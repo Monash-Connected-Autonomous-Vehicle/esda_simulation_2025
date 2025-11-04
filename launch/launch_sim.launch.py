@@ -113,7 +113,7 @@ def generate_launch_description():
     )
     
     # --- 7) Static TF publisher for LiDAR ---
-    '''
+    
     lidar_transform = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -122,7 +122,7 @@ def generate_launch_description():
                    '/laser_frame', 'my_robot_1/base_link/laser_frame'],
         output='screen'
     )
-    '''
+    
     
 
     return LaunchDescription([
@@ -135,5 +135,5 @@ def generate_launch_description():
       spawn_entity,
       joint_broad_spawner,
       diff_drive_spawner,
-      #lidar_transform,
+      lidar_transform,
     ])
