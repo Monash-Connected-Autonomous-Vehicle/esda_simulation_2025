@@ -82,6 +82,7 @@
     <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
       <ros>
         <namespace>$(arg namespace)</namespace>
+        <remapping>/diff_drive_base_controller/cmd_vel_unstamped:=/cmd_vel</remapping>
       </ros>
       <parameters>$(find 2025_esda_simulation)/config/my_controllers_2wd.yaml</parameters>
       <parameters>$(find 2025_esda_simulation)/config/gaz_ros2_ctl_use_sim.yaml</parameters>
