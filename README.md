@@ -7,13 +7,13 @@
 ```
 |_workspace_name
     |_src
-        |_2025_esda_simulation
+        |_esda_simulation_2025
 ```
 - When you are trying to build the project, please do it in the `\workspace_name` level. So the `log`, `build` and `install` folders are generated next to the `src` folder. 
 ```
 |_workspace_name
     |_src
-        |_2025_esda_simulation
+        |_esda_simulation_2025
     |_install
     |_build
     |_log

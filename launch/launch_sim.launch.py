@@ -13,12 +13,12 @@ def generate_launch_description():
 
     # Define the input parameters
     use_sim_time     = LaunchConfiguration('use_sim_time', default='true')
-    package_name = '2025_esda_simulation'
+    package_name = 'esda_simulation_2025'
     
     # For Fortress/older:
     set_ign_path = SetEnvironmentVariable(
         name='IGN_GAZEBO_RESOURCE_PATH',
-        value=[get_package_share_directory('2025_esda_simulation')]
+        value=[get_package_share_directory('esda_simulation_2025')]
     )
 
     # ROS Controller Files:

@@ -84,8 +84,8 @@
         <namespace>$(arg namespace)</namespace>
         <remapping>/diff_drive_base_controller/cmd_vel_unstamped:=/cmd_vel</remapping>
       </ros>
-      <parameters>$(find 2025_esda_simulation)/config/my_controllers_2wd.yaml</parameters>
-      <parameters>$(find 2025_esda_simulation)/config/gaz_ros2_ctl_use_sim.yaml</parameters>
+      <parameters>$(find esda_simulation_2025)/config/my_controllers_2wd.yaml</parameters>
+      <parameters>$(find esda_simulation_2025)/config/gaz_ros2_ctl_use_sim.yaml</parameters>
     </plugin>
   </gazebo>
 

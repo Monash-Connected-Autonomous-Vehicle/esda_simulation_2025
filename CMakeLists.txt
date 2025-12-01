@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(2025_esda_simulation)
+project(esda_simulation_2025)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
