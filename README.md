@@ -24,20 +24,24 @@ source install/setup.bash
 ```
 
 ### 2. Launching Project
-#### 2.1. Teleop
+#### 2.1. Launch Simulator
+```
+ros2 launch esda_simulation_2025 launch_sim.launch.py
+```
+#### 2.2. Teleop
 ```
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args -r /cmd_vel:=/diff_drive_base_controller/cmd_vel_unstamped
 ```
-#### 2.2. Launch slam_toolbox (Mapping Mode)
+#### 2.3. Launch slam_toolbox (Mapping Mode)
 ```
 ros2 launch slam_toolbox online_async_launch.py
 ```
-#### 2.3. Launch AMCL Localization (Navigation Mode)
+#### 2.4. Launch AMCL Localization + NAV2 (Navigation Mode)
 ```
-ros2 launch nav2_bringup localization_launch.py map:=./my_map_save.yaml 
+ros2 launch esda_simulation_2025 localization_launch.py
 ```
 ```
-ros2 launch nav2_bringup navigation_launch.py use_sim_time:=true map_subscribe_transient_local:=true 
+ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:=true map_subscribe_transient_local:=true 
 
 ```
