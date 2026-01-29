@@ -1,0 +1,4 @@
+source;share/esda_simulation_2025/local_setup.bash
+source;share/esda_simulation_2025/local_setup.dsv
+source;share/esda_simulation_2025/local_setup.sh
+source;share/esda_simulation_2025/local_setup.zsh

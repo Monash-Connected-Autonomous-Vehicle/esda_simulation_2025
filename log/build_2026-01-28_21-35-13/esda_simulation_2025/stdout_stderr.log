@@ -1,0 +1,150 @@
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/lib/ccache/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/lib/ccache/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+-- Found ament_lint_auto: 0.12.12 (/opt/ros/humble/share/ament_lint_auto/cmake)
+-- Added test 'copyright' to check source files copyright and LICENSE
+-- Added test 'flake8' to check Python code syntax and style conventions
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_simulation_2025
+-- Install configuration: ""
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/mapper_params_localization.yaml
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/empty.yaml
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/nav2_params.yaml
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/gaz_ros2_ctl_use_sim.yaml
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/view_bot.rviz
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/my_controllers_2wd.yaml
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/mapper_params_online_async.yaml
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot.urdf.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/gazebo_control.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/inertial_macros.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/depth_camera.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/lidar.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/ros2_control_2wd.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/camera.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot_visual.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot_core_ref.xacro
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/rsp.launch.py
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/online_async_launch.py
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/localization_launch.py
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/navigation_launch.py
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/launch_sim.launch.py
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/worlds
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/worlds/igvc.sdf
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/worlds/sim_world.sdf
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__2.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_middle.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_left__configuration_ali_2mm.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_bottom_plate.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lidar_fin.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_tire.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_gps_fin.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_rear__configuration_ali_2mm.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_endcap.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_rear__configuration_ali_2mm.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__2.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bearing_spacer.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_rim.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_gps_fin.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bearing_spacer.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lid__configuration_ali_2mm.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_left__configuration_ali_2mm.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_welded_body__configuration_ali_2mm.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider_mount__configuration_ali_2mm.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_output_carrier.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/caster_arm_r.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_endcap.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_middle.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_motor.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lid__configuration_ali_2mm.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__3.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider__configuration_ali_2mm.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_rim.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__3.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__3.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_tyre.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_motor.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__2.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_rim.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider_mount__configuration_ali_2mm.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/caster_arm_r.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_rhs.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/robot.urdf
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__4.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_right__configuration_ali_2mm.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_arm_bracket.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_camera_mount.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__4.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__3.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_output_carrier.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider__configuration_ali_2mm.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lidar_fin.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__2.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/part_1.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/velodyne_vlp16.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_top_plate.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_bottom_plate.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/part_1.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_arm_bracket.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_tire.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/velodyne_vlp16.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_rim.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_tyre.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_right__configuration_ali_2mm.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_rhs.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_welded_body__configuration_ali_2mm.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_top_plate.stl
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_camera_mount.part
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/maps
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/maps/my_map_save.yaml
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/maps/my_map_save.pgm
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/model.config
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/meshes
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/meshes/ground.dae
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/meshes/construction_barrel.dae
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/model.sdf
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/textures
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/textures/ground.png
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/textures/Construction_Barrel_Diffuse.png
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/scripts
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/scripts/ground.material
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/ament_index/resource_index/package_run_dependencies/esda_simulation_2025
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/ament_index/resource_index/parent_prefix_path/esda_simulation_2025
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/ament_prefix_path.sh
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/ament_prefix_path.dsv
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/path.sh
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/path.dsv
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.bash
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.sh
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.zsh
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.dsv
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/package.dsv
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/ament_index/resource_index/packages/esda_simulation_2025
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/cmake/esda_simulation_2025Config.cmake
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/cmake/esda_simulation_2025Config-version.cmake
+-- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/package.xml

@@ -1,0 +1,127 @@
+-- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found ament_lint_auto: 0.12.12 (/opt/ros/humble/share/ament_lint_auto/cmake)
+-- Added test 'copyright' to check source files copyright and LICENSE
+-- Added test 'flake8' to check Python code syntax and style conventions
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_simulation_2025
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/empty.yaml
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/gaz_ros2_ctl_use_sim.yaml
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/mapper_params_localization.yaml
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/mapper_params_online_async.yaml
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/my_controllers_2wd.yaml
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/nav2_params.yaml
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/view_bot.rviz
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/camera.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/depth_camera.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/gazebo_control.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/inertial_macros.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/lidar.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot.urdf.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot_core_ref.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot_visual.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/ros2_control_2wd.xacro
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/launch_sim.launch.py
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/localization_launch.py
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/navigation_launch.py
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/online_async_launch.py
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/rsp.launch.py
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/worlds/igvc.sdf
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/worlds/sim_world.sdf
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_endcap.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_endcap.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_rhs.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/arm_rhs.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bearing_spacer.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bearing_spacer.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_motor.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_motor.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_rim.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_rim.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_tire.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/bort_tire.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/caster_arm_r.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/caster_arm_r.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_rim.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_rim.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_tyre.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/cstr_wheel_tyre.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_arm_bracket.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_arm_bracket.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_bottom_plate.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_bottom_plate.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_middle.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_middle.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_output_carrier.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_output_carrier.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_top_plate.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/drve_top_plate.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_left__configuration_ali_2mm.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_left__configuration_ali_2mm.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_right__configuration_ali_2mm.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_body_right__configuration_ali_2mm.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_camera_mount.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_camera_mount.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider__configuration_ali_2mm.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider__configuration_ali_2mm.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider_mount__configuration_ali_2mm.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_divider_mount__configuration_ali_2mm.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_gps_fin.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_gps_fin.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lid__configuration_ali_2mm.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lid__configuration_ali_2mm.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lidar_fin.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_lidar_fin.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_rear__configuration_ali_2mm.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_rear__configuration_ali_2mm.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_welded_body__configuration_ali_2mm.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/fcid_welded_body__configuration_ali_2mm.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__2.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__2.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__3.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__3.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__4.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/optic__4.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/part_1.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/part_1.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/robot.urdf
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/velodyne_vlp16.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/velodyne_vlp16.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__2.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__2.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__3.part
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/assets/zed2_ip_outer_with_lens_v8__3.stl
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/maps/my_map_save.pgm
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/maps/my_map_save.yaml
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/scripts/ground.material
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/textures/Construction_Barrel_Diffuse.png
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/materials/textures/ground.png
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/meshes/construction_barrel.dae
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/meshes/ground.dae
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/model.config
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/models/orange_igvc/model.sdf
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/ament_index/resource_index/package_run_dependencies/esda_simulation_2025
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/ament_index/resource_index/parent_prefix_path/esda_simulation_2025
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/ament_prefix_path.sh
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/ament_prefix_path.dsv
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/path.sh
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/environment/path.dsv
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.bash
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.sh
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.zsh
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/local_setup.dsv
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/package.dsv
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/ament_index/resource_index/packages/esda_simulation_2025
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/cmake/esda_simulation_2025Config.cmake
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/cmake/esda_simulation_2025Config-version.cmake
+-- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/package.xml
