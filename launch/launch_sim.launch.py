@@ -123,6 +123,20 @@ def generate_launch_description():
         output='screen'
     )
     
+    # --- 8) Rviz spawn
+    rviz = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', PathJoinSubstitution([
+            FindPackageShare(package_name),
+            'config',
+            'view_bot.rviz'
+        ])],
+        output='screen',
+        parameters=[{'use_sim_time': use_sim_time}]
+    )
+
     
 
     return LaunchDescription([
@@ -136,4 +150,5 @@ def generate_launch_description():
       joint_broad_spawner,
       diff_drive_spawner,
       lidar_transform,
+      rviz,
     ])
