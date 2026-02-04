@@ -50,7 +50,7 @@ def generate_launch_description():
           )
         ),
         launch_arguments={
-            'ign_args': f'-r {os.path.join(get_package_share_directory(package_name), "worlds", "igvc.sdf")}',
+            'ign_args': f'-r {os.path.join(get_package_share_directory(package_name), "worlds", "sim_world.sdf")}',
             'verbose': 'true'
         }.items()
     )
