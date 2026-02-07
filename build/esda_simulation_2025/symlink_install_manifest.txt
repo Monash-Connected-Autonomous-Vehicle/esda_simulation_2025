@@ -4,6 +4,7 @@
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/mapper_params_online_async.yaml
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/my_controllers_2wd.yaml
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/nav2_params.yaml
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/twist_mux.yaml
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/config/view_bot.rviz
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/camera.xacro
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/depth_camera.xacro
@@ -14,6 +15,7 @@
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot_core_ref.xacro
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/robot_visual.xacro
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/description/ros2_control_2wd.xacro
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/launch_robot.launch.py
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/launch_sim.launch.py
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/localization_launch.py
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_simulation_2025/share/esda_simulation_2025/launch/navigation_launch.py
