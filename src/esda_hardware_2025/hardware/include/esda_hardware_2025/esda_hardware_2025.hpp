@@ -21,6 +21,10 @@
 namespace esda_hardware_2025 {
     class EsdaHardware2025 : public hardware_interface::SystemInterface {
 
+        struct Config {
+            std::string left_wheel_name = "";
+            std::string right_wheel_name = "";
+        }
 
         public:
             RCLCPP_SHARED_PTR_DEFINITIONS(EsdaHardware2025);
