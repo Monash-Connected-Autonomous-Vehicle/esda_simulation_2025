@@ -1,0 +1,47 @@
+[0.016s] Invoking command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 -- -j20 -l20
+[0.070s] -- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)
+[0.209s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.220s] -- Found hardware_interface: 2.50.0 (/opt/ros/humble/share/hardware_interface/cmake)
+[0.260s] -- Found rosidl_generator_c: 3.1.6 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[0.263s] -- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[0.270s] -- Found rosidl_generator_cpp: 3.1.6 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[0.282s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.295s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.456s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[0.458s] -- Found rmw_fastrtps_cpp: 6.2.7 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[0.480s] -- Found TinyXML2 via Config file: TinyXML2_DIR-NOTFOUND
+[0.494s] -- Found TinyXML2 via Config file: TinyXML2_DIR-NOTFOUND
+[0.512s] -- Found TinyXML2 via Config file: TinyXML2_DIR-NOTFOUND
+[0.521s] -- Found TinyXML2 via Config file: TinyXML2_DIR-NOTFOUND
+[0.534s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[0.590s] -- Found ament_lint_auto: 0.12.12 (/opt/ros/humble/share/ament_lint_auto/cmake)
+[0.668s] -- Added test 'cppcheck' to perform static code analysis on C / C++ code
+[0.668s] -- Configured cppcheck include dirs: 
+[0.668s] -- Configured cppcheck exclude dirs and/or files: 
+[0.668s] -- Added test 'lint_cmake' to check CMake code style
+[0.670s] -- Added test 'uncrustify' to check C / C++ code style
+[0.670s] -- Configured uncrustify additional arguments: 
+[0.671s] -- Added test 'xmllint' to check XML markup files
+[0.672s] -- Configuring done
+[0.677s] -- Generating done
+[0.680s] -- Build files have been written to: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025
+[0.709s] Invoked command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 -- -j20 -l20
+[0.711s] Invoking command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025
+[0.721s] -- Install configuration: ""
+[0.722s] -- Execute custom install script
+[0.722s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/package_run_dependencies/esda_hardware_2025
+[0.722s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/parent_prefix_path/esda_hardware_2025
+[0.722s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/ament_prefix_path.sh
+[0.722s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/ament_prefix_path.dsv
+[0.723s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/path.sh
+[0.723s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/path.dsv
+[0.723s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.bash
+[0.723s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.sh
+[0.723s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.zsh
+[0.723s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.dsv
+[0.723s] -- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/package.dsv
+[0.736s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/packages/esda_hardware_2025
+[0.737s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/cmake/esda_hardware_2025Config.cmake
+[0.737s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/cmake/esda_hardware_2025Config-version.cmake
+[0.737s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/package.xml
+[0.740s] Invoked command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025

@@ -24,7 +24,16 @@ namespace esda_hardware_2025 {
         struct Config {
             std::string left_wheel_name = "";
             std::string right_wheel_name = "";
-        }
+            float loop_rate = 0.0;
+            std::string_device = "";
+            int baud_rate = 0;
+            int timeout_ms = 0;
+            int enc_counts_per_rev = 0;
+            int pid_p = 0;
+            int pid_d = 0;
+            int pid_i = 0;
+            int pid_o = 0;
+        };
 
         public:
             RCLCPP_SHARED_PTR_DEFINITIONS(EsdaHardware2025);
@@ -64,7 +73,13 @@ namespace esda_hardware_2025 {
             ESDA_HARDWARE_2025_PUBLIC
             hardware_interface::return_type write(
                 const rclcpp::Time & time, const rclcpp::Duration & period) override;
-    }
+
+        private: 
+            STMComms comms_;
+            Config cfg_;
+            Wheel wheel_l_;
+            Wheel wheel_r_;
+    };
 }
 
 #endif
