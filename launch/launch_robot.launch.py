@@ -31,10 +31,12 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default = 'true')
     package_name = 'esda_simulation_2025'
 
+    sim_mode = LaunchConfiguration('sim_mode', default = 'false')
+
     rsp = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
                     get_package_share_directory(package_name),'launch','rsp.launch.py'
-                )]), launch_arguments={'use_sim_time': 'false', 'use_ros2_control': 'true'}.items()
+                )]), launch_arguments={'use_sim_time': 'false', 'use_ros2_control': 'true', 'sim_mode': sim_mode}.items()
     )
 
     robot_description = Command(['ros2 param get --hide-type /robot_state_publisher robot_description'])
