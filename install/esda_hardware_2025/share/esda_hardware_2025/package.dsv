@@ -1,6 +1,9 @@
 source;share/esda_hardware_2025/hook/cmake_prefix_path.ps1
 source;share/esda_hardware_2025/hook/cmake_prefix_path.dsv
 source;share/esda_hardware_2025/hook/cmake_prefix_path.sh
+source;share/esda_hardware_2025/hook/ld_library_path_lib.ps1
+source;share/esda_hardware_2025/hook/ld_library_path_lib.dsv
+source;share/esda_hardware_2025/hook/ld_library_path_lib.sh
 source;share/esda_hardware_2025/local_setup.bash
 source;share/esda_hardware_2025/local_setup.dsv
 source;share/esda_hardware_2025/local_setup.ps1

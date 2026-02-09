@@ -63,7 +63,7 @@ CMAKE_BINARY_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simu
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all:
+all: CMakeFiles/esda_hardware_2025.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -73,6 +73,7 @@ preinstall:
 # The main recursive "clean" target.
 clean: CMakeFiles/uninstall.dir/clean
 clean: CMakeFiles/esda_hardware_2025_uninstall.dir/clean
+clean: CMakeFiles/esda_hardware_2025.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -126,6 +127,32 @@ esda_hardware_2025_uninstall: CMakeFiles/esda_hardware_2025_uninstall.dir/rule
 CMakeFiles/esda_hardware_2025_uninstall.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025_uninstall.dir/build.make CMakeFiles/esda_hardware_2025_uninstall.dir/clean
 .PHONY : CMakeFiles/esda_hardware_2025_uninstall.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/esda_hardware_2025.dir
+
+# All Build rule for target.
+CMakeFiles/esda_hardware_2025.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025.dir/build.make CMakeFiles/esda_hardware_2025.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025.dir/build.make CMakeFiles/esda_hardware_2025.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/CMakeFiles --progress-num=1,2 "Built target esda_hardware_2025"
+.PHONY : CMakeFiles/esda_hardware_2025.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/esda_hardware_2025.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/esda_hardware_2025.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/CMakeFiles 0
+.PHONY : CMakeFiles/esda_hardware_2025.dir/rule
+
+# Convenience name for target.
+esda_hardware_2025: CMakeFiles/esda_hardware_2025.dir/rule
+.PHONY : esda_hardware_2025
+
+# clean rule for target.
+CMakeFiles/esda_hardware_2025.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025.dir/build.make CMakeFiles/esda_hardware_2025.dir/clean
+.PHONY : CMakeFiles/esda_hardware_2025.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

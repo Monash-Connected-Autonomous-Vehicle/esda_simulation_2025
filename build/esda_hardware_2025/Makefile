@@ -197,6 +197,43 @@ esda_hardware_2025_uninstall/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025_uninstall.dir/build.make CMakeFiles/esda_hardware_2025_uninstall.dir/build
 .PHONY : esda_hardware_2025_uninstall/fast
 
+#=============================================================================
+# Target rules for targets named esda_hardware_2025
+
+# Build rule for target.
+esda_hardware_2025: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 esda_hardware_2025
+.PHONY : esda_hardware_2025
+
+# fast build rule for target.
+esda_hardware_2025/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025.dir/build.make CMakeFiles/esda_hardware_2025.dir/build
+.PHONY : esda_hardware_2025/fast
+
+hardware/esda_hardware_2025.o: hardware/esda_hardware_2025.cpp.o
+.PHONY : hardware/esda_hardware_2025.o
+
+# target to build an object file
+hardware/esda_hardware_2025.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025.dir/build.make CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o
+.PHONY : hardware/esda_hardware_2025.cpp.o
+
+hardware/esda_hardware_2025.i: hardware/esda_hardware_2025.cpp.i
+.PHONY : hardware/esda_hardware_2025.i
+
+# target to preprocess a source file
+hardware/esda_hardware_2025.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025.dir/build.make CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.i
+.PHONY : hardware/esda_hardware_2025.cpp.i
+
+hardware/esda_hardware_2025.s: hardware/esda_hardware_2025.cpp.s
+.PHONY : hardware/esda_hardware_2025.s
+
+# target to generate assembly for a file
+hardware/esda_hardware_2025.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/esda_hardware_2025.dir/build.make CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.s
+.PHONY : hardware/esda_hardware_2025.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -212,6 +249,10 @@ help:
 	@echo "... test"
 	@echo "... esda_hardware_2025_uninstall"
 	@echo "... uninstall"
+	@echo "... esda_hardware_2025"
+	@echo "... hardware/esda_hardware_2025.o"
+	@echo "... hardware/esda_hardware_2025.i"
+	@echo "... hardware/esda_hardware_2025.s"
 .PHONY : help
 
 

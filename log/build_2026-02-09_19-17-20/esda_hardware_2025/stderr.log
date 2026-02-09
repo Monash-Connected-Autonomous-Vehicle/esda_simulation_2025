@@ -1,0 +1,27 @@
+In file included from [01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:1[m[K:
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/include/esda_hardware_2025/esda_hardware_2025.hpp:43:60:[m[K [01;35m[Kwarning: [m[Kextra ‘[01m[K;[m[K’ [[01;35m[K-Wpedantic[m[K]
+   43 |             RCLCPP_SHARED_PTR_DEFINITIONS(EsdaHardware2025)[01;35m[K;[m[K
+      |                                                            [01;35m[K^[m[K
+      |                                                            [31m[K-[m[K
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:182:37:[m[K [01;31m[Kerror: [m[K‘[01m[Kdiffdrive_arduino[m[K’ has not been declared
+  182 |     hardware_interface::return_type [01;31m[Kdiffdrive_arduino[m[K ::EsdaHardware2025::write(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
+      |                                     [01;31m[K^~~~~~~~~~~~~~~~~[m[K
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:[m[K In function ‘[01m[Khardware_interface::return_type esda_hardware_2025::write(const rclcpp::Time&, const rclcpp::Duration&)[m[K’:
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:183:14:[m[K [01;31m[Kerror: [m[K‘[01m[Kcomms_[m[K’ was not declared in this scope
+  183 |         if (![01;31m[Kcomms_[m[K.connected()) {
+      |              [01;31m[K^~~~~~[m[K
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:187:39:[m[K [01;31m[Kerror: [m[K‘[01m[Kwheel_l_[m[K’ was not declared in this scope
+  187 |         int motor_l_counts_per_loop = [01;31m[Kwheel_l_[m[K.cmd / wheel_l_.rads_per_count / cfg_.loop_rate;
+      |                                       [01;31m[K^~~~~~~~[m[K
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:187:80:[m[K [01;31m[Kerror: [m[K‘[01m[Kcfg_[m[K’ was not declared in this scope
+  187 |         int motor_l_counts_per_loop = wheel_l_.cmd / wheel_l_.rads_per_count / [01;31m[Kcfg_[m[K.loop_rate;
+      |                                                                                [01;31m[K^~~~[m[K
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:188:39:[m[K [01;31m[Kerror: [m[K‘[01m[Kwheel_r_[m[K’ was not declared in this scope
+  188 |         int motor_r_counts_per_loop = [01;31m[Kwheel_r_[m[K.cmd / wheel_r_.rads_per_count / cfg_.loop_rate;
+      |                                       [01;31m[K^~~~~~~~[m[K
+[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:189:9:[m[K [01;31m[Kerror: [m[K‘[01m[Kcomms_[m[K’ was not declared in this scope
+  189 |         [01;31m[Kcomms_[m[K.set_motor_values(motor_l_counts_per_loop, motor_r_counts_per_loop);
+      |         [01;31m[K^~~~~~[m[K
+gmake[2]: *** [CMakeFiles/esda_hardware_2025.dir/build.make:76: CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:137: CMakeFiles/esda_hardware_2025.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

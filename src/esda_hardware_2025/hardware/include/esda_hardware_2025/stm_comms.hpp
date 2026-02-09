@@ -7,6 +7,9 @@
 #include <libserial/SerialPort.h>
 #include <iostream>
 
+#include "rclcpp/rclcpp.hpp"
+
+
 LibSerial::BaudRate convert_baud_rate(int baud_rate) {
     // Handling common baud rates
     switch(baud_rate) {
@@ -32,8 +35,15 @@ class STMComms {
 
         void connect(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms) {  
             timeout_ms_ = timeout_ms;
+            if (!serial_conn_.IsOpen()) {
+                RCLCPP_INFO(rclcpp::get_logger("EsdaHardware2025"), "Failed to open serial port: %s", serial_device.c_str());
+            }
             serial_conn_.Open(serial_device);
             serial_conn_.SetBaudRate(convert_baud_rate(baud_rate));
+
+            if (!serial_conn_.IsOpen()) {
+                RCLCPP_INFO(rclcpp::get_logger("EsdaHardware2025"), "Failed to open serial port: %s", serial_device.c_str());
+            }
         }
 
         void disconnect() {

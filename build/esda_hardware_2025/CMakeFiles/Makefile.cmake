@@ -874,6 +874,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/esda_hardware_2025"
   "ament_cmake_index/share/ament_index/resource_index/parent_prefix_path/esda_hardware_2025"
   "ament_cmake_index/share/ament_index/resource_index/packages/esda_hardware_2025"
+  "ament_cmake_index/share/ament_index/resource_index/hardware_interface__pluginlib__plugin/esda_hardware_2025"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
@@ -881,4 +882,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/uninstall.dir/DependInfo.cmake"
   "CMakeFiles/esda_hardware_2025_uninstall.dir/DependInfo.cmake"
+  "CMakeFiles/esda_hardware_2025.dir/DependInfo.cmake"
   )

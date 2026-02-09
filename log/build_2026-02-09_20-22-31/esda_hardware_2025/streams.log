@@ -1,0 +1,38 @@
+[0.008s] Invoking command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 -- -j20 -l20
+[0.034s] [35m[1mConsolidate compiler generated dependencies of target esda_hardware_2025[0m
+[0.044s] [ 50%] [32mBuilding CXX object CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o[0m
+[2.074s] In file included from [01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:1[m[K:
+[2.074s] [01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/include/esda_hardware_2025/esda_hardware_2025.hpp:43:60:[m[K [01;35m[Kwarning: [m[Kextra ‘[01m[K;[m[K’ [[01;35m[K-Wpedantic[m[K]
+[2.074s]    43 |             RCLCPP_SHARED_PTR_DEFINITIONS(EsdaHardware2025)[01;35m[K;[m[K
+[2.074s]       |                                                            [01;35m[K^[m[K
+[2.074s]       |                                                            [31m[K-[m[K
+[2.082s] [100%] [32m[1mLinking CXX shared library libesda_hardware_2025.so[0m
+[2.188s] [100%] Built target esda_hardware_2025
+[2.196s] Invoked command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 -- -j20 -l20
+[2.197s] Invoking command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025
+[2.202s] -- Install configuration: ""
+[2.202s] -- Execute custom install script
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025//esda_hardware_2025.xml
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/esda_hardware_2025.hpp
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/stm_comms.hpp
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/visibility_control.h
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/wheels.hpp
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/package_run_dependencies/esda_hardware_2025
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/parent_prefix_path/esda_hardware_2025
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/ament_prefix_path.sh
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/ament_prefix_path.dsv
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/path.sh
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/path.dsv
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.bash
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.sh
+[2.203s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.zsh
+[2.204s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.dsv
+[2.204s] -- Symlinking: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/package.dsv
+[2.210s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/packages/esda_hardware_2025
+[2.210s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/hardware_interface__pluginlib__plugin/esda_hardware_2025
+[2.210s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/cmake/esda_hardware_2025Config.cmake
+[2.210s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/cmake/esda_hardware_2025Config-version.cmake
+[2.210s] -- Up-to-date symlink: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/package.xml
+[2.210s] -- Installing: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/lib/libesda_hardware_2025.so
+[2.211s] -- Set runtime path of "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/lib/libesda_hardware_2025.so" to ""
+[2.212s] Invoked command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025

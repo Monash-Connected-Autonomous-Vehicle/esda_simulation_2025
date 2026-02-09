@@ -310,6 +310,12 @@ message(STATUS "Execute custom install script")
 
 # begin of custom install code
 
+# install(FILES "esda_hardware_2025.xml" "DESTINATION" "share/esda_hardware_2025/")
+ament_cmake_symlink_install_files("/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025" FILES "esda_hardware_2025.xml" "DESTINATION" "share/esda_hardware_2025/")
+
+# install(DIRECTORY "hardware/include/" "DESTINATION" "include/esda_hardware_2025")
+ament_cmake_symlink_install_directory("/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025" DIRECTORY "hardware/include/" "DESTINATION" "include/esda_hardware_2025")
+
 # install(FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/esda_hardware_2025" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
 ament_cmake_symlink_install_files("/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025" FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/esda_hardware_2025" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
 
@@ -345,6 +351,9 @@ ament_cmake_symlink_install_files("/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_
 
 # install(FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_index/share/ament_index/resource_index/packages/esda_hardware_2025" "DESTINATION" "share/ament_index/resource_index/packages")
 ament_cmake_symlink_install_files("/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025" FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_index/share/ament_index/resource_index/packages/esda_hardware_2025" "DESTINATION" "share/ament_index/resource_index/packages")
+
+# install(FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_index/share/ament_index/resource_index/hardware_interface__pluginlib__plugin/esda_hardware_2025" "DESTINATION" "share/ament_index/resource_index/hardware_interface__pluginlib__plugin")
+ament_cmake_symlink_install_files("/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025" FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_index/share/ament_index/resource_index/hardware_interface__pluginlib__plugin/esda_hardware_2025" "DESTINATION" "share/ament_index/resource_index/hardware_interface__pluginlib__plugin")
 
 # install(FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_core/esda_hardware_2025Config.cmake" "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_core/esda_hardware_2025Config-version.cmake" "DESTINATION" "share/esda_hardware_2025/cmake")
 ament_cmake_symlink_install_files("/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025" FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_core/esda_hardware_2025Config.cmake" "/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/ament_cmake_core/esda_hardware_2025Config-version.cmake" "DESTINATION" "share/esda_hardware_2025/cmake")

@@ -1,0 +1,8 @@
+<library path="esda_hardware_2025">
+  <class
+    name="esda_hardware_2025/EsdaHardware2025"
+    type="esda_hardware_2025::EsdaHardware2025"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>ESDA hardware interface</description>
+  </class>
+</library>

@@ -1,0 +1,2 @@
+Invoking command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 -- -j20 -l20
+Invoked command in '/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025' returned '2': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 -- -j20 -l20

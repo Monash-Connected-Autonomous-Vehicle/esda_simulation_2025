@@ -1,4 +1,4 @@
-#include "diffdrive_arduino/diffbot_system.hpp"
+#include "esda_hardware_2025/esda_hardware_2025.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -118,7 +118,9 @@ namespace esda_hardware_2025 {
 
     hardware_interface::CallbackReturn EsdaHardware2025::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) {
         RCLCPP_INFO(rclcpp::get_logger("EsdaHardware2025"), "Configuring ...please wait...");
-        
+
+        // RCLCPP_INFO(rclcpp::get_logger("EsdaHardware2025"))
+      
         if (comms_.connected()) {
           comms_.disconnect();
         }
@@ -179,7 +181,7 @@ namespace esda_hardware_2025 {
         return hardware_interface::return_type::OK;
     }
     
-    hardware_interface::return_type diffdrive_arduino ::EsdaHardware2025::write(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
+    hardware_interface::return_type esda_hardware_2025 ::EsdaHardware2025::write(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/) {
         if (!comms_.connected()) {
             return hardware_interface::return_type::ERROR;
         }

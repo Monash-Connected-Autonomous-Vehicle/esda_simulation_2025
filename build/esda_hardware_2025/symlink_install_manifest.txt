@@ -1,3 +1,8 @@
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025//esda_hardware_2025.xml
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/esda_hardware_2025.hpp
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/stm_comms.hpp
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/visibility_control.h
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/include/esda_hardware_2025/esda_hardware_2025/wheels.hpp
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/package_run_dependencies/esda_hardware_2025
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/parent_prefix_path/esda_hardware_2025
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/environment/ament_prefix_path.sh
@@ -10,6 +15,7 @@
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/local_setup.dsv
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/package.dsv
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/packages/esda_hardware_2025
+/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/ament_index/resource_index/hardware_interface__pluginlib__plugin/esda_hardware_2025
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/cmake/esda_hardware_2025Config.cmake
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/cmake/esda_hardware_2025Config-version.cmake
 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/install/esda_hardware_2025/share/esda_hardware_2025/package.xml
