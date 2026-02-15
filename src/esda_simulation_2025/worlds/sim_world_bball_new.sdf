@@ -1,0 +1,65 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="basketball_half_court">
+    
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="libignition-gazebo-physics-system.so" name="ignition::gazebo::systems::Physics"></plugin>
+    <plugin filename="libignition-gazebo-user-commands-system.so" name="ignition::gazebo::systems::UserCommands"></plugin>
+    <plugin filename="libignition-gazebo-scene-broadcaster-system.so" name="ignition::gazebo::systems::SceneBroadcaster"></plugin>
+    <plugin filename="libignition-gazebo-sensors-system.so" name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Basketball Half-Court -->
+    <model name="half_court">
+      <static>true</static>
+      <link name="link">
+        <pose>0 0 0.01 0 0 0</pose> 
+        <visual name="visual">
+          <geometry><box><size>11 12.5 0.01</size></box></geometry>
+          <material><ambient>0.8 0.5 0.2 1</ambient><diffuse>0.8 0.5 0.2 1</diffuse></material>
+        </visual>
+        <collision name="collision">
+          <geometry><box><size>11 12.5 0.01</size></box></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Obstacles -->
+    <model name="prism_1"><static>true</static><link name="link"><pose>-2.0 3.0 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_2"><static>true</static><link name="link"><pose>2.5 4.5 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_3"><static>true</static><link name="link"><pose>-4.0 -2.0 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_4"><static>true</static><link name="link"><pose>1.0 -5.0 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_5"><static>true</static><link name="link"><pose>4.0 1.0 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_6"><static>true</static><link name="link"><pose>-3.5 0.5 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_8"><static>true</static><link name="link"><pose>-1.5 -4.5 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_9"><static>true</static><link name="link"><pose>3.0 -3.0 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+    <model name="prism_10"><static>true</static><link name="link"><pose>-4.5 5.0 0.31 0 0 0</pose><visual name="v"><geometry><box><size>0.4 0.4 0.6</size></box></geometry><material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material></visual><collision name="c"><geometry><box><size>0.4 0.4 0.6</size></box></geometry></collision></link></model>
+
+  </world>
+</sdf>

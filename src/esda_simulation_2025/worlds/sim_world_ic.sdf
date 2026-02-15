@@ -1,0 +1,101 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="igvc_world">
+    
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="libignition-gazebo-physics-system.so" name="ignition::gazebo::systems::Physics"></plugin>
+    <plugin filename="libignition-gazebo-user-commands-system.so" name="ignition::gazebo::systems::UserCommands"></plugin>
+    <plugin filename="libignition-gazebo-scene-broadcaster-system.so" name="ignition::gazebo::systems::SceneBroadcaster"></plugin>
+    <plugin filename="libignition-gazebo-sensors-system.so" name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- GROUND PLANE - Simple and reliable like basketball world -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.5 0.5 0.5 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- VISUAL ONLY MODEL - Original orange_igvc with NO collision -->
+    <model name="orange_igvc_visual">
+      <static>true</static>
+      <pose>0 0 0.001 0 0 0</pose>
+      <link name="visual_only">
+        <visual name="ground_visual">
+          <geometry>
+            <mesh><uri>package://models/orange_igvc/meshes/ground.dae</uri></mesh>
+          </geometry>
+          <transparency>0.0</transparency>
+        </visual>
+      </link>
+    </model>
+
+    <!-- INVISIBLE PHYSICS OBSTACLES - Ramps -->
+    <model name="ramp1"><static>true</static><link name="link"><pose>0.9889 13 0.15 0.148 0 1.570796</pose><collision name="c"><geometry><box><size>4 2 0.3</size></box></geometry></collision></link></model>
+    <model name="ramp2"><static>true</static><link name="link"><pose>-0.9889 13 0.15 -0.148 0 1.570796</pose><collision name="c"><geometry><box><size>4 2 0.3</size></box></geometry></collision></link></model>
+
+    <!-- INVISIBLE PHYSICS OBSTACLES - Barricades (3x0.5x3 boxes) -->
+    <model name="barricade1"><static>true</static><link name="link"><pose>-19.1652 -17.2165 1.5 0 0 -0.8</pose><collision name="c"><geometry><box><size>3 0.5 3</size></box></geometry></collision></link></model>
+    <model name="barricade2"><static>true</static><link name="link"><pose>18.8846 -17.517 1.5 0 0 0.21445</pose><collision name="c"><geometry><box><size>3 0.5 3</size></box></geometry></collision></link></model>
+    <model name="barricade3"><static>true</static><link name="link"><pose>9.57 12.3819 1.5 0 0 -0.30353</pose><collision name="c"><geometry><box><size>3 0.5 3</size></box></geometry></collision></link></model>
+    <model name="barricade4"><static>true</static><link name="link"><pose>-8.5858 12.1745 1.5 0 0 0.14831</pose><collision name="c"><geometry><box><size>3 0.5 3</size></box></geometry></collision></link></model>
+
+    <!-- INVISIBLE PHYSICS OBSTACLES - Construction Barrels (cylinders ~0.5m diameter, 1m tall) -->
+    <model name="barrel1"><static>true</static><link name="link"><pose>14.8591 -15.356 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel2"><static>true</static><link name="link"><pose>20.9235 -13.6107 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel3"><static>true</static><link name="link"><pose>17.1121 -9.439 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel4"><static>true</static><link name="link"><pose>18.2218 -9.1396 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel5"><static>true</static><link name="link"><pose>17.9234 -6.37453 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel6"><static>true</static><link name="link"><pose>18.8232 -5.70024 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel7"><static>true</static><link name="link"><pose>16.061 -4.40601 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel8"><static>true</static><link name="link"><pose>18.100 1.30974 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel9"><static>true</static><link name="link"><pose>17.4279 7.243 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel10"><static>true</static><link name="link"><pose>20.564 11.0036 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel11"><static>true</static><link name="link"><pose>17.6292 14.470 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel12"><static>true</static><link name="link"><pose>12.9292 12.123 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel13"><static>true</static><link name="link"><pose>12.0142 16.9984 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel14"><static>true</static><link name="link"><pose>9.43968 17.4719 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel15"><static>true</static><link name="link"><pose>7.19005 17.3195 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel16"><static>true</static><link name="link"><pose>6.34524 13.0764 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel17"><static>true</static><link name="link"><pose>3.73125 17.5897 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel18"><static>true</static><link name="link"><pose>0.061325 16.9475 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel19"><static>true</static><link name="link"><pose>-2.8325 16.6695 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel20"><static>true</static><link name="link"><pose>-5.45 17.1955 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel21"><static>true</static><link name="link"><pose>-8.57 17.094 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel22"><static>true</static><link name="link"><pose>-10.8 16.9 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel23"><static>true</static><link name="link"><pose>-5.7 13.15 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel24"><static>true</static><link name="link"><pose>-12.7 12.5 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel25"><static>true</static><link name="link"><pose>-17.3 14.6 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel26"><static>true</static><link name="link"><pose>-20.4 11.2 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel27"><static>true</static><link name="link"><pose>-17.2 7.5 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel28"><static>true</static><link name="link"><pose>-17.9 1.5 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel29"><static>true</static><link name="link"><pose>-15.8 -4.2 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel30"><static>true</static><link name="link"><pose>-18.6 -5.5 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel31"><static>true</static><link name="link"><pose>-17.7 -6.2 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel32"><static>true</static><link name="link"><pose>-16.9 -9.3 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel33"><static>true</static><link name="link"><pose>-20.7 -13.4 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+    <model name="barrel34"><static>true</static><link name="link"><pose>-14.6 -15.2 0.5 0 0 0</pose><collision name="c"><geometry><cylinder><radius>0.25</radius><length>1.0</length></cylinder></geometry></collision></link></model>
+
+  </world>
+</sdf>
+
