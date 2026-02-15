@@ -35,7 +35,14 @@ class SimManager(ctk.CTk):
         self.fg_dim = "#7A7F9A"
 
         self.processes = {}
-        self.workspace_root = "/esda_sim_ws"
+        # Determine workspace root dynamically
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if "src/esda_simulation_2025/scripts" in script_dir:
+            self.workspace_root = os.path.abspath(os.path.join(script_dir, "../../.."))
+        elif "lib/esda_simulation_2025" in script_dir:
+            self.workspace_root = os.path.abspath(os.path.join(script_dir, "../../../.."))
+        else:
+            self.workspace_root = os.getcwd()
         
         # Scan for available files
         self.world_files = self.scan_world_files()
@@ -158,6 +165,9 @@ class SimManager(ctk.CTk):
         self.status_label = ctk.CTkLabel(self, text="System Ready", text_color=self.fg_dim, font=("Orbitron", 10), bg_color=self.bg_dark)
         self.status_label.grid(row=10, column=0, pady=4)
 
+        # Check for xterm
+        self.check_xterm()
+
         # Store original colors
         self.default_colors = {
             "SIM": self.sim_button.cget("fg_color"),
@@ -226,12 +236,27 @@ class SimManager(ctk.CTk):
             self.stop_process(name)
             return
 
+        # Try to find ROS_DISTRO or default to humble
+        ros_distro = os.environ.get("ROS_DISTRO", "humble")
+        ros_setup = f"/opt/ros/{ros_distro}/setup.bash"
+        if not os.path.exists(ros_setup):
+            ros_setup_cmd = "source /opt/ros/*/setup.bash 2>/dev/null || true"
+        else:
+            ros_setup_cmd = f"source {ros_setup}"
+
+        # Setup local workspace
+        local_setup = os.path.join(self.workspace_root, "install/setup.bash")
+        if os.path.exists(local_setup):
+            local_setup_cmd = f"source {local_setup}"
+        else:
+            local_setup_cmd = ":" # No-op
+
         # Prepare the command to source ROS and our workspace
         # We also disable SHM transport to avoid FastDDS errors in Docker
         full_command = (f'xterm -T "{name}" -geometry 100x30 -e "bash -c \\"'
                         f'export FASTRTPS_DEFAULT_PROFILES_FILE={self.workspace_root}/src/esda_simulation_2025/config/fastdds_noshm.xml && '
-                        f'source /opt/ros/humble/setup.bash && '
-                        f'source {self.workspace_root}/install/setup.bash && '
+                        f'{ros_setup_cmd} && '
+                        f'{local_setup_cmd} && '
                         f'echo Starting {name}... && '
                         f'{command}; '
                         f'echo; echo Process finished. Press Enter to close window...; read\\""')
@@ -268,6 +293,16 @@ class SimManager(ctk.CTk):
         elif name == "LANE":
             # Lane detection doesn't have its own button, just update status
             pass
+
+    def check_xterm(self):
+        """Check if xterm is installed"""
+        try:
+            subprocess.run(["which", "xterm"], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            self.after(1000, lambda: self.status_label.configure(
+                text="WARNING: 'xterm' not found. Install with: sudo apt install xterm", 
+                text_color="#FF0059"
+            ))
 
     def build_workspace(self):
         self.status_label.configure(text="Building... Check terminal window", text_color="#F1C40F")
@@ -458,8 +493,16 @@ class SimManager(ctk.CTk):
         self.status_label.configure(text="Checking /clock topic...", text_color="#F1C40F")
         self.update()
         
+        # Try to find ROS_DISTRO or default to humble
+        ros_distro = os.environ.get("ROS_DISTRO", "humble")
+        ros_setup = f"/opt/ros/{ros_distro}/setup.bash"
+        if not os.path.exists(ros_setup):
+            ros_setup_cmd = "source /opt/ros/*/setup.bash 2>/dev/null || true"
+        else:
+            ros_setup_cmd = f"source {ros_setup}"
+
         cmd = (f'xterm -T "Clock Diagnostics" -geometry 80x20 -e "bash -c \\"'
-               f'source /opt/ros/humble/setup.bash && '
+               f'{ros_setup_cmd} && '
                f'echo \\"Checking /clock topic (simulation time)...\\" && '
                f'echo \\"If you see data, simulation time is working.\\" && '
                f'echo \\"If timeout, check if simulation is running.\\" && '

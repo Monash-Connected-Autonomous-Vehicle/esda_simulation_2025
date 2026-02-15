@@ -40,13 +40,22 @@ A complete ROS2 Humble autonomous navigation system with advanced lane detection
 ```bash
 sudo apt update
 sudo apt install -y \
-  ros-humble-gazebo-ros-pkgs \
+  ros-humble-ros-gz \
   ros-humble-navigation2 \
   ros-humble-nav2-bringup \
   ros-humble-slam-toolbox \
-  ros-humble-robot-localization \
+  ros-humble-xacro \
+  ros-humble-joint-state-publisher \
+  ros-humble-robot-state-publisher \
+  ros-humble-controller-manager \
+  ros-humble-diff-drive-controller \
+  ros-humble-joint-state-broadcaster \
+  xterm \
   python3-opencv \
-  python3-tk
+  python3-tk \
+  python3-pip
+
+pip install customtkinter
 ```
 
 ### 1.3. Building the Project
@@ -93,10 +102,14 @@ echo "source ~/esda_sim_ws/install/setup.bash" >> ~/.bashrc
 
 ### 2.1. 🎮 Using the Simulation Manager GUI (Recommended)
 
-The **ESDA Simulation Manager** provides a complete graphical interface:
+The **ESDA Simulation Manager** provides a complete graphical interface. Run it from your workspace:
 
 ```bash
-python3 ~/esda_sim_ws/src/esda_simulation_2025/scripts/ui_launch.py
+# If running from source
+python3 src/esda_simulation_2025/scripts/ui_launch.py
+
+# Or if installed
+ros2 run esda_simulation_2025 ui_launch.py
 ```
 
 ![Simulation Manager Interface](./assets/ui_screenshot.png)

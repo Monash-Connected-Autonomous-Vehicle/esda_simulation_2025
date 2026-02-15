@@ -38,6 +38,7 @@ install(DIRECTORY
   launch
   worlds
   assets
+  maps
   DESTINATION share/${PROJECT_NAME}
 )
 
@@ -46,6 +47,7 @@ install(PROGRAMS
   scripts/lane_detection.py
   scripts/teleop_wasd.py
   scripts/ui_launch.py
+  scripts/waypoint_navigator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
