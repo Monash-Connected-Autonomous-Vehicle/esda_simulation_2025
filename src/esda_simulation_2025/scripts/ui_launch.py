@@ -5,6 +5,7 @@ import signal
 import time
 import glob
 import threading
+from tkinter import filedialog
 
 class SimManager(ctk.CTk):
     def __init__(self):
@@ -49,7 +50,7 @@ class SimManager(ctk.CTk):
         self.grid_columnconfigure(0, weight=1)
         
         # Title
-        self.label = ctk.CTkLabel(self, text="ESDA Simulation Suite", font=("Orbitron", 24, "bold"), text_color=self.accent_blue, bg_color=self.bg_dark)
+        self.label = ctk.CTkLabel(self, text="ESDA SIMULATION SUITE", font=("Orbitron", 24, "bold"), text_color=self.accent_blue, bg_color=self.bg_dark)
         self.label.grid(row=0, column=0, pady=12)
 
         # Build Section
@@ -58,7 +59,7 @@ class SimManager(ctk.CTk):
         
         self.build_button = ctk.CTkButton(self.build_frame, text="1. Colcon Build (Required for changes)", 
                           command=self.build_workspace, 
-                          fg_color=self.accent_green, hover_color="#1E8449", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
+                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.build_button.pack(padx=8, pady=8, side="left", expand=True, fill="x")
 
         # File Selection Section
@@ -72,8 +73,12 @@ class SimManager(ctk.CTk):
         
         self.world_dropdown = ctk.CTkOptionMenu(self.file_frame, variable=self.selected_world, 
                             values=[os.path.basename(f) for f in self.world_files],
-                            width=340, fg_color=self.bg_dark, button_color=self.accent_blue, text_color=self.fg_text)
-        self.world_dropdown.grid(row=0, column=1, padx=6, pady=3, sticky="ew", columnspan=2)
+                            width=280, fg_color=self.bg_dark, button_color=self.accent_purple, text_color=self.fg_text)
+        self.world_dropdown.grid(row=0, column=1, padx=6, pady=3, sticky="ew")
+        
+        self.world_browse_button = ctk.CTkButton(self.file_frame, text="Browse...", command=self.browse_world_file,
+                                                 width=80, fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
+        self.world_browse_button.grid(row=0, column=2, padx=6, pady=3)
         
         # Costmap File Selection
         self.costmap_label = ctk.CTkLabel(self.file_frame, text="Costmap YAML:", font=("Orbitron", 11), text_color=self.accent_purple, bg_color=self.bg_panel)
@@ -82,8 +87,12 @@ class SimManager(ctk.CTk):
         costmap_options = ["[New Costmap]"] + [os.path.basename(f) for f in self.costmap_files]
         self.costmap_dropdown = ctk.CTkOptionMenu(self.file_frame, variable=self.selected_costmap,
                               values=costmap_options,
-                              width=340, fg_color=self.bg_dark, button_color=self.accent_blue, text_color=self.fg_text)
-        self.costmap_dropdown.grid(row=1, column=1, padx=6, pady=3, sticky="ew", columnspan=2)
+                              width=280, fg_color=self.bg_dark, button_color=self.accent_purple, text_color=self.fg_text)
+        self.costmap_dropdown.grid(row=1, column=1, padx=6, pady=3, sticky="ew")
+        
+        self.costmap_browse_button = ctk.CTkButton(self.file_frame, text="Browse...", command=self.browse_costmap_file,
+                                                   width=80, fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
+        self.costmap_browse_button.grid(row=1, column=2, padx=6, pady=3)
 
 
         # Simulation Section (LIDAR and Lane Detection side by side)
@@ -100,7 +109,7 @@ class SimManager(ctk.CTk):
         self.lane_detection_check = ctk.CTkCheckBox(self.sim_frame, text="Enable Lane Detection", variable=self.lane_detection_var, font=("Orbitron", 14), text_color=self.accent_purple, bg_color=self.bg_panel)
         self.lane_detection_check.grid(row=0, column=1, padx=10, pady=6, sticky="w")
 
-        self.sim_button = ctk.CTkButton(self.sim_frame, text="2. Launch Simulation", command=self.toggle_sim, font=("Orbitron", 16, "bold"), fg_color=self.accent_blue, hover_color="#1E90FF", text_color=self.bg_dark)
+        self.sim_button = ctk.CTkButton(self.sim_frame, text="2. Launch Simulation", command=self.toggle_sim, font=("Orbitron", 16, "bold"), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.sim_button.grid(row=0, column=2, padx=10, pady=6, sticky="e")
 
         # Remove SLAM Options Section (now merged)
@@ -115,22 +124,30 @@ class SimManager(ctk.CTk):
         
         self.slam_button = ctk.CTkButton(self.modules_frame, text="Launch SLAM", command=self.toggle_slam, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.slam_button.grid(row=0, column=0, padx=6, pady=6, sticky="ew")
-        self.amcl_button = ctk.CTkButton(self.modules_frame, text="Launch AMCL", command=self.toggle_amcl, font=("Orbitron", 12), fg_color=self.accent_blue, hover_color="#1E90FF", text_color=self.bg_dark)
+        self.amcl_button = ctk.CTkButton(self.modules_frame, text="Launch AMCL", command=self.toggle_amcl, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.amcl_button.grid(row=0, column=1, padx=6, pady=6, sticky="ew")
-        self.nav_button = ctk.CTkButton(self.modules_frame, text="Launch Nav2", command=self.toggle_nav, font=("Orbitron", 12), fg_color=self.accent_green, hover_color="#00B894", text_color=self.bg_dark)
+        self.nav_button = ctk.CTkButton(self.modules_frame, text="Launch Nav2", command=self.toggle_nav, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.nav_button.grid(row=1, column=0, padx=6, pady=6, sticky="ew")
-        self.rviz_button = ctk.CTkButton(self.modules_frame, text="Launch RViz2", command=self.toggle_rviz, font=("Orbitron", 12), fg_color=self.accent_orange, hover_color="#FFB300", text_color=self.bg_dark)
+        self.rviz_button = ctk.CTkButton(self.modules_frame, text="Launch RViz2", command=self.toggle_rviz, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.rviz_button.grid(row=1, column=1, padx=6, pady=6, sticky="ew")
         self.modules_frame.grid_columnconfigure((0,1), weight=1)
 
-        # Teleop Section
-        self.teleop_button = ctk.CTkButton(self, text="Launch WASD Teleop Terminal", command=self.toggle_teleop,
-                           fg_color=self.accent_orange, hover_color="#FFB300", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
-        self.teleop_button.grid(row=7, column=0, pady=6, padx=12, sticky="ew")
+        # Teleop and Waypoint Section
+        self.teleop_frame = ctk.CTkFrame(self, fg_color=self.bg_panel)
+        self.teleop_frame.grid(row=7, column=0, pady=6, padx=12, sticky="ew")
+        self.teleop_frame.grid_columnconfigure((0,1), weight=1)
+        
+        self.teleop_button = ctk.CTkButton(self.teleop_frame, text="WASD Teleop", command=self.toggle_teleop,
+                           fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
+        self.teleop_button.grid(row=0, column=0, pady=6, padx=6, sticky="ew")
+        
+        self.waypoint_button = ctk.CTkButton(self.teleop_frame, text="🎯 Waypoint Nav", command=self.launch_waypoint_navigator,
+                         fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
+        self.waypoint_button.grid(row=0, column=1, pady=6, padx=6, sticky="ew")
         
         # Diagnostics Section
         self.diag_button = ctk.CTkButton(self, text="Check /clock Topic (Diagnostics)", command=self.check_clock,
-                         fg_color=self.accent_blue, hover_color="#1E90FF", font=("Orbitron", 11), text_color=self.bg_dark)
+                         fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 11), text_color=self.bg_dark)
         self.diag_button.grid(row=8, column=0, pady=3, padx=12, sticky="ew")
 
         # Emergency Section
@@ -164,6 +181,45 @@ class SimManager(ctk.CTk):
         maps_dir = f"{self.workspace_root}/src/esda_simulation_2025/maps"
         costmap_files = glob.glob(f"{maps_dir}/*.yaml")
         return sorted(costmap_files) if costmap_files else []
+    
+    def browse_world_file(self):
+        """Open a file browser to select a world file"""
+        initial_dir = f"{self.workspace_root}/src/esda_simulation_2025/worlds"
+        filename = filedialog.askopenfilename(
+            title="Select World File",
+            initialdir=initial_dir if os.path.exists(initial_dir) else self.workspace_root,
+            filetypes=[("SDF Files", "*.sdf"), ("World Files", "*.world"), ("All Files", "*.*")]
+        )
+        if filename:
+            # Add to world_files list if not already there
+            if filename not in self.world_files:
+                self.world_files.append(filename)
+                self.world_files.sort()
+                # Update dropdown values
+                self.world_dropdown.configure(values=[os.path.basename(f) for f in self.world_files])
+            # Set as selected
+            self.selected_world.set(os.path.basename(filename))
+            self.status_label.configure(text=f"Selected: {os.path.basename(filename)}", text_color="#2ECC71")
+    
+    def browse_costmap_file(self):
+        """Open a file browser to select a costmap file"""
+        initial_dir = f"{self.workspace_root}/src/esda_simulation_2025/maps"
+        filename = filedialog.askopenfilename(
+            title="Select Costmap File",
+            initialdir=initial_dir if os.path.exists(initial_dir) else self.workspace_root,
+            filetypes=[("YAML Files", "*.yaml"), ("All Files", "*.*")]
+        )
+        if filename:
+            # Add to costmap_files list if not already there
+            if filename not in self.costmap_files:
+                self.costmap_files.append(filename)
+                self.costmap_files.sort()
+                # Update dropdown values
+                costmap_options = ["[New Costmap]"] + [os.path.basename(f) for f in self.costmap_files]
+                self.costmap_dropdown.configure(values=costmap_options)
+            # Set as selected
+            self.selected_costmap.set(os.path.basename(filename))
+            self.status_label.configure(text=f"Selected: {os.path.basename(filename)}", text_color="#2ECC71")
 
     def run_in_terminal(self, name, command):
         if name in self.processes and self.processes[name].poll() is None:
@@ -259,14 +315,27 @@ class SimManager(ctk.CTk):
                 self.status_label.configure(text="Error: Costmap file not found", text_color="#E74C3C")
                 return
             # slam_toolbox expects map_file_name WITHOUT extension (.yaml, .pgm)
+            # and looks for .data and .posegraph files (serialized SLAM map format)
             # Remove the .yaml extension from the path
             map_file_base = costmap_file.rsplit('.', 1)[0]
-            # Launch SLAM with preloaded map (localization mode with map updates)
-            cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
-                   f"use_sim_time:=true "
-                   f"map_file_name:={map_file_base} "
-                   f"mode:=localization "
-                   f"scan_topic:={scan_topic}")
+            
+            # Check if SLAM serialized map files exist (.data and .posegraph)
+            if os.path.exists(f"{map_file_base}.data") and os.path.exists(f"{map_file_base}.posegraph"):
+                # Launch SLAM with preloaded map in mapping mode (allows adding to existing map)
+                # map_start_at_dock tells slam_toolbox to load and continue from the saved map
+                cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
+                       f"use_sim_time:=true "
+                       f"map_file_name:={map_file_base} "
+                       f"map_start_at_dock:=true "
+                       f"scan_topic:={scan_topic}")
+                self.status_label.configure(text=f"Loading SLAM map: {selected_costmap_name}...", text_color="#F1C40F")
+            else:
+                # Serialized SLAM map doesn't exist - this is likely a Nav2/AMCL map only
+                self.status_label.configure(text=f"Note: '{selected_costmap_name}' has no SLAM data. Starting new SLAM map...", text_color="#F39C12")
+                # Launch SLAM in new mapping mode
+                cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
+                       f"use_sim_time:=true "
+                       f"scan_topic:={scan_topic}")
         else:
             # Launch SLAM in mapping mode (create new map)
             cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
@@ -345,6 +414,17 @@ class SimManager(ctk.CTk):
 
     def toggle_rviz(self):
         rviz_config = f"{self.workspace_root}/src/esda_simulation_2025/config/view_bot.rviz"
+        # Add a small delay if SLAM was just launched to ensure map is published
+        if "SLAM" in self.processes and self.processes["SLAM"].poll() is None:
+            self.status_label.configure(text="Waiting for SLAM to publish map...", text_color="#F1C40F")
+            self.update()
+            threading.Thread(target=self._launch_rviz_delayed, args=(rviz_config,), daemon=True).start()
+        else:
+            cmd = f"rviz2 -d {rviz_config} --ros-args -p use_sim_time:=true"
+            self.run_in_terminal("RVIZ", cmd)
+    
+    def _launch_rviz_delayed(self, rviz_config):
+        time.sleep(2)  # Wait for SLAM to publish the map
         cmd = f"rviz2 -d {rviz_config} --ros-args -p use_sim_time:=true"
         self.run_in_terminal("RVIZ", cmd)
 
@@ -356,10 +436,17 @@ class SimManager(ctk.CTk):
     def kill_all(self):
         self.status_label.configure(text="Cleaning up Gazebo and processes...", text_color="#E74C3C")
         self.update()
-        # Kill processes and clean up shared memory segments that often cause FastDDS errors
-        subprocess.run("pkill -f ign && pkill -f gz && rm -rf /dev/shm/fastrtps_*", shell=True)
+        # Kill all Gazebo/Ignition instances aggressively
+        subprocess.run("killall -9 gzserver gzclient gazebo ruby gz ign ign-gazebo-server 2>/dev/null", shell=True)
+        subprocess.run("pkill -9 -f 'gz sim' 2>/dev/null", shell=True)
+        subprocess.run("pkill -9 -f ign 2>/dev/null", shell=True)
+        subprocess.run("pkill -9 -f gazebo 2>/dev/null", shell=True)
+        # Clean up shared memory segments that often cause FastDDS errors
+        subprocess.run("rm -rf /dev/shm/fastrtps_* /dev/shm/sem.* 2>/dev/null", shell=True)
+        # Kill our managed processes
         for name in list(self.processes.keys()):
             self.stop_process(name)
+        time.sleep(0.5)  # Give processes time to terminate
         self.status_label.configure(text="System Reset", text_color="#BDC3C7")
     
     def is_sim_running(self):
@@ -382,6 +469,19 @@ class SimManager(ctk.CTk):
         
         subprocess.Popen(cmd, shell=True)
         self.status_label.configure(text="Diagnostics window opened", text_color="#3498DB")
+    
+    def launch_waypoint_navigator(self):
+        """Launch the waypoint navigator UI"""
+        self.status_label.configure(text="Launching Waypoint Navigator...", text_color="#F1C40F")
+        self.update()
+        
+        cmd = f"python3 {self.workspace_root}/src/esda_simulation_2025/scripts/waypoint_navigator.py"
+        
+        try:
+            subprocess.Popen(cmd, shell=True)
+            self.status_label.configure(text="Waypoint Navigator launched", text_color="#2ECC71")
+        except Exception as e:
+            self.status_label.configure(text=f"Error launching: {str(e)}", text_color="#E74C3C")
 
 if __name__ == "__main__":
     app = SimManager()

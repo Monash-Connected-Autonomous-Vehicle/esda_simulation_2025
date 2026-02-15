@@ -15,6 +15,7 @@ def generate_launch_description():
     map_file_name = LaunchConfiguration('map_file_name')
     mode = LaunchConfiguration('mode')
     scan_topic = LaunchConfiguration('scan_topic')
+    map_start_at_dock = LaunchConfiguration('map_start_at_dock')
     default_params_file = os.path.join(get_package_share_directory("esda_simulation_2025"),
                                        'config', 'mapper_params_online_async.yaml')
 
@@ -38,6 +39,10 @@ def generate_launch_description():
         'scan_topic',
         default_value='/scan_fused',
         description='Laser scan topic for SLAM')
+    declare_map_start_at_dock_cmd = DeclareLaunchArgument(
+        'map_start_at_dock',
+        default_value='false',
+        description='Whether to start from the saved map dock position')
 
     # If the provided param file doesn't have slam_toolbox params, we must pass the
     # default_params_file instead. This could happen due to automatic propagation of
@@ -61,7 +66,8 @@ def generate_launch_description():
             'use_sim_time': use_sim_time,
             'map_file_name': map_file_name,
             'mode': mode,
-            'scan_topic': scan_topic
+            'scan_topic': scan_topic,
+            'map_start_at_dock': map_start_at_dock
           }
         ],
         package='slam_toolbox',
@@ -76,6 +82,7 @@ def generate_launch_description():
     ld.add_action(declare_map_file_name_cmd)
     ld.add_action(declare_mode_cmd)
     ld.add_action(declare_scan_topic_cmd)
+    ld.add_action(declare_map_start_at_dock_cmd)
     ld.add_action(log_param_change)
     ld.add_action(start_async_slam_toolbox_node)
 
