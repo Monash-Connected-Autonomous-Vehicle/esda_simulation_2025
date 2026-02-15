@@ -1,5 +1,0 @@
-In file included from [01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp:1[m[K:
-[01m[K/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/include/esda_hardware_2025/esda_hardware_2025.hpp:43:60:[m[K [01;35m[Kwarning: [m[Kextra ‘[01m[K;[m[K’ [[01;35m[K-Wpedantic[m[K]
-   43 |             RCLCPP_SHARED_PTR_DEFINITIONS(EsdaHardware2025)[01;35m[K;[m[K
-      |                                                            [01;35m[K^[m[K
-      |                                                            [31m[K-[m[K
