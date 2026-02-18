@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025
+CMAKE_SOURCE_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025
+CMAKE_BINARY_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025
 
 # Include any dependencies generated for this target.
 include CMakeFiles/esda_hardware_2025.dir/depend.make
@@ -70,18 +70,18 @@ include CMakeFiles/esda_hardware_2025.dir/progress.make
 include CMakeFiles/esda_hardware_2025.dir/flags.make
 
 CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: CMakeFiles/esda_hardware_2025.dir/flags.make
-CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp
+CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp
 CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: CMakeFiles/esda_hardware_2025.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o"
-	/usr/lib/ccache/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o -MF CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o.d -o CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o -c /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o"
+	/usr/lib/ccache/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o -MF CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o.d -o CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o -c /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp
 
 CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.i"
-	/usr/lib/ccache/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp > CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.i
+	/usr/lib/ccache/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp > CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.i
 
 CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.s"
-	/usr/lib/ccache/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp -o CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.s
+	/usr/lib/ccache/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp -o CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.s
 
 # Object files for target esda_hardware_2025
 esda_hardware_2025_OBJECTS = \
@@ -286,7 +286,7 @@ libesda_hardware_2025.so: /opt/ros/humble/lib/librosidl_runtime_c.so
 libesda_hardware_2025.so: /opt/ros/humble/lib/librcutils.so
 libesda_hardware_2025.so: /usr/lib/x86_64-linux-gnu/libpython3.10.so
 libesda_hardware_2025.so: CMakeFiles/esda_hardware_2025.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared library libesda_hardware_2025.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared library libesda_hardware_2025.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/esda_hardware_2025.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -298,6 +298,6 @@ CMakeFiles/esda_hardware_2025.dir/clean:
 .PHONY : CMakeFiles/esda_hardware_2025.dir/clean
 
 CMakeFiles/esda_hardware_2025.dir/depend:
-	cd /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/Asterius_MK2_ws/esda_simulation/build/esda_hardware_2025/CMakeFiles/esda_hardware_2025.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/CMakeFiles/esda_hardware_2025.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/esda_hardware_2025.dir/depend
 
