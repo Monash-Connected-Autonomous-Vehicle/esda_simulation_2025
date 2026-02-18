@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <authoring_tool>Ground generator</authoring_tool>
+    </contributor>
+    <created>2026-01-11T00:00:00Z</created>
+    <modified>2026-01-11T00:00:00Z</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+
+  <!-- Use the PNG from your tree:
+       orange_igvc/meshes/ground.dae
+       orange_igvc/materials/textures/ground.png
+       Relative path from meshes/ -> materials/textures/ is ../materials/textures/
+  -->
+  <library_images>
+    <image id="ground_png" name="ground_png">
+      <init_from>../materials/textures/ground.png</init_from>
+    </image>
+  </library_images>
+
+  <library_effects>
+    <effect id="ground_fx" name="ground_fx">
+      <profile_COMMON>
+        <newparam sid="ground_surface">
+          <surface type="2D">
+            <init_from>ground_png</init_from>
+          </surface>
+        </newparam>
+
+        <newparam sid="ground_sampler">
+          <sampler2D>
+            <source>ground_surface</source>
+          </sampler2D>
+        </newparam>
+
+        <technique sid="common">
+          <phong>
+            <diffuse>
+              <texture texture="ground_sampler" texcoord="UVSET0"/>
+            </diffuse>
+            <ambient>
+              <color>0.2 0.2 0.2 1</color>
+            </ambient>
+            <specular>
+              <color>0.0 0.0 0.0 1</color>
+            </specular>
+            <shininess>
+              <float>5.0</float>
+            </shininess>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+
+  <library_materials>
+    <material id="ground_mat" name="ground_mat">
+      <instance_effect url="#ground_fx"/>
+    </material>
+  </library_materials>
+
+  <library_geometries>
+    <geometry id="ground_geo" name="ground">
+      <mesh>
+        <!-- Positions: 43 x 37 plane centered at origin -->
+        <source id="ground_pos">
+          <float_array id="ground_pos_array" count="12">
+            -21.5 -18.5 0
+             21.5 -18.5 0
+             21.5  18.5 0
+            -21.5  18.5 0
+          </float_array>
+          <technique_common>
+            <accessor source="#ground_pos_array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+
+        <!-- Normals -->
+        <source id="ground_nrm">
+          <float_array id="ground_nrm_array" count="12">
+            0 0 1
+            0 0 1
+            0 0 1
+            0 0 1
+          </float_array>
+          <technique_common>
+            <accessor source="#ground_nrm_array" count="4" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+
+        <!-- UVs (stretches texture across the whole ground; change to >1 for tiling) -->
+        <source id="ground_uv">
+          <float_array id="ground_uv_array" count="8">
+            0 0
+            1 0
+            1 1
+            0 1
+          </float_array>
+          <technique_common>
+            <accessor source="#ground_uv_array" count="4" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+
+        <vertices id="ground_vtx">
+          <input semantic="POSITION" source="#ground_pos"/>
+        </vertices>
+
+        <!-- Two triangles, with per-vertex normals + UVs -->
+        <triangles count="2" material="ground_mat">
+          <input semantic="VERTEX" source="#ground_vtx" offset="0"/>
+          <input semantic="NORMAL" source="#ground_nrm" offset="1"/>
+          <input semantic="TEXCOORD" source="#ground_uv" offset="2" set="0"/>
+          <p>
+            0 0 0   1 1 1   2 2 2
+            2 2 2   3 3 3   0 0 0
+          </p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="ground_node" name="ground_node">
+        <instance_geometry url="#ground_geo">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="ground_mat" target="#ground_mat">
+                <!-- Bind UVSET0 to TEXCOORD set=0 -->
+                <bind_vertex_input semantic="UVSET0" input_semantic="TEXCOORD" input_set="0"/>
+              </instance_material>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>

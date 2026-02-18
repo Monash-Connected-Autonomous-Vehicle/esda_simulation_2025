@@ -1,0 +1,14 @@
+{
+    "configuration": "default",
+    "documentId": "aa064596d93db1f39259b834",
+    "documentMicroversion": "8636a9adfac0bab44fff82a3",
+    "documentVersion": "bc97efe5748d5280a6567fb0",
+    "elementId": "42b46512fb2b9edbc01ad5e2",
+    "fullConfiguration": "default",
+    "id": "M9E4o2vbWqd8VRWIF",
+    "isStandardContent": false,
+    "name": "FCID_LIDAR_FIN <1>",
+    "partId": "RfLD",
+    "suppressed": false,
+    "type": "Part"
+}

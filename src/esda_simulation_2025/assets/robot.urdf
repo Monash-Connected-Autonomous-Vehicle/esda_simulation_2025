@@ -1,0 +1,845 @@
+<?xml version="1.0" ?>
+<!-- Generated using onshape-to-robot -->
+<!-- Onshape document_id: 156424edd687d78617c86c6b -->
+<robot name="C:\URDF">
+    <!-- Link urdf_drve_wheel_assembly -->
+    <link name="urdf_drve_wheel_assembly">
+        <inertial>
+            <origin xyz="0.324722 -0.995092 -0.120257" rpy="0 0 0"/>
+            <mass value="2.46468"/>
+            <inertia ixx="0.0210846" ixy="-9.45889e-10" ixz="-2.03772e-09" iyy="0.0132215" iyz="5.21376e-10" izz="0.0132215"/>
+        </inertial>
+        <!-- Part bort_rim -->
+        <visual>
+            <origin xyz="0.331774 -0.995092 -0.120257" rpy="6.14407e-15 0.434592 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\bort_rim.stl"/>
+            </geometry>
+            <material name="bort_rim_material">
+                <color rgba="0.372549 0.368627 0.368627 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.331774 -0.995092 -0.120257" rpy="6.14407e-15 0.434592 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\bort_rim.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_output_carrier -->
+        <visual>
+            <origin xyz="0.238774 -0.995092 -0.120257" rpy="2.52899 -3.29145e-15 3.14159"/>
+            <geometry>
+                <mesh filename="package://assets\drve_output_carrier.stl"/>
+            </geometry>
+            <material name="drve_output_carrier_material">
+                <color rgba="0.231373 0.380392 0.705882 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.238774 -0.995092 -0.120257" rpy="2.52899 -3.29145e-15 3.14159"/>
+            <geometry>
+                <mesh filename="package://assets\drve_output_carrier.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part bort_tire -->
+        <visual>
+            <origin xyz="0.331774 -0.995092 -0.120257" rpy="-3.14159 -1.1362 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\bort_tire.stl"/>
+            </geometry>
+            <material name="bort_tire_material">
+                <color rgba="0.141176 0.141176 0.141176 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.331774 -0.995092 -0.120257" rpy="-3.14159 -1.1362 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\bort_tire.stl"/>
+            </geometry>
+        </collision>
+    </link>
+    <!-- Link urdf_rigid_v2 -->
+    <link name="urdf_rigid_v2">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0"/>
+            <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+        </inertial>
+        <!-- Part fcid_welded_body__configuration_ali_2mm -->
+        <visual>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_welded_body__configuration_ali_2mm.stl"/>
+            </geometry>
+            <material name="fcid_welded_body__configuration_ali_2mm_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_welded_body__configuration_ali_2mm.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_gps_fin -->
+        <visual>
+            <origin xyz="0.490084 -0.150796 -0.282125" rpy="-2.20058 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_gps_fin.stl"/>
+            </geometry>
+            <material name="fcid_gps_fin_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.490084 -0.150796 -0.282125" rpy="-2.20058 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_gps_fin.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_lidar_fin -->
+        <visual>
+            <origin xyz="0.484201 -0.15757 -0.282354" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_lidar_fin.stl"/>
+            </geometry>
+            <material name="fcid_lidar_fin_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.484201 -0.15757 -0.282354" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_lidar_fin.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_lid__configuration_ali_2mm -->
+        <visual>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_lid__configuration_ali_2mm.stl"/>
+            </geometry>
+            <material name="fcid_lid__configuration_ali_2mm_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_lid__configuration_ali_2mm.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_body_right__configuration_ali_2mm -->
+        <visual>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_body_right__configuration_ali_2mm.stl"/>
+            </geometry>
+            <material name="fcid_body_right__configuration_ali_2mm_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_body_right__configuration_ali_2mm.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_divider_mount__configuration_ali_2mm -->
+        <visual>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_divider_mount__configuration_ali_2mm.stl"/>
+            </geometry>
+            <material name="fcid_divider_mount__configuration_ali_2mm_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_divider_mount__configuration_ali_2mm.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_camera_mount -->
+        <visual>
+            <origin xyz="0.469199 -0.153954 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_camera_mount.stl"/>
+            </geometry>
+            <material name="fcid_camera_mount_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.469199 -0.153954 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_camera_mount.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_rear__configuration_ali_2mm -->
+        <visual>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_rear__configuration_ali_2mm.stl"/>
+            </geometry>
+            <material name="fcid_rear__configuration_ali_2mm_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_rear__configuration_ali_2mm.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_divider__configuration_ali_2mm -->
+        <visual>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_divider__configuration_ali_2mm.stl"/>
+            </geometry>
+            <material name="fcid_divider__configuration_ali_2mm_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_divider__configuration_ali_2mm.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part fcid_body_left__configuration_ali_2mm -->
+        <visual>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_body_left__configuration_ali_2mm.stl"/>
+            </geometry>
+            <material name="fcid_body_left__configuration_ali_2mm_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.486251 -0.158399 -0.282125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\fcid_body_left__configuration_ali_2mm.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part velodyne_vlp16 -->
+        <visual>
+            <origin xyz="0.560407 0.0981063 -0.282354" rpy="-4.83258e-15 6.44901e-15 -0.612605"/>
+            <geometry>
+                <mesh filename="package://assets\velodyne_vlp16.stl"/>
+            </geometry>
+            <material name="velodyne_vlp16_material">
+                <color rgba="0.74902 0.74902 0.74902 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.560407 0.0981063 -0.282354" rpy="-4.83258e-15 6.44901e-15 -0.612605"/>
+            <geometry>
+                <mesh filename="package://assets\velodyne_vlp16.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part bort_motor -->
+        <visual>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\bort_motor.stl"/>
+            </geometry>
+            <material name="bort_motor_material">
+                <color rgba="0.654902 0.823529 0.576471 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\bort_motor.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_arm_bracket -->
+        <visual>
+            <origin xyz="0 -1.66533e-16 -0.08225" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_arm_bracket.stl"/>
+            </geometry>
+            <material name="drve_arm_bracket_material">
+                <color rgba="0.8 0.8 0.8 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 -1.66533e-16 -0.08225" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_arm_bracket.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_bottom_plate -->
+        <visual>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_bottom_plate.stl"/>
+            </geometry>
+            <material name="drve_bottom_plate_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_bottom_plate.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_top_plate -->
+        <visual>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_top_plate.stl"/>
+            </geometry>
+            <material name="drve_top_plate_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_top_plate.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_middle -->
+        <visual>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_middle.stl"/>
+            </geometry>
+            <material name="drve_middle_material">
+                <color rgba="0.501961 0.501961 0.501961 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 -1.11022e-16 -0.062" rpy="-1.53959 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_middle.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic.stl"/>
+            </geometry>
+            <material name="optic_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic_2 -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic.stl"/>
+            </geometry>
+            <material name="optic_2_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic_3 -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__2.stl"/>
+            </geometry>
+            <material name="optic_3_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__2.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part zed2_ip_outer_with_lens_v8 -->
+        <visual>
+            <origin xyz="0.373352 0.122099 -0.273156" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\zed2_ip_outer_with_lens_v8.stl"/>
+            </geometry>
+            <material name="zed2_ip_outer_with_lens_v8_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.373352 0.122099 -0.273156" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\zed2_ip_outer_with_lens_v8.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic_4 -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__3.stl"/>
+            </geometry>
+            <material name="optic_4_material">
+                <color rgba="0.192157 0.192157 0.192157 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__3.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic_5 -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__3.stl"/>
+            </geometry>
+            <material name="optic_5_material">
+                <color rgba="0.192157 0.192157 0.192157 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__3.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic_6 -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__4.stl"/>
+            </geometry>
+            <material name="optic_6_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.342125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__4.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic_7 -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__2.stl"/>
+            </geometry>
+            <material name="optic_7_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__2.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part zed2_ip_outer_with_lens_v8_2 -->
+        <visual>
+            <origin xyz="0.373352 0.122099 -0.273156" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\zed2_ip_outer_with_lens_v8__2.stl"/>
+            </geometry>
+            <material name="zed2_ip_outer_with_lens_v8_2_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.373352 0.122099 -0.273156" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\zed2_ip_outer_with_lens_v8__2.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part zed2_ip_outer_with_lens_v8_3 -->
+        <visual>
+            <origin xyz="0.373352 0.122099 -0.273156" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\zed2_ip_outer_with_lens_v8__3.stl"/>
+            </geometry>
+            <material name="zed2_ip_outer_with_lens_v8_3_material">
+                <color rgba="0.286275 0.286275 0.286275 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.373352 0.122099 -0.273156" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\zed2_ip_outer_with_lens_v8__3.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part optic_8 -->
+        <visual>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__4.stl"/>
+            </geometry>
+            <material name="optic_8_material">
+                <color rgba="0.964706 0.964706 0.952941 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.383794 0.125324 -0.222125" rpy="-2.1834 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\optic__4.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part bort_motor_2 -->
+        <visual>
+            <origin xyz="-1.21014e-14 4.05231e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\bort_motor.stl"/>
+            </geometry>
+            <material name="bort_motor_2_material">
+                <color rgba="0.654902 0.823529 0.576471 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-1.21014e-14 4.05231e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\bort_motor.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_arm_bracket_2 -->
+        <visual>
+            <origin xyz="-1.18794e-14 4.16334e-15 -0.482" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_arm_bracket.stl"/>
+            </geometry>
+            <material name="drve_arm_bracket_2_material">
+                <color rgba="0.8 0.8 0.8 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-1.18794e-14 4.16334e-15 -0.482" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_arm_bracket.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_bottom_plate_2 -->
+        <visual>
+            <origin xyz="-1.23235e-14 4.21885e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_bottom_plate.stl"/>
+            </geometry>
+            <material name="drve_bottom_plate_2_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-1.23235e-14 4.21885e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_bottom_plate.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_top_plate_2 -->
+        <visual>
+            <origin xyz="-1.23235e-14 4.21885e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_top_plate.stl"/>
+            </geometry>
+            <material name="drve_top_plate_2_material">
+                <color rgba="0.917647 0.917647 0.917647 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-1.23235e-14 4.21885e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_top_plate.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_middle_2 -->
+        <visual>
+            <origin xyz="-1.23235e-14 4.21885e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_middle.stl"/>
+            </geometry>
+            <material name="drve_middle_2_material">
+                <color rgba="0.501961 0.501961 0.501961 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-1.23235e-14 4.21885e-15 -0.50225" rpy="-2.23032 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_middle.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part arm_endcap -->
+        <visual>
+            <origin xyz="0.118543 -0.091911 -0.483125" rpy="-0.911273 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_endcap.stl"/>
+            </geometry>
+            <material name="arm_endcap_material">
+                <color rgba="0.121569 0.121569 0.121569 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.118543 -0.091911 -0.483125" rpy="-0.911273 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_endcap.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part arm_endcap_2 -->
+        <visual>
+            <origin xyz="0.118543 -0.091911 -0.081125" rpy="-0.911273 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_endcap.stl"/>
+            </geometry>
+            <material name="arm_endcap_2_material">
+                <color rgba="0.121569 0.121569 0.121569 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.118543 -0.091911 -0.081125" rpy="-0.911273 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_endcap.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part arm_rhs -->
+        <visual>
+            <origin xyz="0.118543 -0.091911 -0.483125" rpy="-0.911273 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_rhs.stl"/>
+            </geometry>
+            <material name="arm_rhs_material">
+                <color rgba="0.8 0.8 0.8 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.118543 -0.091911 -0.483125" rpy="-0.911273 1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_rhs.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part arm_rhs_2 -->
+        <visual>
+            <origin xyz="0.149927 -0.00467996 -0.081125" rpy="1.53959 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_rhs.stl"/>
+            </geometry>
+            <material name="arm_rhs_2_material">
+                <color rgba="0.8 0.8 0.8 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0.149927 -0.00467996 -0.081125" rpy="1.53959 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\arm_rhs.stl"/>
+            </geometry>
+        </collision>
+    </link>
+    <!-- Link urdf_cstr_assembly_v2 -->
+    <link name="urdf_cstr_assembly_v2">
+        <inertial>
+            <origin xyz="1.5621e-07 -0.0357066 -0.0782487" rpy="0 0 0"/>
+            <mass value="0.252085"/>
+            <inertia ixx="0.0014392" ixy="-6.87264e-10" ixz="-2.53705e-09" iyy="0.000970124" iyz="-0.000416745" izz="0.000918439"/>
+        </inertial>
+        <!-- Part caster_arm_r -->
+        <visual>
+            <origin xyz="-0.0864 -0.17791 -0.159689" rpy="3.17155e-16 -0.0876147 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\caster_arm_r.stl"/>
+            </geometry>
+            <material name="caster_arm_r_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-0.0864 -0.17791 -0.159689" rpy="3.17155e-16 -0.0876147 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\caster_arm_r.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part bearing_spacer -->
+        <visual>
+            <origin xyz="0 0 -0.006" rpy="0 -1.54074e-33 1.27705e-17"/>
+            <geometry>
+                <mesh filename="package://assets\bearing_spacer.stl"/>
+            </geometry>
+            <material name="bearing_spacer_material">
+                <color rgba="0.8 0.8 0.8 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -0.006" rpy="0 -1.54074e-33 1.27705e-17"/>
+            <geometry>
+                <mesh filename="package://assets\bearing_spacer.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part caster_arm_r_2 -->
+        <visual>
+            <origin xyz="-0.0254 -0.17791 -0.159689" rpy="-2.46491e-15 -0.0876147 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\caster_arm_r.stl"/>
+            </geometry>
+            <material name="caster_arm_r_2_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-0.0254 -0.17791 -0.159689" rpy="-2.46491e-15 -0.0876147 1.5708"/>
+            <geometry>
+                <mesh filename="package://assets\caster_arm_r.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part part_1 -->
+        <visual>
+            <origin xyz="2.77556e-17 -0.015 -0.0958377" rpy="0 1.41391e-20 1.27705e-17"/>
+            <geometry>
+                <mesh filename="package://assets\part_1.stl"/>
+            </geometry>
+            <material name="part_1_material">
+                <color rgba="0.647059 0.647059 0.647059 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="2.77556e-17 -0.015 -0.0958377" rpy="0 1.41391e-20 1.27705e-17"/>
+            <geometry>
+                <mesh filename="package://assets\part_1.stl"/>
+            </geometry>
+        </collision>
+    </link>
+    <!-- Link urdf_cstr_wheel_assembly__configuration_default -->
+    <link name="urdf_cstr_wheel_assembly__configuration_default">
+        <inertial>
+            <origin xyz="6.26367e-17 -2.28362e-13 -0.025" rpy="0 0 0"/>
+            <mass value="0.45"/>
+            <inertia ixx="0.000707413" ixy="-4.40727e-18" ixz="-5.04462e-19" iyy="0.000707413" iyz="7.82969e-19" izz="0.00119057"/>
+        </inertial>
+        <!-- Part cstr_wheel_tyre -->
+        <visual>
+            <origin xyz="0 0 -0.025" rpy="-1.5708 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\cstr_wheel_tyre.stl"/>
+            </geometry>
+            <material name="cstr_wheel_tyre_material">
+                <color rgba="0.168627 0.168627 0.168627 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -0.025" rpy="-1.5708 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\cstr_wheel_tyre.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part cstr_wheel_rim -->
+        <visual>
+            <origin xyz="0 0 -0.025" rpy="-1.5708 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\cstr_wheel_rim.stl"/>
+            </geometry>
+            <material name="cstr_wheel_rim_material">
+                <color rgba="0.0901961 0.0901961 0.0901961 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -0.025" rpy="-1.5708 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\cstr_wheel_rim.stl"/>
+            </geometry>
+        </collision>
+    </link>
+    <!-- Joint from urdf_cstr_assembly_v2 to urdf_cstr_wheel_assembly__configuration_default -->
+    <joint name="wheelrear_speed" type="revolute">
+        <origin xyz="-0.025 -0.159386 -0.142" rpy="1.5708 0.870779 -1.5708"/>
+        <parent link="urdf_cstr_assembly_v2"/>
+        <child link="urdf_cstr_wheel_assembly__configuration_default"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+    </joint>
+    <!-- Joint from urdf_rigid_v2 to urdf_cstr_assembly_v2 -->
+    <joint name="caster" type="revolute">
+        <origin xyz="0.588877 -0.34114 -0.282125" rpy="1.5708 1.14232 2.52899"/>
+        <parent link="urdf_rigid_v2"/>
+        <child link="urdf_cstr_assembly_v2"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+    </joint>
+    <!-- Link urdf_drve_wheel_assembly_2 -->
+    <link name="urdf_drve_wheel_assembly_2">
+        <inertial>
+            <origin xyz="-1.11746e-08 6.45164e-09 -0.0239477" rpy="0 0 0"/>
+            <mass value="2.46468"/>
+            <inertia ixx="0.0132215" ixy="4.03722e-10" ixz="1.94557e-09" iyy="0.0132215" iyz="-1.12328e-09" izz="0.0210846"/>
+        </inertial>
+        <!-- Part bort_rim_2 -->
+        <visual>
+            <origin xyz="0 0 -0.031" rpy="1.5708 5.00379e-15 1.0472"/>
+            <geometry>
+                <mesh filename="package://assets\bort_rim.stl"/>
+            </geometry>
+            <material name="bort_rim_2_material">
+                <color rgba="0.372549 0.368627 0.368627 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -0.031" rpy="1.5708 5.00379e-15 1.0472"/>
+            <geometry>
+                <mesh filename="package://assets\bort_rim.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part drve_output_carrier_2 -->
+        <visual>
+            <origin xyz="0 0 0.062" rpy="-1.5708 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_output_carrier.stl"/>
+            </geometry>
+            <material name="drve_output_carrier_2_material">
+                <color rgba="0.231373 0.380392 0.705882 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0.062" rpy="-1.5708 -1.5708 0"/>
+            <geometry>
+                <mesh filename="package://assets\drve_output_carrier.stl"/>
+            </geometry>
+        </collision>
+        <!-- Part bort_tire_2 -->
+        <visual>
+            <origin xyz="-1.11022e-16 -2.77556e-17 -0.031" rpy="-1.5708 1.39687e-15 -0.523599"/>
+            <geometry>
+                <mesh filename="package://assets\bort_tire.stl"/>
+            </geometry>
+            <material name="bort_tire_2_material">
+                <color rgba="0.141176 0.141176 0.141176 1.0"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="-1.11022e-16 -2.77556e-17 -0.031" rpy="-1.5708 1.39687e-15 -0.523599"/>
+            <geometry>
+                <mesh filename="package://assets\bort_tire.stl"/>
+            </geometry>
+        </collision>
+    </link>
+    <!-- Joint from urdf_rigid_v2 to urdf_drve_wheel_assembly_2 -->
+    <joint name="wheelright_speed" type="revolute">
+        <origin xyz="-1.27676e-14 4.21885e-15 -0.56425" rpy="-5.12554e-15 6.25685e-15 -0.659523"/>
+        <parent link="urdf_rigid_v2"/>
+        <child link="urdf_drve_wheel_assembly_2"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+    </joint>
+    <!-- Joint from urdf_drve_wheel_assembly to urdf_rigid_v2 -->
+    <joint name="wheelleft_speed" type="revolute">
+        <origin xyz="0.300774 -0.995092 -0.120257" rpy="1.5708 -0.612605 1.5708"/>
+        <parent link="urdf_drve_wheel_assembly"/>
+        <child link="urdf_rigid_v2"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+    </joint>
+</robot>

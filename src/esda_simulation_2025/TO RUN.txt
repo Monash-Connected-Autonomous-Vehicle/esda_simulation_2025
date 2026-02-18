@@ -1,0 +1,55 @@
+# RECOMMENDED: Use the GUI Manager for easier launch experience
+python3 src/esda_simulation_2025/scripts/ui_launch.py
+
+
+#manual via command line
+
+#IF YOU NEED OT REBUILD/SOURCE (BASHRC SHOULD DO IT FOR YOU)
+colcon build --packages-select esda_simulation_2025
+source install/setup.bash
+
+
+#STEP 1- run sim with or without LIDAR
+
+# Option A:
+ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:=true
+
+# Option B:
+ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:=false
+
+
+
+#STEP 2 - Launch SLAM if needed
+
+ros2 launch slam_toolbox online_async_launch.py \
+    use_sim_time:=true \
+    odom_frame:=my_robot_1/odom \
+    base_frame:=my_robot_1/base_link \
+    scan_topic:=/scan \
+    map_frame:=map
+
+
+#STEP 3 launch AMCL (pose finder)
+
+ros2 launch esda_simulation_2025 localization_launch.py \
+    use_sim_time:=true \
+    map:=/esda_sim_ws/src/esda_simulation_2025/maps/my_map.yaml \
+    amcl_base_frame_id:=my_robot_1/base_link \
+    amcl_odom_frame_id:=my_robot_1/odom
+
+
+#STEP 4 - launch NAV2
+ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:=True map_subscribe_transient_local:=true map:=/esda_sim_ws/src/esda_simulation_2025/maps/my_map.yaml
+
+
+#STEP 5 - launch rviz2 (type rviz2) and give initial pose estimate and goal and ur drivin' 
+MAKE SURE fixed frame in rviz2 is 'map' NOT 'odom' before this.
+
+
+#FOR TELEOP
+python3 src/esda_simulation_2025/scripts/teleop_wasd.py
+
+#TROUBLESHOOTING
+
+#TO CLEAR OLD GAZEBO STUFF - usual culprit of failed to load jointstate broadcaster etc...
+pkill -f ign && pkill -f gz

@@ -1,0 +1,14 @@
+{
+    "configuration": "default",
+    "documentId": "fee79eb5b51cb1b6ad7f9762",
+    "documentMicroversion": "c89f50ad94fc6b4ca2f7df4f",
+    "documentVersion": "05d28b7e778431c727d5a52e",
+    "elementId": "b4ed1c78b515a90483ab61b8",
+    "fullConfiguration": "default",
+    "id": "MGtdU8b71KsHsPpVi",
+    "isStandardContent": false,
+    "name": "DRVE_OUTPUT_CARRIER <1>",
+    "partId": "RcBD",
+    "suppressed": false,
+    "type": "Part"
+}
