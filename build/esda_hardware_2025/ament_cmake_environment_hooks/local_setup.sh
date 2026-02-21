@@ -2,7 +2,7 @@
 
 # since this file is sourced use either the provided AMENT_CURRENT_PREFIX
 # or fall back to the destination set at configure time
-: ${AMENT_CURRENT_PREFIX:="/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/install/esda_hardware_2025"}
+: ${AMENT_CURRENT_PREFIX:="/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/install/esda_hardware_2025"}
 if [ ! -d "$AMENT_CURRENT_PREFIX" ]; then
   if [ -z "$COLCON_CURRENT_PREFIX" ]; then
     echo "The compile time prefix path '$AMENT_CURRENT_PREFIX' doesn't " \

@@ -1,8 +1,8 @@
-# Install script for directory: /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025
+# Install script for directory: /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/install/esda_hardware_2025")
+  set(CMAKE_INSTALL_PREFIX "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/install/esda_hardware_2025")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -43,7 +43,7 @@ if(NOT DEFINED CMAKE_OBJDUMP)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  include("/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/ament_cmake_symlink_install/ament_cmake_symlink_install.cmake")
+  include("/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025/ament_cmake_symlink_install/ament_cmake_symlink_install.cmake")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
@@ -53,7 +53,7 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libesda_hardware_2025.so"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/libesda_hardware_2025.so")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025/libesda_hardware_2025.so")
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libesda_hardware_2025.so" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libesda_hardware_2025.so")
     file(RPATH_CHANGE
@@ -77,5 +77,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

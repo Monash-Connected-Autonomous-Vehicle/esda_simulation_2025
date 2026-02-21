@@ -1,7 +1,7 @@
 CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: \
- /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp \
+ /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025/hardware/esda_hardware_2025.cpp \
  /usr/include/stdc-predef.h \
- /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/include/esda_hardware_2025/esda_hardware_2025.hpp \
+ /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025/hardware/include/esda_hardware_2025/esda_hardware_2025.hpp \
  /usr/include/c++/11/memory /usr/include/c++/11/bits/stl_algobase.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
@@ -335,8 +335,8 @@ CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: \
  /usr/include/c++/11/bits/unordered_set.h \
  /opt/ros/humble/include/rclcpp/rclcpp/init_options.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/macros.hpp \
- /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/include/esda_hardware_2025/visibility_control.h \
- /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/include/esda_hardware_2025/stm_comms.hpp \
+ /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025/hardware/include/esda_hardware_2025/visibility_control.h \
+ /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025/hardware/include/esda_hardware_2025/stm_comms.hpp \
  /usr/include/c++/11/cstring /usr/include/libserial/SerialPort.h \
  /usr/include/libserial/SerialPortConstants.h /usr/include/termios.h \
  /usr/include/x86_64-linux-gnu/bits/termios.h \
@@ -668,7 +668,7 @@ CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/thread_safe_synchronization.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/detail/write_preferring_read_write_lock.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_template.hpp \
- /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025/hardware/include/esda_hardware_2025/wheels.hpp \
+ /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025/hardware/include/esda_hardware_2025/wheels.hpp \
  /opt/ros/humble/include/hardware_interface/types/hardware_interface_type_values.hpp \
  /opt/ros/humble/include/pluginlib/pluginlib/class_list_macros.hpp \
  /opt/ros/humble/include/class_loader/class_loader/class_loader.hpp \

@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025
+CMAKE_SOURCE_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025
+CMAKE_BINARY_DIR = /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025
 
 # Utility rule file for uninstall.
 
@@ -78,6 +78,6 @@ CMakeFiles/uninstall.dir/clean:
 .PHONY : CMakeFiles/uninstall.dir/clean
 
 CMakeFiles/uninstall.dir/depend:
-	cd /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/CMakeFiles/uninstall.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025 /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025/CMakeFiles/uninstall.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/uninstall.dir/depend
 

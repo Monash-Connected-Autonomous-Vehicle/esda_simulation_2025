@@ -1,7 +1,7 @@
 # generated from
 # ament_cmake_core/cmake/symlink_install/ament_cmake_symlink_install_uninstall_script.cmake.in
 
-set(install_manifest "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/symlink_install_manifest.txt")
+set(install_manifest "/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025/symlink_install_manifest.txt")
 if(NOT EXISTS "${install_manifest}")
   message(FATAL_ERROR "Cannot find symlink install manifest: ${install_manifest}")
 endif()

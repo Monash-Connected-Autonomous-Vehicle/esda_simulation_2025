@@ -13,7 +13,6 @@ class SimManager(ctk.CTk):
 
         self.title("ESDA Simulation Manager")
         self.geometry("700x540")
-        
 
         # Futuristic Appearance
         ctk.set_appearance_mode("dark")
@@ -87,6 +86,7 @@ class SimManager(ctk.CTk):
                                                  width=80, fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.world_browse_button.grid(row=0, column=2, padx=6, pady=3)
         
+        
         # Costmap File Selection
         self.costmap_label = ctk.CTkLabel(self.file_frame, text="Costmap YAML:", font=("Orbitron", 11), text_color=self.accent_purple, bg_color=self.bg_panel)
         self.costmap_label.grid(row=1, column=0, padx=6, pady=3, sticky="w")
@@ -148,7 +148,8 @@ class SimManager(ctk.CTk):
                            fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.teleop_button.grid(row=0, column=0, pady=6, padx=6, sticky="ew")
         
-        self.waypoint_button = ctk.CTkButton(self.teleop_frame, text="🎯 Waypoint Nav", command=self.launch_waypoint_navigator,
+        print("WDAWDAWDA")
+        self.waypoint_button = ctk.CTkButton(self.teleop_frame, text="Waypoint Nav", command=self.launch_waypoint_navigator,
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.waypoint_button.grid(row=0, column=1, pady=6, padx=6, sticky="ew")
         
@@ -527,5 +528,6 @@ class SimManager(ctk.CTk):
             self.status_label.configure(text=f"Error launching: {str(e)}", text_color="#E74C3C")
 
 if __name__ == "__main__":
+    # print("WDADWAWDW")
     app = SimManager()
     app.mainloop()

@@ -159,7 +159,7 @@ def generate_launch_description():
       DeclareLaunchArgument('spawn_x',         default_value='0.0'),
       DeclareLaunchArgument('spawn_y',         default_value='0.0'),
       DeclareLaunchArgument('world_file',      default_value=os.path.join(
-          get_package_share_directory(package_name), 'worlds', 'sim_world_igvc.sdf')),
+          get_package_share_directory(package_name), 'worlds', 'igvc.sdf')),
       rsp,
       ign_resource_path,
       ign_resource_path_legacy,

@@ -1,1 +1,1 @@
-/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_simulation_2025/build/esda_hardware_2025/ament_cmake_environment_hooks/local_setup.zsh
+/home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/build/esda_hardware_2025/ament_cmake_environment_hooks/local_setup.zsh
