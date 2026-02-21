@@ -152,21 +152,21 @@ CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: \
  /usr/include/c++/11/bits/stl_vector.h \
  /usr/include/c++/11/bits/stl_bvector.h \
  /usr/include/c++/11/bits/vector.tcc \
- /opt/ros/humble/include/hardware_interface/handle.hpp \
- /opt/ros/humble/include/hardware_interface/macros.hpp \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/handle.hpp \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/macros.hpp \
  /usr/include/c++/11/stdexcept \
  /opt/ros/humble/include/rcpputils/rcpputils/pointer_traits.hpp \
- /opt/ros/humble/include/hardware_interface/visibility_control.h \
- /opt/ros/humble/include/hardware_interface/hardware_info.hpp \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/visibility_control.h \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/hardware_info.hpp \
  /usr/include/c++/11/unordered_map /usr/include/c++/11/bits/hashtable.h \
  /usr/include/c++/11/bits/hashtable_policy.h \
  /usr/include/c++/11/bits/enable_special_members.h \
  /usr/include/c++/11/bits/node_handle.h \
  /usr/include/c++/11/bits/unordered_map.h \
  /usr/include/c++/11/bits/erase_if.h \
- /opt/ros/humble/include/hardware_interface/system_interface.hpp \
- /opt/ros/humble/include/hardware_interface/types/hardware_interface_return_values.hpp \
- /opt/ros/humble/include/hardware_interface/types/lifecycle_state_names.hpp \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/system_interface.hpp \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/types/hardware_interface_return_values.hpp \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/types/lifecycle_state_names.hpp \
  /opt/ros/humble/include/lifecycle_msgs/lifecycle_msgs/msg/state.hpp \
  /opt/ros/humble/include/lifecycle_msgs/lifecycle_msgs/msg/detail/state__struct.hpp \
  /usr/include/c++/11/algorithm /usr/include/c++/11/bits/stl_algo.h \
@@ -325,6 +325,7 @@ CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: \
  /opt/ros/humble/include/rcl_lifecycle/rcl_lifecycle/default_state_machine.h \
  /opt/ros/humble/include/rclcpp_lifecycle/rclcpp_lifecycle/state.hpp \
  /opt/ros/humble/include/rclcpp_lifecycle/rclcpp_lifecycle/visibility_control.h \
+ /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/detail/node_interfaces_helpers.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/clock.hpp \
  /usr/include/c++/11/mutex /usr/include/c++/11/bits/std_mutex.h \
  /usr/include/c++/11/bits/unique_lock.h \
@@ -669,7 +670,7 @@ CMakeFiles/esda_hardware_2025.dir/hardware/esda_hardware_2025.cpp.o: \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/detail/write_preferring_read_write_lock.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_template.hpp \
  /home/samuel/MCAV/ESDA/Asterius_MK2/esda_sim_ws/esda_sim_ws/src/esda_hardware_2025/hardware/include/esda_hardware_2025/wheels.hpp \
- /opt/ros/humble/include/hardware_interface/types/hardware_interface_type_values.hpp \
+ /opt/ros/humble/include/hardware_interface/hardware_interface/types/hardware_interface_type_values.hpp \
  /opt/ros/humble/include/pluginlib/pluginlib/class_list_macros.hpp \
  /opt/ros/humble/include/class_loader/class_loader/class_loader.hpp \
  /usr/include/c++/11/cstddef /usr/include/console_bridge/console.h \

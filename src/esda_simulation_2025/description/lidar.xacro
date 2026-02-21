@@ -31,7 +31,8 @@
         </xacro:inertial_cylinder>
     </link>
 
-    <gazebo reference="laser_frame">
+        
+    <gazebo reference="laser_frame"> 
         <material>Gazebo/Red</material>
         <sensor name='laser_frame' type='gpu_lidar'>
             <pose relative_to='laser_frame'>0 0 0 0 0 0</pose>
@@ -43,7 +44,7 @@
                     <horizontal>
                         <samples>360</samples>
                         <resolution>1</resolution>
-                        <min_angle>-3.14159</min_angle> <!-- -π radians -->
+                        <min_angle>-3.14159</min_angle> 
                         <max_angle>3.14159</max_angle>
                     </horizontal>
                     <vertical>
@@ -63,5 +64,7 @@
             <visualize>true</visualize>
         </sensor>
         
-    </gazebo>
+    </gazebo >
+
+
 </robot>

@@ -8,6 +8,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch.event_handlers import OnProcessStart
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_conditions import IfCondition
 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -29,7 +30,9 @@ def generate_launch_description():
     # 1. Robot description + TF
     # -------------------------------
     use_sim_time = LaunchConfiguration('use_sim_time', default = 'true')
+    use_lidar = LaunchConfiguration("use_lidar", default="false")
     package_name = 'esda_simulation_2025'
+
 
     sim_mode = LaunchConfiguration('sim_mode', default = 'false')
 
@@ -96,6 +99,36 @@ def generate_launch_description():
             on_start=[diff_drive_spawner],
         )
     )
+
+    # Launching LiDar
+    # velodyne_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         os.path.join(
+    #             get_package_share_directory('velodyne'),
+    #             'launch',
+    #             'velodyne-all-nodes-VLP16-launch.py'
+    #         )
+    #     ]),
+    #     launch_arguments = {
+    #         'params_file': os.path.join(
+    #             get_package_share_directory('esda_simulation_2025'),
+    #             'config',
+    #             'vlp16.yaml'
+    #         )
+    #     }.items()
+    # )
+
+    lidar = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory(package_name),
+                "launch",
+                "lidar.launch.py",
+            )
+        ),
+        condition = IfCondition(use_lidar)
+    )
+
 
     # Launch them all!
     return LaunchDescription([

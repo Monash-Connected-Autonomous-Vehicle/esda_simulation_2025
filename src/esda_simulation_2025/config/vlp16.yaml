@@ -1,0 +1,16 @@
+velodyne_driver_node:
+  ros__parameters:
+    device_ip: 192.168.10.201
+    port: 2368
+    frame_id: laser_frame
+    model: VLP16
+    rpm: 600.0
+
+velodyne_transform_node:
+  ros__parameters:
+    model: VLP16
+    fixed_frame: laser_frame
+
+velodyne_laserscan_node:
+  ros__parameters:
+    frame_id: laser_frame
