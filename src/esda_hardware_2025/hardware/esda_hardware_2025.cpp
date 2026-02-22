@@ -9,6 +9,38 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <filesystem>
+
+static std::string read_file(const std::string &path)
+{
+    std::ifstream file(path);
+    if (!file.is_open()) return "unknown";
+
+    std::string value;
+    std::getline(file, value);
+    return value;
+}
+
+static std::string get_usb_description(const std::string &tty)
+{
+    // tty = "/dev/ttyACM0" → "ttyACM0"
+    std::string name = std::filesystem::path(tty).filename();
+
+    std::string base = "/sys/class/tty/" + name + "/device/../";
+
+    std::string vendor  = read_file(base + "idVendor");
+    std::string product = read_file(base + "idProduct");
+    std::string manuf   = read_file(base + "manufacturer");
+    std::string prod    = read_file(base + "product");
+
+    std::stringstream ss;
+    ss << manuf << " " << prod << " (" << vendor << ":" << product << ")";
+    return ss.str();
+}
+
 namespace esda_hardware_2025 {
 
     hardware_interface::CallbackReturn EsdaHardware2025::on_init(const hardware_interface::HardwareInfo & info) {
@@ -125,6 +157,14 @@ namespace esda_hardware_2025 {
           comms_.disconnect();
         }
         comms_.connect(cfg_.device, cfg_.baud_rate, cfg_.timeout_ms);
+
+        // 🔹 Query USB identity    
+        std::string usb_desc = get_usb_description(cfg_.device);
+
+        RCLCPP_INFO(rclcpp::get_logger("EsdaHardware2025"),
+                    "Connected to: %s",
+                    usb_desc.c_str());
+
         RCLCPP_INFO(rclcpp::get_logger("EsdaHardware2025"), "Successfully configured!");
       
         return hardware_interface::CallbackReturn::SUCCESS;
@@ -177,6 +217,8 @@ namespace esda_hardware_2025 {
         pos_prev = wheel_r_.pos;
         wheel_r_.pos = wheel_r_.calc_enc_angle();
         wheel_r_.vel = (wheel_r_.pos - pos_prev) / delta_seconds;
+
+        
         
         return hardware_interface::return_type::OK;
     }
