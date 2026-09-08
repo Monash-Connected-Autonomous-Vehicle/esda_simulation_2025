@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from email.header import Header
+from std_msgs.msg import Header as ROSHeader
 import math
 import rclpy
 import numpy as np
@@ -14,9 +16,12 @@ from nav2_msgs.msg import Costmap
 from visualization_msgs.msg import Marker, MarkerArray
 from sensor_msgs import msg
 from tf2_ros import Buffer, TransformListener, TransformException
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, PointCloud2, PointField  
+import sensor_msgs_py.point_cloud2 as pc2
 from tf2_geometry_msgs import do_transform_point
 from nav_msgs.msg import Odometry
+
+
 
 class WaypointNavigator(Node):
     def __init__(self):
@@ -30,7 +35,7 @@ class WaypointNavigator(Node):
         
         self.declare_parameter('safety_bubble_radius', 0.5) # Safety bubble radius around the robot to avoid collisions
 
-        self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        # self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
         # Getting the parameter values
         self.map_topic = self.get_parameter('map_topic').get_parameter_value().string_value
@@ -179,34 +184,54 @@ class WaypointNavigator(Node):
             self.global_costmap_callback,
             10
         )
-	
-    def send_goal(self, goal_pose: PoseStamped):
-        goal_msg = NavigateToPose.Goal()
 
-        goal_msg.pose.header.frame_id = self.frame_id
-        goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
+        self.navigation_timer = self.create_timer(
+            0.2,
+            self.check_navigation_complete
+        )
 
-        goal_msg.pose.pose.position.x = goal_pose.pose.position.x
-        goal_msg.pose.pose.position.y = goal_pose.pose.position.y
-        goal_msg.pose.pose.position.z = 0.0
+        self.gps_waypoints = []
 
-        goal_msg.pose.pose.orientation = goal_pose.pose.orientation
+        # Travel history to prevent sending waypoints behind robot
+        self.travel_history_publisher = self.create_publisher(
+            PointCloud2,
+            '/travel_history',
+            10
+        )
 
-        if not self.client.server_is_ready():
+        self.travel_history_points = []
+        self.last_travel_marker = None
+        self.travel_marker_spacing = 2.5
+
+    def send_goal(self, goal_pose: PoseStamped, mode="normal"):
+        """
+        Send a Nav2 goal using BasicNavigator.
+
+        mode:
+            "normal"   -> normal lane/forward waypoint
+            "recovery" -> recovery waypoint
+        """
+
+        if self.goal_in_progress:
             self.get_logger().warn(
-                "NavigateToPose action server is not ready."
+                "Cannot send goal: another Nav2 goal is already active."
             )
-            self.goal_in_progress = False
             return
 
-        self._send_goal_future = self.client.send_goal_async(
-            goal_msg,
-            feedback_callback=self.feedback_callback
+        goal_pose.header.frame_id = self.frame_id
+        goal_pose.header.stamp = self.get_clock().now().to_msg()
+
+        self.get_logger().warn(
+            f"Sending {mode} goal: "
+            f"x={goal_pose.pose.position.x:.2f}, "
+            f"y={goal_pose.pose.position.y:.2f}"
         )
 
-        self._send_goal_future.add_done_callback(
-            self.goal_response_callback
-        )
+        self.goal_in_progress = True
+        self.navigation_mode = mode
+        self.last_sent_goal = goal_pose
+
+        self.navigator.goToPose(goal_pose)
 
     def send_initial_forward_goal(self):
         if self.initial_forward_goal_sent:
@@ -268,96 +293,13 @@ class WaypointNavigator(Node):
         self.initial_forward_goal_sent = True
         self.initial_goal_timer.cancel()
 
-        self.goal_in_progress = True
-        self.last_sent_goal = goal
-
-        self.send_goal(goal)
-
-    def goal_response_callback(self, future):
-        try:
-            goal_handle = future.result()
-        except Exception as ex:
-            self.get_logger().error(
-                f"Failed to send goal: {ex}"
-            )
-            self.goal_in_progress = False
-            self.latest_forward_goal = None
-            return
-
-        if not goal_handle.accepted:
-            self.get_logger().warn(
-                "Goal rejected. Allowing a new waypoint to be generated."
-            )
-
-            # The robot was never navigating to this waypoint because
-            # Nav2 rejected it.
-            self.goal_in_progress = False
-            self.latest_forward_goal = None
-            return
-
-        self.get_logger().info("Goal accepted!")
-
-        self._goal_handle = goal_handle
-
-
-        self._result_future = goal_handle.get_result_async()
-        self._result_future.add_done_callback(
-            self.arrival_callback
+        self.send_goal(
+            goal,
+            mode="normal"
         )
 
-    
-
-    def feedback_callback(self, feedback_msg):
-        feedback = feedback_msg.feedback
-
-        self.get_logger().warn(
-            f"NAV2 FEEDBACK | "
-            f"distance_remaining={feedback.distance_remaining:.2f} m, "
-            f"navigation_time="
-            f"{feedback.navigation_time.sec}."
-            f"{feedback.navigation_time.nanosec:09d} s, "
-            f"recoveries={feedback.number_of_recoveries}"
-        )
-
-    def arrival_callback(self, future):
-        try:
-            wrapped_result = future.result()
-            status = wrapped_result.status
-
-        except Exception as ex:
-            self.get_logger().error(
-                f"Failed to obtain navigation result: {ex}"
-            )
-            
-            return
-
-        if status == 4:  # STATUS_SUCCEEDED
-            self.get_logger().info(
-                "Robot reached the waypoint. "
-                "A new waypoint may now be generated."
-            )
-
-            # Only now allow the next waypoint to be calculated.
-            self.enter_recovery_mode = False
-            self.goal_in_progress = False
-            self.latest_forward_goal = None
-            self.last_sent_goal = None
-
-        else:
-            self.get_logger().error(
-                f"Navigation did not reach the waypoint. "
-                f"Status: {status}. "
-                f"New waypoint generation remains locked."
-            )
-
-            # The failed Nav2 goal is finished.
-            self.goal_in_progress = False
-            self.latest_forward_goal = None
-            self.last_sent_goal = None
-
-            # Recovery now owns the robot. It will attempt to get the robot back on track.
-            self.enter_recovery_mode = True
-            self.robot_recovery()
+    def pull_towards_gps_waypoints(self):
+        pass
 
     def send_latest_forward_goal(self):
         """
@@ -408,10 +350,10 @@ class WaypointNavigator(Node):
             f"Sending forward waypoint: x={goal_x:.2f}, y={goal_y:.2f}"
         )
 
-        self.goal_in_progress = True
-        self.last_sent_goal = self.latest_forward_goal
-        
-        self.send_goal(self.latest_forward_goal)
+        self.send_goal(
+            self.latest_forward_goal,
+            mode="normal"
+        )
 
     def odometry_callback(self, msg: Odometry):
         self.current_velocity = msg.twist.twist.linear
@@ -497,6 +439,7 @@ class WaypointNavigator(Node):
         self.robot_x = transform.transform.translation.x
         self.robot_y = transform.transform.translation.y
 
+
     
 
         # Robot orientation in the map frame.
@@ -511,6 +454,8 @@ class WaypointNavigator(Node):
         )
 
         self.current_pose = (self.robot_x, self.robot_y, self.robot_yaw)
+
+        self.update_travel_history()
 
         lane_goal = self.calculate_lane_goal()
 
@@ -1778,6 +1723,7 @@ class WaypointNavigator(Node):
                 "No reachable recovery goal found."
             )
             self.enter_recovery_mode = True
+            self.schedule_recovery_retry()
             return
 
         self.get_logger().warn(
@@ -1786,15 +1732,22 @@ class WaypointNavigator(Node):
             f"y={recovery_goal.pose.position.y:.2f}"
         )
 
-        self.navigator.goToPose(recovery_goal)
-
-        self.recovery_timer = self.create_timer(
-            0.2,
-            self.check_recovery_complete
+        self.send_goal(
+            recovery_goal,
+            mode="recovery"
         )
 
     def retry_recovery_goal(self):
-        pass
+        self.recovery_retry_timer.cancel()
+        del self.recovery_retry_timer
+
+        if not self.enter_recovery_mode:
+            return
+
+        if self.goal_in_progress:
+            return
+
+        self.robot_recovery()
 
     def find_front_recovery_goal(self):
         if self.map_data is None:
@@ -2125,31 +2078,137 @@ class WaypointNavigator(Node):
 
         return None
 
+    def update_travel_history(self):
+        if self.current_pose is None:
+            return
+        
+        current_x = self.robot_x
+        current_y = self.robot_y
 
-    def check_recovery_complete(self):
+        # First last travel marker append
+        if self.last_travel_marker is None:
+            self.last_travel_marker = (current_x, current_y)
+
+            self.travel_history_points.append(
+                (current_x, current_y)
+            )
+
+            self.publish_travel_history_marker()
+            return
+        
+        last_x, last_y = self.last_travel_marker
+
+        distance_moved = math.hypot(
+            current_x - last_x,
+            current_y - last_y
+        )
+
+        if distance_moved < self.travel_marker_spacing:
+            return
+        
+        self.last_travel_marker = (current_x, current_y)
+        self.travel_history_points.append((current_x, current_y))
+
+        self.publish_travel_history_marker()
+
+    def publish_travel_history_marker(self):
+        if not self.travel_history_points:
+            return
+
+        header = ROSHeader()
+        header.frame_id = self.frame_id
+        header.stamp = (self.get_clock().now().to_msg())
+
+        cloud = pc2.create_cloud_xyz32(
+            header,
+            [(x, y, 0.0) for x, y in self.travel_history_points]
+        )
+
+        self.travel_history_publisher.publish(
+            cloud
+        )
+
+    def check_navigation_complete(self):
+        if not self.goal_in_progress:
+            return
+
+        # Get feedback while the task is active
+        feedback = self.navigator.getFeedback()
+
+        if feedback is not None:
+            self.get_logger().info(
+                f"NAV2 FEEDBACK | "
+                f"mode={self.navigation_mode}, "
+                f"distance_remaining="
+                f"{feedback.distance_remaining:.2f} m, "
+                f"recoveries={feedback.number_of_recoveries}"
+            )
+
         if not self.navigator.isTaskComplete():
             return
 
         result = self.navigator.getResult()
 
-        self.recovery_timer.cancel()
+        completed_mode = self.navigation_mode
+
+        self.goal_in_progress = False
+        self.navigation_mode = None
+
+        self.latest_forward_goal = None
+        self.last_sent_goal = None
 
         if result == TaskResult.SUCCEEDED:
-            self.get_logger().warn(
-                "Recovery movement succeeded. Resuming normal navigation."
-            )
 
-            self.enter_recovery_mode = False
-            self.goal_in_progress = False
-            self.latest_forward_goal = None
-            self.last_sent_goal = None
+            if completed_mode == "normal":
+                self.get_logger().info(
+                    "Normal waypoint reached."
+                )
 
-        else:
+                self.enter_recovery_mode = False
+
+            elif completed_mode == "recovery":
+                self.get_logger().warn(
+                    "Recovery movement succeeded. "
+                    "Resuming normal navigation."
+                )
+
+                self.enter_recovery_mode = False
+
+            return
+
+        # ------------------------------------------------------
+        # Navigation failed
+        # ------------------------------------------------------
+
+        if completed_mode == "normal":
             self.get_logger().error(
-                f"Recovery movement failed. Result: {result}"
+                f"Normal navigation failed. Result: {result}. "
+                f"Entering recovery mode."
             )
 
             self.enter_recovery_mode = True
+            self.robot_recovery()
+
+        elif completed_mode == "recovery":
+            self.get_logger().error(
+                f"Recovery navigation failed. Result: {result}."
+            )
+
+            self.enter_recovery_mode = True
+            self.schedule_recovery_retry()
+
+    def schedule_recovery_retry(self):
+        if hasattr(self, "recovery_retry_timer"):
+            return
+
+        self.get_logger().warn(
+            "Retrying recovery search in 1 second."
+        )
+
+        self.recovery_retry_timer = self.create_timer(
+            1.0,
+            self.retry_recovery_goal
+        )
 
     def send_far_goal(self, goal_pose: PoseStamped):
         """
@@ -2217,6 +2276,7 @@ class WaypointNavigator(Node):
         # Acquiring the map data
         self.global_costmap_data = msg.data
    	
+    
 
 if __name__ == '__main__':
     # import rclpy

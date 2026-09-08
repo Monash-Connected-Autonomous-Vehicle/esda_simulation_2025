@@ -253,7 +253,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 2.4
-        inflation_radius: 1.0
+        inflation_radius: 0.1
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -294,72 +294,103 @@ local_costmap:
         map_subscribe_transient_local: True
       always_send_full_costmap: True
       introspection_mode: "disabled"
-
+      
 global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: True
-      update_frequency: 1.0
-      publish_frequency: 0.5
+
       global_frame: map
       robot_base_frame: base_link
+
       robot_radius: 0.45
       resolution: 0.05
+
       rolling_window: false
       track_unknown_space: true
-      width: 50
-      height: 50
-      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
-      # filters: ["keepout_filter", "speed_filter"]
-      keepout_filter:
-        plugin: "nav2_costmap_2d::KeepoutFilter"
-        enabled: True
-        filter_info_topic: "keepout_costmap_filter_info"
-        override_lethal_cost: True
-        lethal_override_cost: 200
-      speed_filter:
-        plugin: "nav2_costmap_2d::SpeedFilter"
-        enabled: True
-        filter_info_topic: "speed_costmap_filter_info"
-        speed_limit_topic: "speed_limit"
+
+      plugins:
+        [
+          "static_layer",
+          "obstacle_layer",
+          "lane_layer",
+          "travel_history_layer",
+          "inflation_layer"
+        ]
+
+      # =========================
+      # LIDAR
+      # =========================
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan lane virtual_wall
+
+        observation_sources: scan
+
         scan:
-          # A relative topic will be appended to the parent of the global_costmap namespace.
-          # For example:
-          #   * User chosen namespace is `tb4`.
-          #   * User chosen topic is `scan`.
-          #   * Topic will be remapped to `/tb4/scan` without `global_costmap`.
-          #   * Use global topic `/scan` if you do not wish the node namespace to apply
           topic: /scan_fused
           max_obstacle_height: 2.0
+
           clearing: True
           marking: True
+
           data_type: "LaserScan"
+
           raytrace_max_range: 30.0
           raytrace_min_range: 0.0
+
           obstacle_max_range: 25.0
           obstacle_min_range: 0.0
+
+      # =========================
+      # LANES
+      # =========================
+      lane_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+
+        observation_sources: lane
+
         lane:
           topic: /lane_obstacles
-          max_obstacle_height: 2.0
+
+          data_type: "PointCloud2"
+
           clearing: False
           marking: True
-          data_type: "PointCloud2"
+
+          max_obstacle_height: 2.0
+          min_obstacle_height: -0.5
+
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
-          min_obstacle_height: -0.5
+
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
+
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
         inflation_radius: 0.55
-      always_send_full_costmap: True
-      introspection_mode: "disabled"
+
+      travel_history_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: travel_history
+        travel:
+          topic: /travel_history
+
+          data_type: "PointCloud2"
+
+          marking: True
+          clearing: False
+
+          max_obstacle_height: 2.0
+          min_obstacle_height: -1.0
+
+          obstacle_max_range: 100.0
+          obstacle_min_range: 0.0
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.
 # If you'd rather set it in the yaml, remove the default "map" value in the launch file(s).
