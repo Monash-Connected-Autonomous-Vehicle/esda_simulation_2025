@@ -1,0 +1,47 @@
+services:
+  esda:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Flip to "true" to bake in the optional lane detectors.
+        INSTALL_TORCH: "false"
+        INSTALL_TENSORFLOW: "false"
+    image: esda_simulation_2025:humble
+    container_name: esda_sim
+    stdin_open: true
+    tty: true
+
+    environment:
+      # WSLg (Windows 11 + Docker Desktop WSL2 backend). For VcXsrv/X410
+      # instead, override with: DISPLAY=host.docker.internal:0.0
+      - DISPLAY=${DISPLAY:-:0}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
+      - XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+      - PULSE_SERVER=/mnt/wslg/PulseServer
+      - QT_X11_NO_MITSHM=1
+      # Gazebo and RViz have no GPU under Docker Desktop on Windows.
+      # Comment out if you are on Linux with a working GPU passthrough.
+      - LIBGL_ALWAYS_SOFTWARE=1
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+
+    volumes:
+      # Live-mount the repo so edits on Windows are picked up immediately.
+      # Shadows the image's prebuilt install/ — run colcon build inside.
+      - .:/ros2_ws
+      # X11 / WSLg sockets
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /mnt/wslg:/mnt/wslg
+
+    # Gazebo + Nav2 + RViz will exhaust the 64 MB default.
+    shm_size: "2gb"
+    ipc: host
+
+    # Everything runs inside this one container, so the default bridge network
+    # is enough. Uncomment ONLY on native Linux if you need DDS discovery
+    # between the container and host — Docker Desktop on Windows does not
+    # support host networking reliably, and it breaks host.docker.internal.
+    # network_mode: host
+
+    working_dir: /ros2_ws
+    command: bash
