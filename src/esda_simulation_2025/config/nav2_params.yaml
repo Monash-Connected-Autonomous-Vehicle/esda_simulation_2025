@@ -247,9 +247,10 @@ local_costmap:
       keepout_filter:
         plugin: "nav2_costmap_2d::KeepoutFilter"
         enabled: True
-        filter_info_topic: "keepout_costmap_filter_info"
-        override_lethal_cost: True
-        lethal_override_cost: 200
+        filter_info_topic: "/keepout_costmap_filter_info"
+        # NOTE: override_lethal_cost / lethal_override_cost were listed here
+        # but are not KeepoutFilter parameters in Humble, so they were
+        # silently ignored. Cost grading comes from the mask values instead.
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 2.4
@@ -263,7 +264,10 @@ local_costmap:
         z_voxels: 16
         max_obstacle_height: 2.0
         mark_threshold: 0
-        observation_sources: scan lane virtual_wall
+        # virtual_wall was listed here with no matching virtual_wall: block,
+        # so Nav2 defaulted it to a LaserScan source on a topic nothing
+        # publishes. Same inert-source bug as the old travel_history_layer.
+        observation_sources: scan lane
         scan:
           # A relative topic will be appended to the parent of the local_costmap namespace.
           # For example:
@@ -314,9 +318,18 @@ global_costmap:
           "static_layer",
           "obstacle_layer",
           "lane_layer",
-          "travel_history_layer",
           "inflation_layer"
         ]
+
+      # Traversed-path cost. The mask and its filter info are published by
+      # waypoint_navigator_recommendation.py, not by a map server, so the
+      # keepout region follows the robot as it drives.
+      filters: ["keepout_filter"]
+
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: True
+        filter_info_topic: "/keepout_costmap_filter_info"
 
       # =========================
       # LIDAR
@@ -374,23 +387,13 @@ global_costmap:
         cost_scaling_factor: 3.0
         inflation_radius: 0.55
 
-      travel_history_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
-        observation_sources: travel_history
-        travel:
-          topic: /travel_history
-
-          data_type: "PointCloud2"
-
-          marking: True
-          clearing: False
-
-          max_obstacle_height: 2.0
-          min_obstacle_height: -1.0
-
-          obstacle_max_range: 100.0
-          obstacle_min_range: 0.0
+      # travel_history_layer removed. Its observation source was named
+      # travel_history while its config block was named travel:, so Nav2 fell
+      # back to the defaults for an unmatched source (a LaserScan source on
+      # topic "travel_history") and the layer never took effect. It is
+      # superseded by the keepout_filter above, which also gives graded cost
+      # rather than LETHAL - the latter would seal a 1.7 m corridor once the
+      # 0.55 m inflation is added.
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.
 # If you'd rather set it in the yaml, remove the default "map" value in the launch file(s).

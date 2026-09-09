@@ -26,7 +26,15 @@ source install/setup.bash
 colcon build --packages-select esda_simulation_2025
 ```
 
-There are **no tests**. `BUILD_TESTING` only wires up `ament_lint_auto`; `colcon test` runs linters, nothing else.
+`colcon test` runs **only linters** — `BUILD_TESTING` just wires up `ament_lint_auto`.
+
+The one real test suite is an offline harness that needs no ROS, Gazebo or Nav2 (numpy + cv2 + pyyaml only):
+
+```bash
+python3 tools/validate_waypoint_logic.py
+```
+
+It validates the waypoint navigator's clearance maths against the original brute-force implementation as an oracle, plus a lint that every `observation_sources` entry in `nav2_params.yaml` has a matching config block — the class of bug that silently disabled two costmap layers. Run it after touching `waypoint_navigator_recommendation.py` or the costmap config.
 
 **The GUI launcher is the intended entrypoint** — it wraps every launch step in `xterm` windows and manages process lifetimes:
 
@@ -59,6 +67,11 @@ Uses `nav2_simple_commander` / the `NavigateToPose` action. `waypoint_navigator_
 
 Nav2 behaviour is configured by `config/nav2_params.yaml` (MPPI controller, NavFn/A* planner, `robot_radius: 0.45`) and the custom BT in `behaviour_tree/navigate_recovery.xml`.
 
+Two things about this node are easy to get wrong:
+
+- **Clearance comes from a cached distance transform**, built in `map_callback` into an immutable `MapSnapshot` (grid + two transforms). Readers must bind `self.map_snapshot` once per cycle rather than re-reading `self.map_data`, or a map resize can pair a grid with transforms from a different geometry. The clearance/scan helpers are deliberately module-level pure functions so `tools/validate_waypoint_logic.py` can test them without ROS.
+- **`unknown_clearance_allowance` (U)** blends the two transforms as `min(dt_hard, dt_unknown + U)`. Default 0.8 matches Tier 3's `max_unknown_distance`; a very large U reproduces the old behaviour of ignoring unknown space, and `U = 0` treats it as a hard obstacle. Lowering U tightens the recovery gates, so it interacts with the `enter_recovery_mode` timeout escape — don't change one without the other.
+
 ### 2. Reactive lane/gap stack (`follow_the_gap.py` + `track_follower.py` + `behaviour_tree.py`)
 
 A hand-rolled arbitration layer that bypasses Nav2:
@@ -89,7 +102,8 @@ That fusion is load-bearing: `nav2_params.yaml` costmaps and AMCL subscribe to *
 | `/scan` | gz bridge (sim) / `velodyne_laserscan` (real) | lane detection, FTG, track follower |
 | `/scan_fused` | lane detection base class | Nav2 costmaps, AMCL, SLAM |
 | `/lane_obstacles`, `/lane_markers` | lane detection | costmap voxel layer, RViz, waypoint navigator |
-| `/travel_history` | `waypoint_navigator_recommendation.py` | global costmap obstacle layer |
+| `/travel_history` | `waypoint_navigator_recommendation.py` | RViz only (visualisation) |
+| `/keepout_filter_mask`, `/keepout_costmap_filter_info` | `waypoint_navigator_recommendation.py` (latched) | global costmap `KeepoutFilter` |
 | `/lane_parameters` | `track_follower.py` | `behaviour_tree.py` |
 | `/cmd_vel` | Nav2 / behaviour tree / teleop | gz bridge → diff drive |
 
