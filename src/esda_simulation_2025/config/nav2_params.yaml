@@ -280,6 +280,11 @@ local_costmap:
           clearing: True
           marking: True
           data_type: "LaserScan"
+          # Gazebo reports no-return beams as inf. Without this Nav2 ignores
+          # them, so open space is never raytrace-cleared and stale marks stay.
+          # inf is treated as range_max (12 m), beyond obstacle_max_range, so
+          # these rays only clear, never mark.
+          inf_is_valid: true
           raytrace_max_range: 25.0
           raytrace_min_range: 0.0
           obstacle_max_range: 5.0
@@ -348,6 +353,12 @@ global_costmap:
           marking: True
 
           data_type: "LaserScan"
+
+          # Gazebo reports no-return beams as inf. Without this Nav2 ignores
+          # them, so open space is never raytrace-cleared and stale marks stay
+          # in this non-rolling map. inf is treated as range_max (12 m), beyond
+          # obstacle_max_range, so these rays only clear, never mark.
+          inf_is_valid: true
 
           # Clear slightly past the marking range so stale far marks get erased.
           raytrace_max_range: 8.0
