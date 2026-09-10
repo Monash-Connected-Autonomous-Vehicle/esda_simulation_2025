@@ -39,7 +39,7 @@ amcl:
     z_max: 0.05
     z_rand: 0.5
     z_short: 0.05
-    scan_topic: /scan  # match the SLAM map, which is built from raw /scan
+    scan_topic: /scan_fused  # match the SLAM map, which is built from /scan_fused
 
 bt_navigator:
   ros__parameters:

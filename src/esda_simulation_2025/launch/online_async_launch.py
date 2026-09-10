@@ -37,8 +37,8 @@ def generate_launch_description():
         description='SLAM mode: mapping or localization')
     declare_scan_topic_cmd = DeclareLaunchArgument(
         'scan_topic',
-        default_value='/scan',
-        description='Laser scan topic for SLAM (raw /scan: lanes must not enter the map)')
+        default_value='/scan_fused',
+        description='Laser scan topic for SLAM (/scan_fused bakes lanes into the map)')
     declare_map_start_at_dock_cmd = DeclareLaunchArgument(
         'map_start_at_dock',
         default_value='false',

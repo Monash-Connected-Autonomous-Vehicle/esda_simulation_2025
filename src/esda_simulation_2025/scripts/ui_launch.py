@@ -411,8 +411,10 @@ class SimManager(ctk.CTk):
             return
         
         selected_costmap_name = self.selected_costmap.get()
-        # SLAM always maps raw /scan: lanes are a driving constraint, not map
-        # structure. Only Nav2 follows the "Enable Lane Detection" toggle.
+        # Lanes are deliberately mapped: the waypoint navigator's clearance
+        # grid is built from /map, and the map is the only memory of lanes the
+        # camera can no longer see.
+        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
 
         # Check if user wants to load an existing map
         if selected_costmap_name != "[New Costmap]":
@@ -433,7 +435,7 @@ class SimManager(ctk.CTk):
                        f"use_sim_time:=true "
                        f"map_file_name:={map_file_base} "
                        f"map_start_at_dock:=true "
-                       f"scan_topic:=/scan")
+                       f"scan_topic:={scan_topic}")
                 self.status_label.configure(text=f"Loading SLAM map: {selected_costmap_name}...", text_color="#F1C40F")
             else:
                 # Serialized SLAM map doesn't exist - this is likely a Nav2/AMCL map only
@@ -441,12 +443,12 @@ class SimManager(ctk.CTk):
                 # Launch SLAM in new mapping mode
                 cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
                        f"use_sim_time:=true "
-                       f"scan_topic:=/scan")
+                       f"scan_topic:={scan_topic}")
         else:
             # Launch SLAM in mapping mode (create new map)
             cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
                    f"use_sim_time:=true "
-                   f"scan_topic:=/scan")
+                   f"scan_topic:={scan_topic}")
         
         self.status_label.configure(text="Waiting for simulation to stabilize...", text_color="#F1C40F")
         self.update()
@@ -460,9 +462,8 @@ class SimManager(ctk.CTk):
         """Launch (or stop, if already running) the lane detection node standalone.
 
         Independent of SLAM/AMCL/Nav2 - the "Enable Lane Detection" checkbox
-        controls whether Nav2's costmaps read /scan_fused vs /scan (SLAM and
-        AMCL always use raw /scan), but actually starting the detector is a
-        separate, explicit action here.
+        controls whether those modules are pointed at /scan_fused vs /scan, but
+        actually starting the detector is a separate, explicit action here.
         """
         if not self.is_sim_running():
             self.status_label.configure(text="Error: Launch Simulation first!", text_color="#E74C3C")
@@ -523,11 +524,13 @@ class SimManager(ctk.CTk):
     
     def _launch_amcl_delayed(self, costmap_file):
         time.sleep(3)  # Wait for simulation to be ready
-        # AMCL matches against the SLAM map, which is built from raw /scan.
+        # Same scan source as SLAM, so AMCL matches against a map that
+        # contains the lanes it is also seeing.
+        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
         cmd = (f"ros2 launch esda_simulation_2025 localization_launch.py "
                f"use_sim_time:=true map:={costmap_file} "
                f"amcl_base_frame_id:=base_link amcl_odom_frame_id:=odom "
-               f"scan_topic:=/scan")
+               f"scan_topic:={scan_topic}")
         self.run_in_terminal("AMCL", cmd)
 
     def toggle_nav(self):
