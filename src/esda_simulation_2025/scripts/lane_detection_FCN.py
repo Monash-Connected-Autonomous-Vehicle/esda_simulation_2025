@@ -378,6 +378,8 @@ class LaneDetectionFCNNode(LaneDetectionNode):
 
                 self.publish_lane_markers(lines_array, header)
 
+                self.publish_virtual_lane_cloud()
+
                 if self.latest_depth_image is not None:
                     self.publish_obstacle_cloud(self.latest_lines, self.latest_depth_image, header)
                 else:

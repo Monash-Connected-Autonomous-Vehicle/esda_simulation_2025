@@ -36,6 +36,10 @@ class LaneDetectionNode(Node):
         self.declare_parameter('max_lane_width', 200)  # Maximum lane width in pixels
         self.declare_parameter('lane_thickness_pixels', 8)  # Lane thickness for dense sampling
         self.declare_parameter('point_spacing_pixels', 2.0)  # Distance between sampled points
+
+        self.declare_parameter('virtual_lane_length', 3.0)
+        self.declare_parameter('virtual_lane_spacing', 0.05)
+        self.declare_parameter('virtual_lane_fit_points', 8)
         
         # Get parameters
         self.show_viz = self.get_parameter('show_visualization').value
@@ -47,6 +51,18 @@ class LaneDetectionNode(Node):
         self.max_lane_width = self.get_parameter('max_lane_width').value
         self.lane_thickness = self.get_parameter('lane_thickness_pixels').value
         self.point_spacing = self.get_parameter('point_spacing_pixels').value
+
+        self.virtual_lane_length = self.get_parameter(
+            'virtual_lane_length'
+        ).value
+
+        self.virtual_lane_spacing = self.get_parameter(
+            'virtual_lane_spacing'
+        ).value
+
+        self.virtual_lane_fit_points = self.get_parameter(
+            'virtual_lane_fit_points'
+        ).value
         
         # CV Bridge for ROS-OpenCV conversion
         self.bridge = CvBridge()
@@ -103,6 +119,19 @@ class LaneDetectionNode(Node):
         #     10
         # )
 
+        # Publisher for extrapolated / virtual lane boundaries (if needed)
+        self.virtual_lane_pub = self.create_publisher(
+            PointCloud2,
+            '/virtual_lane_points',
+            10
+        )
+
+        self.virtual_lane_marker_pub = self.create_publisher(
+            MarkerArray,
+            '/virtual_lane_markers',
+            10
+        )
+
         # TF Buffer for transforming points
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -117,6 +146,9 @@ class LaneDetectionNode(Node):
         self.latest_right_image = None
         self.latest_lines = []
         self.latest_3d_points = [] # Store detected points in camera frame
+
+        self.left_lane_points = []
+        self.right_lane_points = []
         
         self.get_logger().info('Lane Detection Node initialized (Stereo Mode)')
         self.get_logger().info(f'Subscribing to: /camera/left/image_raw, /camera/right/image_raw, /camera/depth/image_raw')
@@ -213,6 +245,56 @@ class LaneDetectionNode(Node):
             self.get_logger().warn(f'Could not transform lane points from {camera_frame} to {laser_frame}: {ex}', 
                                    throttle_duration_sec=5.0)
             self.scan_pub.publish(msg)
+
+    def publish_virtual_lane_markers(self, virtual_left, virtual_right):
+        """
+        Publish virtual lane points as orange RViz markers.
+        """
+
+        marker_array = MarkerArray()
+
+        marker_id = 0
+
+        for points in [virtual_left, virtual_right]:
+
+            for x, y, z in points:
+
+                marker = Marker()
+
+                marker.header.frame_id = 'base_link'
+                marker.header.stamp = self.get_clock().now().to_msg()
+
+                marker.ns = 'virtual_lanes'
+                marker.id = marker_id
+
+                marker.type = Marker.SPHERE
+                marker.action = Marker.ADD
+
+                marker.pose.position.x = float(x)
+                marker.pose.position.y = float(y)
+                marker.pose.position.z = float(z + 0.03)
+
+                marker.pose.orientation.w = 1.0
+
+                marker.scale.x = 0.08
+                marker.scale.y = 0.08
+                marker.scale.z = 0.08
+
+                # Orange
+                marker.color.r = 1.0
+                marker.color.g = 0.55
+                marker.color.b = 0.0
+                marker.color.a = 1.0
+
+                # Short lifetime so old predictions disappear
+                marker.lifetime.sec = 0
+                marker.lifetime.nanosec = 300000000
+
+                marker_array.markers.append(marker)
+
+                marker_id += 1
+
+        self.virtual_lane_marker_pub.publish(marker_array)
 
     def depth_callback(self, msg):
         """Store the latest depth image"""
@@ -424,10 +506,22 @@ class LaneDetectionNode(Node):
                 header.frame_id = 'camera_link_optical' # Use the optical frame for projection
                 
                 self.publish_lane_markers(lines_array, header)
-                
-                # Also publish to PointCloud for Nav2 costmap
+
+                # publish_lane_markers() has now populated:
+                #
+                # self.left_lane_points
+                # self.right_lane_points
+                #
+                # Use these to create predicted lane boundaries.
+                self.publish_virtual_lane_cloud()
+
+                # Also publish the REAL detected lane points
                 if self.latest_depth_image is not None:
-                    self.publish_obstacle_cloud(self.latest_lines, self.latest_depth_image, header)
+                    self.publish_obstacle_cloud(
+                        self.latest_lines,
+                        self.latest_depth_image,
+                        header
+                    )
                 else:
                     self.latest_3d_points = []
                 
@@ -714,7 +808,308 @@ class LaneDetectionNode(Node):
     
     # Deprecated methods removed (image_y_to_distance, etc)
 
+    def transform_lane_points_to_base(self, points):
+        """
+        Transform lane points from camera_link_optical into base_link.
 
+        Returns:
+            List of (x, y, z) tuples in base_link.
+        """
+
+        if not points:
+            return []
+
+        transformed_points = []
+
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                'base_link',
+                'camera_link_optical',
+                rclpy.time.Time()
+            )
+
+            for point in points:
+                p = PointStamped()
+                p.header.frame_id = 'camera_link_optical'
+
+                p.point.x = float(point[0])
+                p.point.y = float(point[1])
+                p.point.z = float(point[2])
+
+                p_base = do_transform_point(p, transform)
+
+                transformed_points.append((
+                    float(p_base.point.x),
+                    float(p_base.point.y),
+                    float(p_base.point.z)
+                ))
+
+        except TransformException as ex:
+            self.get_logger().warn(
+                f'Could not transform lane points to base_link: {ex}',
+                throttle_duration_sec=2.0
+            )
+
+            return []
+
+        return transformed_points
+
+    def extrapolate_lane(self, lane_points):
+        """
+        Fit a local straight line to the furthest visible part of a lane and
+        extrapolate it forward.
+
+        lane_points must already be in base_link.
+
+        Returns:
+            List of virtual (x, y, z) points in base_link.
+        """
+
+        if len(lane_points) < 3:
+            return []
+
+        # Remove points behind the robot
+        forward_points = [
+            p for p in lane_points
+            if p[0] > 0.0
+        ]
+
+        if len(forward_points) < 3:
+            return []
+
+        # Sort by forward distance
+        forward_points.sort(key=lambda p: p[0])
+
+        # Only use the furthest few points to estimate the direction
+        fit_count = min(
+            self.virtual_lane_fit_points,
+            len(forward_points)
+        )
+
+        fit_points = forward_points[-fit_count:]
+
+        x_vals = np.array(
+            [p[0] for p in fit_points],
+            dtype=np.float64
+        )
+
+        y_vals = np.array(
+            [p[1] for p in fit_points],
+            dtype=np.float64
+        )
+
+        z_vals = np.array(
+            [p[2] for p in fit_points],
+            dtype=np.float64
+        )
+
+        # Need some difference in x or the fit becomes unstable
+        if np.ptp(x_vals) < 0.05:
+            return []
+
+        # Fit:
+        #
+        # y = m*x + b
+        #
+        try:
+            m, b = np.polyfit(x_vals, y_vals, 1)
+        except Exception as ex:
+            self.get_logger().warn(
+                f'Virtual lane fit failed: {ex}',
+                throttle_duration_sec=2.0
+            )
+            return []
+
+        # Start prediction at the furthest observed point
+        start_x = float(np.max(x_vals))
+
+        end_x = start_x + self.virtual_lane_length
+
+        average_z = float(np.mean(z_vals))
+
+        virtual_points = []
+
+        for x in np.arange(
+            start_x,
+            end_x,
+            self.virtual_lane_spacing
+        ):
+            y = m * x + b
+
+            virtual_points.append((
+                float(x),
+                float(y),
+                average_z
+            ))
+
+        return virtual_points
+    
+    def publish_virtual_lane_cloud(self):
+        """
+        Extrapolate the currently observed left/right lanes and publish
+        the resulting virtual boundaries as PointCloud2 in base_link.
+        """
+
+        self.get_logger().warn(
+            'publish_virtual_lane_cloud() CALLED',
+            throttle_duration_sec=1.0
+        )
+
+        left_base = self.transform_lane_points_to_base(
+            self.left_lane_points
+        )
+
+        right_base = self.transform_lane_points_to_base(
+            self.right_lane_points
+        )
+
+        self.get_logger().warn(
+            f'raw_left={len(self.left_lane_points)}, '
+            f'raw_right={len(self.right_lane_points)}, '
+            f'base_left={len(left_base)}, '
+            f'base_right={len(right_base)}',
+            throttle_duration_sec=1.0
+        )
+
+        if left_base:
+            self.get_logger().warn(
+                f'LEFT SAMPLE: {left_base[:3]}',
+                throttle_duration_sec=1.0
+            )
+
+        if right_base:
+            self.get_logger().warn(
+                f'RIGHT SAMPLE: {right_base[:3]}',
+                throttle_duration_sec=1.0
+            )
+
+
+        virtual_left = self.extrapolate_lane(left_base)
+        virtual_right = self.extrapolate_lane(right_base)
+
+        self.publish_virtual_lane_markers(
+            virtual_left,
+            virtual_right
+        )
+
+        self.get_logger().warn(
+            f'virtual_left={len(virtual_left)}, '
+            f'virtual_right={len(virtual_right)}',
+            throttle_duration_sec=1.0
+        )
+
+
+        virtual_points = virtual_left + virtual_right
+
+        if not virtual_points:
+            self.get_logger().warn(
+                'No virtual points generated',
+                throttle_duration_sec=1.0
+            )
+            return
+
+        # Feed the extrapolated line into the same topic the local/global
+        # costmaps already subscribe to for /lane_obstacles, so the virtual
+        # boundary is actually treated as an obstacle by the local planner
+        # (not just drawn in RViz).
+        obstacle_msg = PointCloud2()
+        obstacle_msg.header.stamp = self.get_clock().now().to_msg()
+        obstacle_msg.header.frame_id = 'base_link'
+        obstacle_msg.height = 1
+        obstacle_msg.width = len(virtual_points)
+        obstacle_msg.is_bigendian = False
+        obstacle_msg.is_dense = False
+        obstacle_msg.fields = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        ]
+        obstacle_msg.point_step = 12
+        obstacle_msg.row_step = obstacle_msg.point_step * len(virtual_points)
+        obstacle_msg.data = b''.join(
+            struct.pack('fff', float(x), float(y), float(z))
+            for x, y, z in virtual_points
+        )
+        self.cloud_pub.publish(obstacle_msg)
+
+        msg = PointCloud2()
+
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
+
+        msg.height = 1
+        msg.width = len(virtual_points)
+
+        msg.is_bigendian = False
+        msg.is_dense = True
+
+        msg.fields = [
+            PointField(
+                name='x',
+                offset=0,
+                datatype=PointField.FLOAT32,
+                count=1
+            ),
+            PointField(
+                name='y',
+                offset=4,
+                datatype=PointField.FLOAT32,
+                count=1
+            ),
+            PointField(
+                name='z',
+                offset=8,
+                datatype=PointField.FLOAT32,
+                count=1
+            ),
+            PointField(
+                name='rgb',
+                offset=12,
+                datatype=PointField.FLOAT32,
+                count=1
+            ),
+        ]
+
+        # Orange: RGB(255, 140, 0)
+        r = 255
+        g = 140
+        b = 0
+
+        rgb_uint32 = (r << 16) | (g << 8) | b
+
+        rgb_float = struct.unpack(
+            'f',
+            struct.pack('I', rgb_uint32)
+        )[0]
+
+        msg.point_step = 16
+        msg.row_step = msg.point_step * len(virtual_points)
+
+        # msg.point_step = 12
+        # msg.row_step = msg.point_step * len(virtual_points)
+
+        buffer = []
+
+        for x, y, z in virtual_points:
+            buffer.append(
+                struct.pack(
+                    'ffff',
+                    float(x),
+                    float(y),
+                    float(z),
+                    rgb_float
+                )
+            )
+        msg.data = b''.join(buffer)
+
+        self.virtual_lane_pub.publish(msg)
+
+        self.get_logger().info(
+            f'Published {len(virtual_points)} virtual lane points '
+            f'(left={len(virtual_left)}, '
+            f'right={len(virtual_right)})',
+            throttle_duration_sec=2.0
+        )
 
 def main(args=None):
     rclpy.init(args=args)

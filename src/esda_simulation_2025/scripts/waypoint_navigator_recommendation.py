@@ -462,6 +462,20 @@ class WaypointNavigator(Node):
         # for the current recovery episode. See handle_no_candidate_timeout.
         self.relaxed_recovery_attempted = False
 
+        # Time a goal (normal, recovery, or nudge) was last actually sent to
+        # Nav2. Seeded at startup so the stuck-nudge check below does not
+        # fire before the node has had a chance to produce a real goal.
+        self.last_goal_dispatch_time = self.get_clock().now()
+
+        # If normal waypoint generation (update_forward_goal) has produced
+        # nothing sendable for this long -- e.g. no lane data and no scan
+        # data, as opposed to a Nav2 action actually failing -- nudge the
+        # robot a short distance into whatever nearby space has the most
+        # clearance instead of sitting locked indefinitely. See
+        # find_stuck_nudge_goal / send_latest_forward_goal.
+        self.stuck_nudge_timeout = 5.0  # seconds
+        self.stuck_nudge_distance = 0.80  # metres
+
         # Prevent repeatedly firing far goal attempts
         self.far_goal_in_progress = False
 
@@ -571,6 +585,7 @@ class WaypointNavigator(Node):
         self.goal_in_progress = True
         self.navigation_mode = mode
         self.last_sent_goal = goal_pose
+        self.last_goal_dispatch_time = self.get_clock().now()
 
         self.navigator.goToPose(goal_pose)
 
@@ -663,6 +678,20 @@ class WaypointNavigator(Node):
             return
 
         if self.latest_forward_goal is None:
+            elapsed_since_dispatch = (
+                self.get_clock().now() - self.last_goal_dispatch_time
+            ).nanoseconds / 1e9
+
+            if (
+                not self.goal_in_progress
+                and elapsed_since_dispatch >= self.stuck_nudge_timeout
+            ):
+                nudge_goal = self.find_stuck_nudge_goal()
+
+                if nudge_goal is not None:
+                    self.send_goal(nudge_goal, mode="normal")
+                    return
+
             self.get_logger().debug("Nothing sent to Nav2: latest_forward_goal is None.")
             return
 
@@ -695,6 +724,99 @@ class WaypointNavigator(Node):
             self.latest_forward_goal,
             mode="normal"
         )
+
+    def find_stuck_nudge_goal(self):
+        """
+        Last-resort fallback for when normal waypoint generation
+        (update_forward_goal) has produced nothing sendable for
+        stuck_nudge_timeout seconds -- e.g. no lane centreline and no valid
+        scan data, as opposed to an actual Nav2 action failure (that case is
+        already handled by the recovery ladder / handle_no_candidate_timeout).
+
+        Steps a short, fixed distance away from the robot, straight ahead if
+        that has enough map clearance, otherwise the nearest heading to
+        forward that does -- so the robot is not stuck indefinitely waiting
+        on data that may never arrive, and still generally makes forward
+        progress rather than veering off sideways. Deliberately conservative:
+        this is a nudge, not a recovery manoeuvre.
+        """
+        if self.map_snapshot is None or self.current_pose is None:
+            return None
+
+        snapshot = self.map_snapshot
+
+        # robot_radius (0.45) + a small buffer. Lower bar than the
+        # min_forward_clearance used by the normal forward search, since this
+        # only ever fires once the robot has already been stuck for a while.
+        min_nudge_clearance = 0.55
+
+        # Fan out from straight ahead to the sides, ordered by increasing
+        # angle from forward. We take the FIRST heading that clears
+        # min_nudge_clearance rather than the single best-clearance heading
+        # overall, so the nudge stays "kinda forward" and only swings toward
+        # a side once forward itself is blocked.
+        heading_offsets_deg = [0, -20, 20, -40, 40, -60, 60, -90, 90]
+
+        best_x = None
+        best_y = None
+        best_clearance = None
+
+        for offset_deg in heading_offsets_deg:
+            candidate_yaw = self.robot_yaw + math.radians(offset_deg)
+
+            candidate_x = (
+                self.robot_x
+                + self.stuck_nudge_distance * math.cos(candidate_yaw)
+            )
+            candidate_y = (
+                self.robot_y
+                + self.stuck_nudge_distance * math.sin(candidate_yaw)
+            )
+
+            candidate_clearance = map_clearance(
+                snapshot,
+                candidate_x,
+                candidate_y,
+                self.unknown_clearance_allowance
+            )
+
+            if candidate_clearance < min_nudge_clearance:
+                continue
+
+            best_x = candidate_x
+            best_y = candidate_y
+            best_clearance = candidate_clearance
+            break
+
+        if best_x is None:
+            self.get_logger().warn(
+                f"Stuck nudge: no nearby direction cleared "
+                f"{min_nudge_clearance:.2f} m; staying put."
+            )
+            return None
+
+        goal = PoseStamped()
+        goal.header.frame_id = self.frame_id
+        goal.header.stamp = self.get_clock().now().to_msg()
+        goal.pose.position.x = best_x
+        goal.pose.position.y = best_y
+        goal.pose.position.z = 0.0
+
+        goal_yaw = math.atan2(
+            best_y - self.robot_y,
+            best_x - self.robot_x
+        )
+        goal.pose.orientation.z = math.sin(goal_yaw / 2.0)
+        goal.pose.orientation.w = math.cos(goal_yaw / 2.0)
+
+        self.get_logger().warn(
+            f"Stuck nudge: no forward goal for "
+            f"{self.stuck_nudge_timeout:.0f}+ s, nudging toward "
+            f"x={best_x:.2f}, y={best_y:.2f} "
+            f"(clearance={best_clearance:.2f} m)"
+        )
+
+        return goal
 
     def odometry_callback(self, msg: Odometry):
         self.current_velocity = msg.twist.twist.linear
@@ -898,6 +1020,14 @@ class WaypointNavigator(Node):
 
         found_target = False
 
+        # Minimum standoff a forward target must have from the nearest
+        # obstacle. Without this, the ray march below walks all the way to
+        # the last free cell that borders an obstacle and uses that as the
+        # goal -- putting the waypoint right against the obstacle instead of
+        # adjacent to it with a safety margin. robot_radius (0.45) +
+        # inflation_radius (0.1) + a small buffer.
+        min_forward_clearance = 0.70
+
         for i in range(1, number_of_steps + 1):
             current_distance = i * step_size
 
@@ -930,10 +1060,24 @@ class WaypointNavigator(Node):
             ]
 
             if cell_value == 0:
-                # Confirmed free space.
-                best_grid_x = check_grid_x
-                best_grid_y = check_grid_y
-                found_target = True
+                # Confirmed free space, but only accept it as the goal if it
+                # actually stands off from the nearest obstacle by
+                # min_forward_clearance. Otherwise leave best_grid_x/y at
+                # whatever it was last set to -- the last cell that *did*
+                # have clearance (adjacent to the obstacle, not touching it),
+                # or the robot's own cell if nothing along the ray ever had
+                # enough clearance (effectively "stay behind it").
+                cell_clearance = map_clearance(
+                    snapshot,
+                    check_world_x,
+                    check_world_y,
+                    self.unknown_clearance_allowance
+                )
+
+                if cell_clearance >= min_forward_clearance:
+                    best_grid_x = check_grid_x
+                    best_grid_y = check_grid_y
+                    found_target = True
 
                 # Reset because we have returned to known free space.
                 unknown_distance = 0.0
@@ -943,9 +1087,17 @@ class WaypointNavigator(Node):
                 unknown_distance += step_size
 
                 if unknown_distance <= max_unknown_distance:
-                    best_grid_x = check_grid_x
-                    best_grid_y = check_grid_y
-                    found_target = True
+                    cell_clearance = map_clearance(
+                        snapshot,
+                        check_world_x,
+                        check_world_y,
+                        self.unknown_clearance_allowance
+                    )
+
+                    if cell_clearance >= min_forward_clearance:
+                        best_grid_x = check_grid_x
+                        best_grid_y = check_grid_y
+                        found_target = True
                 else:
                     break
 
