@@ -13,7 +13,13 @@ Two packages live under `src/`:
 | `esda_simulation_2025` | `ament_cmake` | Everything: URDF/xacro, Gazebo worlds, launch files, Nav2/SLAM configs, all Python nodes, custom `.msg` interfaces |
 | `esda_hardware_2025` | `ament_cmake` (C++) | `ros2_control` `SystemInterface` plugin (`esda_hardware_2025/EsdaHardware2025`) that talks to an STM over serial for the real robot |
 
-Note: this checkout may be on Windows, but the code only builds and runs on Linux/ROS 2. Do not attempt `colcon build` unless the environment is actually Ubuntu.
+**Workflow: edit on Windows, run in WSL.** Code is edited, committed and pushed from the Windows checkout. Everything ROS-related (`colcon build`, `ros2 launch`, Gazebo, Nav2, RViz) runs only in an Ubuntu 22.04 WSL environment that already has all dependencies. There, the changes are pulled and tested with ROS. Do not attempt `colcon build` or `ros2` commands from Windows, and do not edit files through WSL paths. The committed `Dockerfile` / `docker-compose.yml` / `DOCKER.md` are not used.
+
+Dependency facts worth knowing when something fails in WSL (full list in `DOCKER.md` §1):
+
+- Gazebo must be **Fortress** (`ignition-fortress`) — the worlds load `libignition-gazebo-*-system.so` plugins, so Garden/Harmonic won't work.
+- `esda_hardware_2025` needs `libserial-dev` to build.
+- `ui_launch.py` sets `FASTRTPS_DEFAULT_PROFILES_FILE` to `config/fastdds_noshm.xml` (UDP-only Fast DDS) in each terminal it opens; set it yourself when launching by hand if DDS discovery misbehaves.
 
 ## Build & run
 
@@ -34,7 +40,13 @@ The one real test suite is an offline harness that needs no ROS, Gazebo or Nav2 
 python3 tools/validate_waypoint_logic.py
 ```
 
-It validates the waypoint navigator's clearance maths against the original brute-force implementation as an oracle, plus a lint that every `observation_sources` entry in `nav2_params.yaml` has a matching config block — the class of bug that silently disabled two costmap layers. Run it after touching `waypoint_navigator_recommendation.py` or the costmap config.
+It validates the waypoint navigator's clearance maths against the original brute-force implementation as an oracle, plus a lint that every `observation_sources` entry in `nav2_params.yaml` has a matching config block — the class of bug that silently disabled two costmap layers. Run it after touching `waypoint_navigator_recommendation.py` or the costmap config. It stubs out `rclpy`/Nav2/msg modules before importing the node, so it runs on any OS with those three pip packages — including the Windows checkout (the one test that can run before pushing to WSL). A new top-level ROS import in the node must be added to the stub list in `_import_target()` or the harness breaks. It exits non-zero on any failure.
+
+There is no CLI filter; to run one check group, call its function directly (`RESULTS` accumulates results, and `v11_timing` needs the snapshot from `v2_v5_real_map`):
+
+```bash
+python3 -c "import sys; sys.path.insert(0, 'tools'); import validate_waypoint_logic as v; v.v10_yaml_lint(); print(v.RESULTS)"
+```
 
 **The GUI launcher is the intended entrypoint** — it wraps every launch step in `xterm` windows and manages process lifetimes:
 
@@ -82,6 +94,10 @@ A hand-rolled arbitration layer that bypasses Nav2:
 - `behaviour_tree.py` subscribes to both, picks a `NavigationState` (CENTRELINE_FOLLOWING / FOLLOW_THE_GAP / GOAL_NAVIGATION / RECOVERY), and is the only one of the three that should own `/cmd_vel`.
 
 `msg/NavigationRecommendation.msg` is the contract between these nodes — its `reason` enum (lane-pair geometry cases, `RECOVERY_REQUIRED`, …) is where new decision states get added first. `track_follower.py` and `follow_the_gap.py` each have an `enable_cmd_vel` / `test_*_itself` parameter so they can be run standalone without fighting the behaviour tree.
+
+### Auxiliary nodes
+
+Also installed but outside both stacks: `wavefront_frontier_exploration.py` (publishes `frontier_list` as a `PoseArray`), `curve_detection.py` (fits a line/quadratic to high-cost cells in `/local_costmap/costmap` to detect track curvature; RViz markers on `/curve_detection/centers`), and two `/cmd_vel` *consumers* — `throttle_publisher.py` (maps linear velocity to a normalised `Float32` on `/esda_throttle_topic`) and `cmd_vel_odometry.py` (dead-reckons odometry from `/cmd_vel`). Neither consumer publishes `/cmd_vel`, so they are safe to run alongside either stack.
 
 ## Perception: lane detection and scan fusion
 
