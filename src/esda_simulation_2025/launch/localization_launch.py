@@ -96,8 +96,8 @@ def generate_launch_description():
         description='Automatically startup the nav2 stack')
 
     declare_scan_topic_cmd = DeclareLaunchArgument(
-        'scan_topic', default_value='/scan_fused',
-        description='The topic to subscribe to for laser scans')
+        'scan_topic', default_value='/scan',
+        description='The topic to subscribe to for laser scans (raw /scan, matching the SLAM map)')
 
     declare_use_composition_cmd = DeclareLaunchArgument(
         'use_composition', default_value='False',

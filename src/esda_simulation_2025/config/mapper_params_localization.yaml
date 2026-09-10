@@ -13,7 +13,7 @@ slam_toolbox:
     odom_frame: odom
     map_frame: map
     base_frame: base_link
-    scan_topic: /scan_fused
+    scan_topic: /scan  # raw scan: injected lane points must not become map structure
     mode: localization
     #localization
 

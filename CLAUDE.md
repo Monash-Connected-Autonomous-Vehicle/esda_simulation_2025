@@ -111,14 +111,14 @@ Three interchangeable detectors, all subclassing the base node in `lane_detectio
 
 Subclasses override only mask/line extraction and visualisation. **All downstream behaviour lives in the base class** — 3D projection via the depth image, `/lane_markers` (MarkerArray), `/lane_obstacles` (PointCloud2), and the `scan_callback` that injects lane points into the LiDAR scan and republishes it as `/scan_fused`.
 
-That fusion is load-bearing: `nav2_params.yaml` costmaps and AMCL subscribe to **`/scan_fused`, not `/scan`**. If lane detection is not running, nothing publishes `/scan_fused` and Nav2 sees no obstacles — hence the UI's "Enable Lane Detection" toggle, which swaps the `scan_topic:=` argument between `/scan` and `/scan_fused`.
+That fusion is load-bearing: the `nav2_params.yaml` costmaps subscribe to **`/scan_fused`, not `/scan`**. If lane detection is not running, nothing publishes `/scan_fused` and Nav2 sees no obstacles — hence the UI's "Enable Lane Detection" toggle, which swaps Nav2's `scan_topic:=` argument between `/scan` and `/scan_fused`. SLAM and AMCL deliberately always use raw `/scan`: injected lane points are a driving constraint and must not become map structure.
 
 ## Topic and frame conventions
 
 | Topic | Produced by | Consumed by |
 |---|---|---|
-| `/scan` | gz bridge (sim) / `velodyne_laserscan` (real) | lane detection, FTG, track follower |
-| `/scan_fused` | lane detection base class | Nav2 costmaps, AMCL, SLAM |
+| `/scan` | gz bridge (sim) / `velodyne_laserscan` (real) | lane detection, SLAM, AMCL, waypoint navigator, FTG, track follower |
+| `/scan_fused` | lane detection base class | Nav2 costmaps only |
 | `/lane_obstacles`, `/lane_markers` | lane detection | costmap voxel layer, RViz, waypoint navigator |
 | `/travel_history` | `waypoint_navigator_recommendation.py` | RViz only (visualisation) |
 | `/keepout_filter_mask`, `/keepout_costmap_filter_info` | `waypoint_navigator_recommendation.py` (latched) | global costmap `KeepoutFilter` |
