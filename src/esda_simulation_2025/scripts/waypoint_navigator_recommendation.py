@@ -270,6 +270,10 @@ class WaypointNavigator(Node):
         # lane_detection.py runs at ~10 Hz, so 1.5 s is several missed frames.
         self.declare_parameter('lane_centreline_timeout', 1.5)
 
+        # Off switch for lane-following goals. When False the node falls
+        # straight through to the forward/free-space search.
+        self.declare_parameter('use_lane_goals', True)
+
         # How often the robot pose is refreshed from TF, independent of
         # whether a Nav2 goal is currently active.
         self.declare_parameter('pose_refresh_period', 0.1)
@@ -301,6 +305,8 @@ class WaypointNavigator(Node):
             'unknown_clearance_allowance').get_parameter_value().double_value
         self.lane_centreline_timeout = self.get_parameter(
             'lane_centreline_timeout').get_parameter_value().double_value
+        self.use_lane_goals = self.get_parameter(
+            'use_lane_goals').get_parameter_value().bool_value
         self.pose_refresh_period = self.get_parameter(
             'pose_refresh_period').get_parameter_value().double_value
         self.max_recovery_path_checks = self.get_parameter(
@@ -950,7 +956,7 @@ class WaypointNavigator(Node):
             )
             return
 
-        lane_goal = self.calculate_lane_goal()
+        lane_goal = self.calculate_lane_goal() if self.use_lane_goals else None
 
 
         if lane_goal is not None:
@@ -1220,16 +1226,22 @@ class WaypointNavigator(Node):
         left_points = []
         right_points = []
 
+        # All detector markers share one frame, so look each frame up once
+        # per message rather than once per marker.
+        transforms = {}
+
         for marker in msg.markers:
             
             source_frame = marker.header.frame_id
 
             try:
-                transform = self.tf_buffer.lookup_transform(
-                    self.frame_id,       # target: map
-                    source_frame,        # source: marker frame
-                    rclpy.time.Time()
-                )
+                if source_frame not in transforms:
+                    transforms[source_frame] = self.tf_buffer.lookup_transform(
+                        self.frame_id,       # target: map
+                        source_frame,        # source: marker frame
+                        rclpy.time.Time()
+                    )
+                transform = transforms[source_frame]
             except TransformException as ex:
                 self.get_logger().warn(
                     f"TF not ready for lane markers: {ex}",
@@ -1237,8 +1249,13 @@ class WaypointNavigator(Node):
                 )
                 continue 
 
+            # lane_detection.py publishes single CUBE markers positioned by
+            # pose, with an empty points list. Reading only marker.points
+            # meant the centreline was always empty.
+            marker_points = marker.points if marker.points else [marker.pose.position]
+
             transformed_points = self.transform_marker_points(
-                marker.points,
+                marker_points,
                 source_frame,
                 transform
             )
@@ -1253,12 +1270,14 @@ class WaypointNavigator(Node):
 
         self.get_logger().info(
             f"Left points: {len(left_points)}, "
-            f"Right points: {len(right_points)}"
+            f"Right points: {len(right_points)}",
+            throttle_duration_sec=2.0
         )
 
         if len(left_points) < 2 or len(right_points) < 2:
             self.get_logger().warn(
-                "Not enough left/right lane points."
+                "Not enough left/right lane points.",
+                throttle_duration_sec=2.0
             )
             self.lane_centreline = []
             self.last_lane_update_time = None
@@ -1313,7 +1332,8 @@ class WaypointNavigator(Node):
 
         self.get_logger().info(
             f"Updated lane centreline with "
-            f"{len(self.lane_centreline)} points"
+            f"{len(self.lane_centreline)} points",
+            throttle_duration_sec=2.0
         )
 
     def transform_marker_points(
