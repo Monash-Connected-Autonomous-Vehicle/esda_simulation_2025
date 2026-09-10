@@ -282,7 +282,7 @@ local_costmap:
           data_type: "LaserScan"
           raytrace_max_range: 25.0
           raytrace_min_range: 0.0
-          obstacle_max_range: 20.0
+          obstacle_max_range: 5.0
           obstacle_min_range: 0.0
         lane:
           topic: /lane_obstacles
@@ -349,10 +349,13 @@ global_costmap:
 
           data_type: "LaserScan"
 
-          raytrace_max_range: 30.0
+          # Clear slightly past the marking range so stale far marks get erased.
+          raytrace_max_range: 8.0
           raytrace_min_range: 0.0
 
-          obstacle_max_range: 25.0
+          # Capped to keep far-range smear (beam spacing + pose error) out of the
+          # non-rolling global map; the navigator never plans further than ~2.5 m.
+          obstacle_max_range: 5.0
           obstacle_min_range: 0.0
 
       # =========================
