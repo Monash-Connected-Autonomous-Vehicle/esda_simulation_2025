@@ -5,3 +5,7 @@ log/
 lane-detection-on-rural-roads-master
 TwinLiteNetPlus
 image.png
+
+
+# Ignore compiled Python bytecode
+*.pyc
