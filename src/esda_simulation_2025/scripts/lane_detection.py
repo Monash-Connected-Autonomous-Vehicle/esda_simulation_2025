@@ -40,7 +40,11 @@ class LaneDetectionNode(Node):
         self.declare_parameter('virtual_lane_length', 3.0)
         self.declare_parameter('virtual_lane_spacing', 0.05)
         self.declare_parameter('virtual_lane_fit_points', 8)
-        
+
+        # Lane points older than this are not injected into /scan_fused. They
+        # are in the camera frame, so stale ones ride along with the robot.
+        self.declare_parameter('lane_points_max_age', 0.5)
+
         # Get parameters
         self.show_viz = self.get_parameter('show_visualization').value
         self.white_low = self.get_parameter('white_threshold_low').value
@@ -146,6 +150,8 @@ class LaneDetectionNode(Node):
         self.latest_right_image = None
         self.latest_lines = []
         self.latest_3d_points = [] # Store detected points in camera frame
+        self.latest_3d_points_time = None
+        self.lane_points_max_age = self.get_parameter('lane_points_max_age').value
 
         self.left_lane_points = []
         self.right_lane_points = []
@@ -167,7 +173,14 @@ class LaneDetectionNode(Node):
         Receive LaserScan, inject lane obstacles, and republish to /scan_fused
         """
         # If no lanes detected, just republish the original scan
-        if not self.latest_3d_points:
+        if not self.latest_3d_points or self.latest_3d_points_time is None:
+            self.scan_pub.publish(msg)
+            return
+
+        # Also skip points the image pipeline has stopped refreshing (e.g. a
+        # processing exception), rather than injecting them indefinitely.
+        points_age = (self.get_clock().now() - self.latest_3d_points_time).nanoseconds / 1e9
+        if points_age > self.lane_points_max_age:
             self.scan_pub.publish(msg)
             return
 
@@ -524,6 +537,10 @@ class LaneDetectionNode(Node):
                     )
                 else:
                     self.latest_3d_points = []
+            else:
+                # No lanes this frame: drop the previous detection so
+                # scan_callback stops injecting it into /scan_fused.
+                self.latest_3d_points = []
                 
         except Exception as e:
             self.get_logger().error(f'Error processing image: {str(e)}')
@@ -657,6 +674,8 @@ class LaneDetectionNode(Node):
                                f'(valid_depth={valid_depth_count}, fallback={fallback_count})', 
                                throttle_duration_sec=2.0)
         
+        self.latest_3d_points_time = self.get_clock().now()
+
         if not points:
             self.get_logger().warn('No valid 3D points generated from lanes', throttle_duration_sec=5.0)
             return
