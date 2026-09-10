@@ -238,6 +238,13 @@ class LaneDetectionNode(Node):
         self.lane_fixed_frame = self.get_parameter('lane_fixed_frame').value
         self.latest_lane_points_fixed = None  # N x 3, in lane_fixed_frame
 
+        # Camera intrinsics (approximate for the sim's 640x480, FOV 1.089 rad
+        # camera in camera.xacro): fx = width / (2 * tan(fov / 2)).
+        self.fx = 640 / (2 * np.tan(1.089 / 2))
+        self.fy = self.fx
+        self.cx = 320
+        self.cy = 240
+
         self.left_lane_points = []
         self.right_lane_points = []
         
@@ -258,7 +265,8 @@ class LaneDetectionNode(Node):
         Receive LaserScan, inject lane obstacles, and republish to /scan_fused
         """
         # If no lanes detected, just republish the original scan
-        if not self.latest_3d_points or self.latest_3d_points_time is None:
+        # len() rather than truthiness: subclasses may store a numpy array.
+        if len(self.latest_3d_points) == 0 or self.latest_3d_points_time is None:
             self.scan_pub.publish(msg)
             return
 
@@ -349,6 +357,49 @@ class LaneDetectionNode(Node):
                 marker_id += 1
 
         self.virtual_lane_marker_pub.publish(marker_array)
+
+    def store_lane_points(self, points, header):
+        """
+        Record lane points (camera_link_optical, N x 3 list or array) for
+        /scan_fused injection. They are anchored in lane_fixed_frame at the
+        IMAGE stamp, so scan_callback can place them correctly however far
+        the robot has moved by the time each later scan arrives.
+        """
+        self.latest_3d_points = points
+        self.latest_3d_points_time = self.get_clock().now()
+        self.latest_lane_points_fixed = None
+
+        if len(points) == 0:
+            return
+
+        transform = self.lookup_transform_at(
+            self.lane_fixed_frame, 'camera_link_optical', header.stamp)
+        if transform is not None:
+            rotation, translation = transform_to_matrix(transform)
+            self.latest_lane_points_fixed = (
+                np.asarray(points, dtype=np.float64).reshape(-1, 3) @ rotation.T + translation
+            )
+
+    def publish_point_cloud(self, points, header):
+        """Publish N x 3 points (in header.frame_id) as an xyz PointCloud2 on /lane_obstacles."""
+        xyz = np.asarray(points, dtype=np.float32).reshape(-1, 3)
+
+        msg = PointCloud2()
+        msg.header = header
+        msg.height = 1
+        msg.width = int(xyz.shape[0])
+        msg.is_bigendian = False
+        msg.is_dense = False
+        msg.fields = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        ]
+        msg.point_step = 12
+        msg.row_step = 12 * msg.width
+        msg.data = xyz.tobytes()
+
+        self.cloud_pub.publish(msg)
 
     def lookup_transform_at(self, target_frame, source_frame, stamp_msg):
         """
@@ -616,14 +667,8 @@ class LaneDetectionNode(Node):
         Creates thick lane lines by sampling perpendicular to line direction
         """
         points = []
-        self.latest_3d_points = []
         
-        # Camera Intrinsics (Approximate for 640x480, FOV ~1.089 rad)
-        # fx = width / (2 * tan(fov/2))
-        fx = 640 / (2 * np.tan(1.089 / 2))
-        fy = fx
-        cx = 320
-        cy = 240
+        fx, fy, cx, cy = self.fx, self.fy, self.cx, self.cy
         
         # Camera height and tilt for ground plane fallback
         camera_height = self.camera_height
@@ -733,55 +778,19 @@ class LaneDetectionNode(Node):
                     
                     # Add to points list (as native Python floats)
                     points.append([float(x), float(y), float(z)])
-                    self.latest_3d_points.append((float(x), float(y), float(z)))
         
         self.get_logger().info(f'Generated {len(points)} 3D points from {len(lines)} lane segments '\
                                f'(valid_depth={valid_depth_count}, fallback={fallback_count})', 
                                throttle_duration_sec=2.0)
         
-        self.latest_3d_points_time = self.get_clock().now()
-
-        # Anchor the points in a world-fixed frame at the IMAGE stamp, so
-        # scan_callback can place them correctly however far the robot has
-        # moved by the time each later scan arrives.
-        self.latest_lane_points_fixed = None
-        if points:
-            transform = self.lookup_transform_at(
-                self.lane_fixed_frame, 'camera_link_optical', header.stamp)
-            if transform is not None:
-                rotation, translation = transform_to_matrix(transform)
-                self.latest_lane_points_fixed = (
-                    np.asarray(points, dtype=np.float64) @ rotation.T + translation
-                )
+        self.store_lane_points(points, header)
 
         if not points:
             self.get_logger().warn('No valid 3D points generated from lanes', throttle_duration_sec=5.0)
             return
 
-        # Create PointCloud2 message
-        msg = PointCloud2()
-        msg.header = header # Use same header/frame as camera
-        msg.height = 1
-        msg.width = len(points)
-        msg.is_bigendian = False
-        msg.is_dense = False
-        
-        msg.fields = [
-            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
-            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
-            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
-        ]
-        msg.point_step = 12
-        msg.row_step = 12 * len(points)
-        
-        # Pack binary data
-        buffer = []
-        for p in points:
-            buffer.append(struct.pack('fff', p[0], p[1], p[2]))
-            
-        msg.data = b''.join(buffer)
-        
-        self.cloud_pub.publish(msg)
+        # Same header/frame as the camera image
+        self.publish_point_cloud(points, header)
 
     def publish_lane_markers(self, lines, header):
         """
@@ -794,11 +803,7 @@ class LaneDetectionNode(Node):
         self.left_lane_points = []
         self.right_lane_points = []
 
-        # Camera intrinsics
-        fx = 640 / (2 * np.tan(1.089 / 2))
-        fy = fx
-        cx = 320
-        cy = 240
+        fx, fy, cx, cy = self.fx, self.fy, self.cx, self.cy
         camera_height = self.camera_height
         camera_pitch = self.camera_pitch
 
