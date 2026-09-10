@@ -303,6 +303,7 @@ Visualization Manager:
         Map: true
         RobotModel: true
         TF: true
+        VirtualLaneMarkers: true
         VirtualRearWall: true
         Value: true
       Zoom Factor: 1
@@ -317,6 +318,18 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /lane_markers
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: VirtualLaneMarkers
+      Namespaces:
+        virtual_lanes: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /virtual_lane_markers
       Value: true
     - Alpha: 1
       Class: rviz_default_plugins/PointCloud2
