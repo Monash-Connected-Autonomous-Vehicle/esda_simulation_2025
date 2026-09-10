@@ -45,6 +45,8 @@ def _import_target():
         'sensor_msgs', 'sensor_msgs.msg',
         'sensor_msgs_py', 'sensor_msgs_py.point_cloud2',
         'tf2_ros', 'tf2_geometry_msgs',
+        # Extra imports of lane_detection.py (V-12)
+        'tf2_ros.buffer', 'tf2_ros.transform_listener', 'cv_bridge',
     ]:
         if name not in sys.modules:
             module = types.ModuleType(name)
@@ -486,6 +488,97 @@ def v11_timing(snap):
     check('path_clearance under 1 ms', path < 1e-3, f'{path * 1e3:.3f} ms')
 
 
+def reference_inject(ranges, angle_min, angle_max, angle_increment, range_max, points_xy):
+    """
+    The ORIGINAL lane_detection.py scan_callback injection loop, verbatim from
+    the point where each lane point is already in the laser frame.
+    """
+    ranges = list(ranges)
+    for lx, ly in points_xy:
+        dist = math.sqrt(lx*lx + ly*ly)
+        angle = math.atan2(ly, lx)
+        if angle < angle_min or angle > angle_max:
+            continue
+        if not (-10.0 < lx < 10.0 and -10.0 < ly < 10.0):
+            continue
+        if dist < 0.15:
+            continue
+        if dist > range_max:
+            continue
+        idx = int((angle - angle_min) / angle_increment)
+        if 0 <= idx < len(ranges):
+            current_r = ranges[idx]
+            if math.isinf(current_r) or math.isnan(current_r) or current_r == 0.0 or dist < current_r:
+                ranges[idx] = dist
+    return ranges
+
+
+def v12_lane_injection():
+    print('\nV-12  lane_detection.py scan injection vs original loop')
+
+    import lane_detection as lane
+
+    rng = np.random.default_rng(12)
+    beams = 360
+    angle_min, angle_max = -math.pi, math.pi
+    increment = (angle_max - angle_min) / beams
+    range_max = 12.0
+
+    mismatches = 0
+    for _ in range(200):
+        ranges = rng.uniform(0.1, range_max, beams)
+        special = rng.choice(beams, 60, replace=False)
+        ranges[special[:20]] = np.inf
+        ranges[special[20:40]] = np.nan
+        ranges[special[40:]] = 0.0
+
+        # Mix of in-range, out-of-box, beyond-range_max and footprint points.
+        points = np.vstack([
+            rng.uniform(-12.0, 12.0, (rng.integers(0, 400), 2)),
+            rng.uniform(-0.2, 0.2, (5, 2)),
+        ])
+
+        expected = np.asarray(reference_inject(
+            ranges.tolist(), angle_min, angle_max, increment, range_max, points.tolist()))
+        got, _ = lane.inject_lane_ranges(
+            ranges.tolist(), angle_min, angle_max, increment, range_max,
+            points[:, 0], points[:, 1])
+
+        if not np.allclose(expected, got, rtol=0.0, atol=1e-12, equal_nan=True):
+            mismatches += 1
+
+    check('inject_lane_ranges matches the original loop (200 random scans)',
+          mismatches == 0, f'{mismatches} mismatching scans')
+
+    untouched = [1.0, np.inf, 0.0, np.nan]
+    got, changed = lane.inject_lane_ranges(
+        untouched, angle_min, angle_max, increment, range_max, np.array([]), np.array([]))
+    check('no lane points leaves the scan unchanged',
+          np.allclose(got, untouched, equal_nan=True) and changed == 0)
+
+    def fake_transform(qx, qy, qz, qw, tx, ty, tz):
+        return types.SimpleNamespace(transform=types.SimpleNamespace(
+            rotation=types.SimpleNamespace(x=qx, y=qy, z=qz, w=qw),
+            translation=types.SimpleNamespace(x=tx, y=ty, z=tz)))
+
+    yaw = 0.7
+    rotation, translation = lane.transform_to_matrix(
+        fake_transform(0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2), 1.0, -2.0, 0.5))
+    expected_rotation = np.array([
+        [math.cos(yaw), -math.sin(yaw), 0.0],
+        [math.sin(yaw), math.cos(yaw), 0.0],
+        [0.0, 0.0, 1.0],
+    ])
+    check('transform_to_matrix reproduces a yaw rotation',
+          np.allclose(rotation, expected_rotation) and np.allclose(translation, [1.0, -2.0, 0.5]))
+
+    q = rng.normal(size=4)
+    q /= np.linalg.norm(q)
+    rotation, _ = lane.transform_to_matrix(fake_transform(*q, 0.0, 0.0, 0.0))
+    check('transform_to_matrix gives a proper rotation for an arbitrary quaternion',
+          np.allclose(rotation @ rotation.T, np.eye(3)) and np.isclose(np.linalg.det(rotation), 1.0))
+
+
 def main():
     print('Offline validation for waypoint_navigator_recommendation.py')
     print('=' * 62)
@@ -498,6 +591,7 @@ def main():
     v9_travel_geometry()
     v10_yaml_lint()
     v11_timing(snap)
+    v12_lane_injection()
 
     print('\n' + '=' * 62)
     failed = [name for name, ok, _ in RESULTS if not ok]

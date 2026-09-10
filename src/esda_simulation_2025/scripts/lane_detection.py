@@ -21,6 +21,76 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from tf2_geometry_msgs import do_transform_point
 
+
+# ==========================================================================
+# Pure helpers - no ROS state, so tools/validate_waypoint_logic.py can test
+# them offline.
+# ==========================================================================
+
+def transform_to_matrix(transform):
+    """
+    Rotation (3x3) and translation (3,) of a geometry_msgs TransformStamped,
+    so a point cloud can be transformed in one numpy operation instead of one
+    do_transform_point call per point.
+    """
+    q = transform.transform.rotation
+    t = transform.transform.translation
+    x, y, z, w = q.x, q.y, q.z, q.w
+
+    rotation = np.array([
+        [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - z * w), 2.0 * (x * z + y * w)],
+        [2.0 * (x * y + z * w), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - x * w)],
+        [2.0 * (x * z - y * w), 2.0 * (y * z + x * w), 1.0 - 2.0 * (x * x + y * y)],
+    ])
+
+    return rotation, np.array([t.x, t.y, t.z])
+
+
+def inject_lane_ranges(ranges, angle_min, angle_max, angle_increment, range_max, lx, ly):
+    """
+    Write lane points (laser-frame x/y) into a LaserScan's ranges.
+
+    Same rules as the original per-point loop: a point must lie inside the
+    scan's angular span, within 10 m on each axis, 0.15 m to range_max from
+    the laser; it replaces its beam if that beam is inf, NaN or 0.0 (no
+    return) or further away. With several points on one beam the closest
+    wins, exactly as the sequential loop produced.
+
+    Returns (ranges as float64 array, number of beams changed).
+    """
+    ranges = np.array(ranges, dtype=np.float64)
+    lx = np.asarray(lx, dtype=np.float64)
+    ly = np.asarray(ly, dtype=np.float64)
+
+    dist = np.sqrt(lx * lx + ly * ly)
+    angle = np.arctan2(ly, lx)
+
+    keep = (
+        (angle >= angle_min) & (angle <= angle_max)
+        & (np.abs(lx) < 10.0) & (np.abs(ly) < 10.0)
+        & (dist >= 0.15) & (dist <= range_max)
+    )
+
+    # angle >= angle_min here, so truncation equals the loop's int().
+    idx = ((angle[keep] - angle_min) / angle_increment).astype(np.int64)
+    dist = dist[keep]
+
+    in_scan = (idx >= 0) & (idx < ranges.size)
+    idx = idx[in_scan]
+    dist = dist[in_scan]
+
+    lane_min = np.full(ranges.size, np.inf)
+    np.minimum.at(lane_min, idx, dist)
+
+    hit = np.isfinite(lane_min)
+    current = ranges[hit]
+    replace = ~np.isfinite(current) | (current == 0.0) | (lane_min[hit] < current)
+
+    ranges[hit] = np.where(replace, lane_min[hit], current)
+
+    return ranges, int(np.count_nonzero(replace))
+
+
 class LaneDetectionNode(Node):
     def __init__(self):
         super().__init__('lane_detection_node')
@@ -50,6 +120,11 @@ class LaneDetectionNode(Node):
         # robot_core_ref.xacro) and camera_joint adds 0.315 (camera.xacro).
         self.declare_parameter('camera_height', 0.4775)
         self.declare_parameter('camera_pitch', 0.0)  # radians, 0 = looking straight ahead
+
+        # World-fixed frame lane points are anchored in between the image and
+        # the scans they are injected into, so robot motion in that gap does
+        # not smear them. odom = EKF world_frame / diff-drive odom_frame_id.
+        self.declare_parameter('lane_fixed_frame', 'odom')
 
         # Get parameters
         self.show_viz = self.get_parameter('show_visualization').value
@@ -160,6 +235,8 @@ class LaneDetectionNode(Node):
         self.lane_points_max_age = self.get_parameter('lane_points_max_age').value
         self.camera_height = self.get_parameter('camera_height').value
         self.camera_pitch = self.get_parameter('camera_pitch').value
+        self.lane_fixed_frame = self.get_parameter('lane_fixed_frame').value
+        self.latest_lane_points_fixed = None  # N x 3, in lane_fixed_frame
 
         self.left_lane_points = []
         self.right_lane_points = []
@@ -192,80 +269,36 @@ class LaneDetectionNode(Node):
             self.scan_pub.publish(msg)
             return
 
-        fused_scan = msg
-        # Make ranges mutable
-        ranges = list(fused_scan.ranges)
-        
-        # Transform cached 3D points to Laser Frame
-        # Points are currently in 'camera_link_optical'
-        camera_frame = 'camera_link_optical'
         laser_frame = msg.header.frame_id
-        
-        injected_count = 0
-        
-        try:
-            trans = self.tf_buffer.lookup_transform(
-                laser_frame,
-                camera_frame,
-                rclpy.time.Time())
-                
-            for pt in self.latest_3d_points:
-                # Create PointStamped
-                p = PointStamped()
-                p.header.frame_id = camera_frame
-                # Ensure native Python float types (ROS2 rejects numpy types)
-                p.point.x = float(pt[0])
-                p.point.y = float(pt[1])
-                p.point.z = float(pt[2])
-                
-                # Transform
-                p_laser = do_transform_point(p, trans)
-                
-                lx = p_laser.point.x
-                ly = p_laser.point.y
-                
-                # Convert to Polar
-                dist = math.sqrt(lx*lx + ly*ly)
-                angle = math.atan2(ly, lx)
-                
-                # Check bounds and filter noise near robot (e.g., ground reflections under vehicle)
-                if angle < fused_scan.angle_min or angle > fused_scan.angle_max:
-                    continue
-                
-                # Validate the transformed point is reasonable
-                if not (-10.0 < lx < 10.0 and -10.0 < ly < 10.0):
-                    continue
-                    
-                # Ignore points too close to the robot center (footprint exclusion)
-                if dist < 0.15: 
-                    continue
-                    
-                if dist > fused_scan.range_max:
-                    continue
-                    
-                # Find index
-                idx = int((angle - fused_scan.angle_min) / fused_scan.angle_increment)
-                
-                # Inject obstacle if closer
-                if 0 <= idx < len(ranges):
-                    current_r = ranges[idx]
-                    # If current_r is inf or 0 (unknown/far) or further away
-                    if math.isinf(current_r) or math.isnan(current_r) or current_r == 0.0 or dist < current_r:
-                        ranges[idx] = dist
-                        injected_count += 1
-                        
-            fused_scan.ranges = ranges
-            self.scan_pub.publish(fused_scan)
-            
-            if injected_count > 0:
-                self.get_logger().info(f'Injected {injected_count} lane points into scan (frame: {laser_frame})', 
-                                       throttle_duration_sec=2.0)
 
-        except TransformException as ex:
-            # If TF fails, just republish original
-            self.get_logger().warn(f'Could not transform lane points from {camera_frame} to {laser_frame}: {ex}', 
-                                   throttle_duration_sec=5.0)
+        if self.latest_lane_points_fixed is None:
             self.scan_pub.publish(msg)
+            return
+
+        # Lane points are held in lane_fixed_frame, anchored at the image
+        # stamp. Bring them into the laser frame at THIS scan's stamp so robot
+        # motion since the image was taken does not smear them.
+        transform = self.lookup_transform_at(
+            laser_frame, self.lane_fixed_frame, msg.header.stamp)
+        if transform is None:
+            self.scan_pub.publish(msg)
+            return
+
+        rotation, translation = transform_to_matrix(transform)
+        points_laser = self.latest_lane_points_fixed @ rotation.T + translation
+
+        ranges, injected_count = inject_lane_ranges(
+            msg.ranges, msg.angle_min, msg.angle_max, msg.angle_increment,
+            msg.range_max, points_laser[:, 0], points_laser[:, 1])
+
+        # tolist() gives native Python floats; rclpy rejects numpy scalars.
+        msg.ranges = ranges.tolist()
+        self.scan_pub.publish(msg)
+
+        if injected_count > 0:
+            self.get_logger().info(
+                f'Injected lane points into {injected_count} beams (frame: {laser_frame})',
+                throttle_duration_sec=2.0)
 
     def publish_virtual_lane_markers(self, virtual_left, virtual_right):
         """
@@ -316,6 +349,30 @@ class LaneDetectionNode(Node):
                 marker_id += 1
 
         self.virtual_lane_marker_pub.publish(marker_array)
+
+    def lookup_transform_at(self, target_frame, source_frame, stamp_msg):
+        """
+        Transform at a message's stamp, falling back to the latest available
+        one (e.g. the stamp is just ahead of the newest odom TF). Returns None
+        if neither is available.
+        """
+        try:
+            return self.tf_buffer.lookup_transform(
+                target_frame, source_frame, rclpy.time.Time.from_msg(stamp_msg))
+        except TransformException as ex:
+            self.get_logger().warn(
+                f'No {source_frame} -> {target_frame} transform at message stamp, '
+                f'using latest (lane motion compensation reduced): {ex}',
+                throttle_duration_sec=10.0)
+
+        try:
+            return self.tf_buffer.lookup_transform(
+                target_frame, source_frame, rclpy.time.Time())
+        except TransformException as ex:
+            self.get_logger().warn(
+                f'Could not transform {source_frame} -> {target_frame}: {ex}',
+                throttle_duration_sec=5.0)
+            return None
 
     def depth_callback(self, msg):
         """Store the latest depth image"""
@@ -683,6 +740,19 @@ class LaneDetectionNode(Node):
                                throttle_duration_sec=2.0)
         
         self.latest_3d_points_time = self.get_clock().now()
+
+        # Anchor the points in a world-fixed frame at the IMAGE stamp, so
+        # scan_callback can place them correctly however far the robot has
+        # moved by the time each later scan arrives.
+        self.latest_lane_points_fixed = None
+        if points:
+            transform = self.lookup_transform_at(
+                self.lane_fixed_frame, 'camera_link_optical', header.stamp)
+            if transform is not None:
+                rotation, translation = transform_to_matrix(transform)
+                self.latest_lane_points_fixed = (
+                    np.asarray(points, dtype=np.float64) @ rotation.T + translation
+                )
 
         if not points:
             self.get_logger().warn('No valid 3D points generated from lanes', throttle_duration_sec=5.0)

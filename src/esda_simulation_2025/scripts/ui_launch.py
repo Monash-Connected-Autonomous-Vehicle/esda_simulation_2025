@@ -480,7 +480,7 @@ class SimManager(ctk.CTk):
             model_path = f"{self.workspace_root}/lane-detection-on-rural-roads-master/CS542_Project/Code/FCN_model.h5"
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection_FCN.py "
-                f"--ros-args "
+                f"--ros-args -p use_sim_time:=true "
                 f"-p fcn_model_path:={model_path} "
                 f"-p show_visualization:={show_visualization}"
             )
@@ -489,15 +489,16 @@ class SimManager(ctk.CTk):
             weight_path = f"{repo_path}/pretrained/nano.pth"
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection_twinlite.py "
-                f"--ros-args -p twinlite_repo_path:={repo_path} "
+                f"--ros-args -p use_sim_time:=true "
+                f"-p twinlite_repo_path:={repo_path} "
                 f"-p twinlite_weight_path:={weight_path} "
-                f"-p twinlite_variant:=nano"
+                f"-p twinlite_variant:=nano "
                 f"-p show_visualization:={show_visualization}"
             )
         else:
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection.py "
-                f"--ros-args "
+                f"--ros-args -p use_sim_time:=true "
                 f"-p show_visualization:={show_visualization}"
             )
 
