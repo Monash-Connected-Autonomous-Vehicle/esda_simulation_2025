@@ -159,6 +159,23 @@ class SimManager(ctk.CTk):
         self.lane_detection_button = ctk.CTkButton(self.sim_frame, text="Launch Lane Detection", command=self.toggle_lane_detection, font=("Orbitron", 13, "bold"), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.lane_detection_button.grid(row=1, column=2, columnspan=2, padx=10, pady=(0, 8), sticky="ew")
 
+        # Lane detection method: the simple white-pixel detector, or the
+        # line-based detectors picked in the Regular/FCN/TwinLiteNet+ dropdown.
+        # Switching while the detector runs restarts it, for quick A/B tests.
+        self.lane_method = ctk.StringVar(value="Simple (White)")
+        self.lane_method_selector = ctk.CTkSegmentedButton(
+            self.sim_frame,
+            values=["Simple (White)", "Line Detection"],
+            variable=self.lane_method,
+            command=self.on_lane_method_change,
+            font=("Orbitron", 13, "bold"),
+            selected_color=self.accent_purple,
+            unselected_color=self.bg_dark,
+            text_color=self.fg_text
+        )
+        self.lane_method_selector.grid(row=2, column=0, columnspan=4, padx=10, pady=(0, 8), sticky="ew")
+        self.update_lane_mode_dropdown_state()
+
         # Remove SLAM Options Section (now merged)
 
         # Modules Label
@@ -458,6 +475,21 @@ class SimManager(ctk.CTk):
         time.sleep(3)  # Wait for simulation to be ready
         self.run_in_terminal("SLAM", cmd)
 
+    def update_lane_mode_dropdown_state(self):
+        """The Regular/FCN/TwinLiteNet+ dropdown only applies to Line Detection."""
+        state = "disabled" if self.lane_method.get() == "Simple (White)" else "normal"
+        self.lane_mode_dropdown.configure(state=state)
+
+    def on_lane_method_change(self, _value=None):
+        """Switch lane detection method, restarting the detector if it is running."""
+        self.update_lane_mode_dropdown_state()
+
+        if "LANE" in self.processes and self.processes["LANE"].poll() is None:
+            # stop_process removes the entry synchronously, so the relaunch
+            # below starts the new detector rather than toggling it off.
+            self.stop_process("LANE")
+            self.toggle_lane_detection()
+
     def toggle_lane_detection(self):
         """Launch (or stop, if already running) the lane detection node standalone.
 
@@ -477,7 +509,13 @@ class SimManager(ctk.CTk):
             else "false"
         )
 
-        if mode == "FCN":
+        if self.lane_method.get() == "Simple (White)":
+            lane_cmd = (
+                f"ros2 run esda_simulation_2025 simple_lane_detection.py "
+                f"--ros-args -p use_sim_time:=true "
+                f"-p show_visualization:={show_visualization}"
+            )
+        elif mode == "FCN":
             model_path = f"{self.workspace_root}/lane-detection-on-rural-roads-master/CS542_Project/Code/FCN_model.h5"
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection_FCN.py "
@@ -622,6 +660,7 @@ class SimManager(ctk.CTk):
         subprocess.run("pkill -9 -f lane_detection.py 2>/dev/null", shell=True)
         subprocess.run("pkill -9 -f lane_detection_FCN.py 2>/dev/null", shell=True)
         subprocess.run("pkill -9 -f lane_detection_twinlite.py 2>/dev/null", shell=True)
+        subprocess.run("pkill -9 -f simple_lane_detection.py 2>/dev/null", shell=True)
         # Clean up shared memory segments that often cause FastDDS errors
         subprocess.run("rm -rf /dev/shm/fastrtps_* /dev/shm/sem.* 2>/dev/null", shell=True)
         # Kill our managed processes
