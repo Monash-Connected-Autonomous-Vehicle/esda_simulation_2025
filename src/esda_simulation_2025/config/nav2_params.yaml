@@ -363,7 +363,11 @@ global_costmap:
       # =========================
       lane_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
+        # Disabled: this layer has clearing: False and no other source, so in
+        # the non-rolling global costmap every lane / virtual-lane point ever
+        # published stayed forever. Real lane points still reach the global
+        # costmap via /scan_fused (obstacle_layer), which raytrace-clears.
+        enabled: False
 
         observation_sources: lane
 
