@@ -64,6 +64,7 @@ install(PROGRAMS
   scripts/curve_detection.py
   scripts/throttle_publisher.py
   scripts/cmd_vel_odometry.py
+  scripts/simple_lane_detection.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

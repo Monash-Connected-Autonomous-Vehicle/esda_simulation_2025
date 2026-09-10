@@ -579,6 +579,97 @@ def v12_lane_injection():
           np.allclose(rotation @ rotation.T, np.eye(3)) and np.isclose(np.linalg.det(rotation), 1.0))
 
 
+def reference_project(u, v, d, fx, fy, cx, cy, camera_height, camera_pitch, max_range):
+    """
+    Per-pixel rules of the ORIGINAL LaneDetectionNode.publish_obstacle_cloud
+    (depth path + ground-plane fallback), plus the simple detector's max_range
+    cap. Returns (x, y, z) or None.
+    """
+    use_fallback = math.isnan(d) or math.isinf(d) or d <= 0.05 or d > 10.0
+
+    if use_fallback:
+        ray_x = (u - cx) / fx
+        ray_y = (v - cy) / fy
+        ray_z = 1.0
+        ray_len = math.sqrt(ray_x**2 + ray_y**2 + ray_z**2)
+        ray_x /= ray_len
+        ray_y /= ray_len
+        ray_z /= ray_len
+        ray_y_rot = ray_y * math.cos(camera_pitch) - ray_z * math.sin(camera_pitch)
+        ray_z_rot = ray_y * math.sin(camera_pitch) + ray_z * math.cos(camera_pitch)
+        if abs(ray_y_rot) <= 0.01:
+            return None
+        t_intersect = camera_height / ray_y_rot
+        if not (0.3 < t_intersect < 8.0):
+            return None
+        z = t_intersect * ray_z_rot
+        x = t_intersect * ray_x
+        y = t_intersect * ray_y_rot
+        if not (z > 0.2 and abs(x) < 5.0):
+            return None
+    else:
+        z = d
+        x = (u - cx) * z / fx
+        y = (v - cy) * z / fy
+        if z < 0.2 or z > 8.0 or abs(x) > 5.0:
+            return None
+
+    if z > max_range:
+        return None
+
+    return (x, y, z)
+
+
+def v13_simple_projection():
+    print('\nV-13  simple_lane_detection.py pixel projection vs per-pixel rules')
+
+    import simple_lane_detection as simple
+
+    fx = 640 / (2 * math.tan(1.089 / 2))
+    fy, cx, cy = fx, 320, 240
+    camera_height, camera_pitch, max_range = 0.4775, 0.0, 5.0
+
+    rng = np.random.default_rng(13)
+
+    depth = rng.uniform(0.0, 12.0, (480, 640)).astype(np.float32)
+    flat = depth.reshape(-1)
+    special = rng.choice(flat.size, 60000, replace=False)
+    flat[special[:20000]] = np.nan
+    flat[special[20000:40000]] = np.inf
+    flat[special[40000:]] = 0.0
+
+    us = rng.integers(0, 640, 5000)
+    vs = rng.integers(0, 480, 5000)
+
+    mismatch_detail = ''
+    for label, depth_image in (('with depth', depth), ('no depth', None)):
+        expected = []
+        for u, v in zip(us.tolist(), vs.tolist()):
+            d = float(depth_image[v, u]) if depth_image is not None else float('nan')
+            point = reference_project(u, v, d, fx, fy, cx, cy,
+                                      camera_height, camera_pitch, max_range)
+            if point is not None:
+                expected.append(point)
+        expected = np.asarray(expected, dtype=np.float64).reshape(-1, 3)
+
+        got = simple.project_pixels_to_camera(
+            us, vs, depth_image, fx, fy, cx, cy, camera_height, camera_pitch, max_range)
+
+        ok = got.shape == expected.shape and np.allclose(got, expected, rtol=0.0, atol=1e-9)
+        if not ok:
+            mismatch_detail = f'{label}: expected {expected.shape}, got {got.shape}'
+        check(f'project_pixels_to_camera matches per-pixel rules ({label})', ok, mismatch_detail)
+
+    v = 479
+    point = simple.project_pixels_to_camera(
+        np.array([320]), np.array([v]), None, fx, fy, cx, cy,
+        camera_height, camera_pitch, max_range)
+    expected_z = camera_height * fy / (v - cy)
+    check('bottom-centre ground pixel lands at z = h*fy/(v-cy)',
+          point.shape == (1, 3) and abs(point[0, 2] - expected_z) < 1e-9 and abs(point[0, 0]) < 1e-12,
+          f'z={point[0, 2] if len(point) else None}, expected {expected_z:.4f}')
+
+
 def main():
     print('Offline validation for waypoint_navigator_recommendation.py')
     print('=' * 62)
@@ -592,6 +683,7 @@ def main():
     v10_yaml_lint()
     v11_timing(snap)
     v12_lane_injection()
+    v13_simple_projection()
 
     print('\n' + '=' * 62)
     failed = [name for name, ok, _ in RESULTS if not ok]

@@ -103,11 +103,12 @@ Also installed but outside both stacks: `wavefront_frontier_exploration.py` (pub
 
 ## Perception: lane detection and scan fusion
 
-Three interchangeable detectors, all subclassing the base node in `lane_detection.py`:
+Four interchangeable detectors, all subclassing the base node in `lane_detection.py`:
 
 - `lane_detection.py` — classic CV (grayscale threshold → Canny → Hough).
 - `lane_detection_FCN.py` — FCN segmentation.
 - `lane_detection_twinlite.py` — TwinLiteNet+ multi-task model (external repo, gitignored; see `LANE_DETECTION.md` for setup).
+- `simple_lane_detection.py` — no lines at all: every white (HSV) pixel below the horizon is projected to 3D and published as an obstacle through the base class's `store_lane_points` / `publish_point_cloud`. Publishes **no** `/lane_markers`, so the navigator's lane-following goals stay idle. The UI's "Simple (White)" / "Line Detection" switch picks it; the Regular/FCN/TwinLiteNet+ dropdown only applies to Line Detection.
 
 Subclasses override only mask/line extraction and visualisation. **All downstream behaviour lives in the base class** — 3D projection via the depth image, `/lane_markers` (MarkerArray), `/lane_obstacles` (PointCloud2), and the `scan_callback` that injects lane points into the LiDAR scan and republishes it as `/scan_fused`.
 
