@@ -45,6 +45,12 @@ class LaneDetectionNode(Node):
         # are in the camera frame, so stale ones ride along with the robot.
         self.declare_parameter('lane_points_max_age', 0.5)
 
+        # Ground-plane fallback geometry. Height is above the GROUND, not
+        # base_link: base_link sits at axle height (wheel_radius 0.1625 in
+        # robot_core_ref.xacro) and camera_joint adds 0.315 (camera.xacro).
+        self.declare_parameter('camera_height', 0.4775)
+        self.declare_parameter('camera_pitch', 0.0)  # radians, 0 = looking straight ahead
+
         # Get parameters
         self.show_viz = self.get_parameter('show_visualization').value
         self.white_low = self.get_parameter('white_threshold_low').value
@@ -152,6 +158,8 @@ class LaneDetectionNode(Node):
         self.latest_3d_points = [] # Store detected points in camera frame
         self.latest_3d_points_time = None
         self.lane_points_max_age = self.get_parameter('lane_points_max_age').value
+        self.camera_height = self.get_parameter('camera_height').value
+        self.camera_pitch = self.get_parameter('camera_pitch').value
 
         self.left_lane_points = []
         self.right_lane_points = []
@@ -561,8 +569,8 @@ class LaneDetectionNode(Node):
         cy = 240
         
         # Camera height and tilt for ground plane fallback
-        camera_height = 0.315  # meters above ground
-        camera_pitch = 0.0  # radians (0 = looking straight ahead)
+        camera_height = self.camera_height
+        camera_pitch = self.camera_pitch
         
         valid_depth_count = 0
         fallback_count = 0
@@ -721,8 +729,8 @@ class LaneDetectionNode(Node):
         fy = fx
         cx = 320
         cy = 240
-        camera_height = 0.315
-        camera_pitch = 0.0
+        camera_height = self.camera_height
+        camera_pitch = self.camera_pitch
 
         marker_id = 0
 
