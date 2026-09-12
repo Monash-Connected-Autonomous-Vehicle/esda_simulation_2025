@@ -33,6 +33,14 @@
         -->
     </link>
 
+    <!-- IMU built into the ZED camera -->
+    <joint name="imu_joint" type="fixed">
+        <parent link="camera_link"/>
+        <child link="imu_link"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <link name="imu_link"/>
 
     <joint name="camera_optical_joint" type="fixed">
         <parent link="camera_link"/>
@@ -117,6 +125,14 @@
                 </image>
                 <clip><near>0.1</near><far>10.0</far></clip>
             </camera>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="imu_link">
+        <sensor name="zed_imu" type="imu">
+            <always_on>true</always_on>
+            <update_rate>100</update_rate>
+            <topic>imu/data</topic>
         </sensor>
     </gazebo>
 

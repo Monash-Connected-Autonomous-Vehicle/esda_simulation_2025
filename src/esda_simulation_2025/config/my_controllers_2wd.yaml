@@ -28,6 +28,9 @@ diff_drive_base_controller:
     twist_covariance_diagonal: [0.001, 0.0, 0.0, 0.0, 0.0, 0.01]
 
     open_loop: true
+    # EKF (ekf.yaml, launched with the sim) is the sole publisher of
+    # odom->base_link TF, fused from this controller's raw /odom + IMU.
+    # Leaving this true would have two nodes broadcasting the same transform.
     enable_odom_tf: true
 
     cmd_vel_timeout: 0.5

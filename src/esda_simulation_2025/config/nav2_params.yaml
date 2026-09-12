@@ -47,7 +47,7 @@ bt_navigator:
     global_frame: map
     robot_base_frame: base_link
     # odom_topic: /diff_drive_base_controller/odom
-    odom_topic: odom
+    odom_topic: odometry/filtered  # EKF-fused odom+IMU, not raw wheel odom
 
     # default_nav_to_pose_bt_xml: "/home/sam/Desktop/MCAV/ESDA_Software/esda_simulation_2025/install/esda_simulation_2025/share/esda_simulation_2025/behaviour_tree/navigate_recovery.xml"
     default_nav_to_pose_bt_xml: "install/esda_simulation_2025/share/esda_simulation_2025/behaviour_tree/navigate_recovery.xml"
@@ -267,7 +267,7 @@ local_costmap:
         # virtual_wall was listed here with no matching virtual_wall: block,
         # so Nav2 defaulted it to a LaserScan source on a topic nothing
         # publishes. Same inert-source bug as the old travel_history_layer.
-        observation_sources: scan lane
+        observation_sources: scan lane lane_left lane_right
         scan:
           # A relative topic will be appended to the parent of the local_costmap namespace.
           # For example:
@@ -286,6 +286,24 @@ local_costmap:
           obstacle_min_range: 0.0
         lane:
           topic: /lane_obstacles
+          max_obstacle_height: 2.0
+          clearing: False
+          marking: True
+          data_type: "PointCloud2"
+          obstacle_max_range: 5.0
+          obstacle_min_range: 0.0
+          min_obstacle_height: -0.5
+        lane_left:
+          topic: /lane_obstacles_left_camera
+          max_obstacle_height: 2.0
+          clearing: False
+          marking: True
+          data_type: "PointCloud2"
+          obstacle_max_range: 5.0
+          obstacle_min_range: 0.0
+          min_obstacle_height: -0.5
+        lane_right:
+          topic: /lane_obstacles_right_camera
           max_obstacle_height: 2.0
           clearing: False
           marking: True
@@ -362,10 +380,38 @@ global_costmap:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
 
-        observation_sources: lane
+        observation_sources: lane lane_left lane_right
 
         lane:
           topic: /lane_obstacles
+
+          data_type: "PointCloud2"
+
+          clearing: False
+          marking: True
+
+          max_obstacle_height: 2.0
+          min_obstacle_height: -0.5
+
+          obstacle_max_range: 5.0
+          obstacle_min_range: 0.0
+
+        lane_left:
+          topic: /lane_obstacles_left_camera
+
+          data_type: "PointCloud2"
+
+          clearing: False
+          marking: True
+
+          max_obstacle_height: 2.0
+          min_obstacle_height: -0.5
+
+          obstacle_max_range: 5.0
+          obstacle_min_range: 0.0
+
+        lane_right:
+          topic: /lane_obstacles_right_camera
 
           data_type: "PointCloud2"
 
@@ -560,7 +606,7 @@ velocity_smoother:
     min_velocity: [-0.5, 0.0, -2.0]
     max_accel: [2.5, 0.0, 3.2]
     max_decel: [-2.5, 0.0, -3.2]
-    odom_topic: "odom"
+    odom_topic: "odometry/filtered"  # EKF-fused odom+IMU, not raw wheel odom
     # odom_topic: /diff_drive_base_controller/odom
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]

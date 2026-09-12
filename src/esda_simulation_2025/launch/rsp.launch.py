@@ -3,7 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.substitutions import LaunchConfiguration, Command
+from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution
 from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -17,10 +17,11 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_ros2_control = LaunchConfiguration('use_ros2_control')
     use_lidar = LaunchConfiguration('use_lidar')
+    robot_model = LaunchConfiguration('robot_model')
 
     # Process the URDF file
     pkg_path = os.path.join(get_package_share_directory('esda_simulation_2025'))
-    xacro_file = os.path.join(pkg_path,'description','robot.urdf.xacro')
+    xacro_file = PathJoinSubstitution([pkg_path, 'description', robot_model])
     # robot_description_config = xacro.process_file(xacro_file).toxml()
     robot_description_config = ParameterValue(
         Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time, ' use_lidar:=', use_lidar]),
@@ -50,6 +51,10 @@ def generate_launch_description():
             'use_lidar',
             default_value='true',
             description='Use lidar if true'),
+        DeclareLaunchArgument(
+            'robot_model',
+            default_value='robot.urdf.xacro',
+            description='xacro filename under description/ to load'),
 
         node_robot_state_publisher
     ])

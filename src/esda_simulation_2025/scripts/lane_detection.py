@@ -36,7 +36,19 @@ class LaneDetectionNode(Node):
         self.declare_parameter('max_lane_width', 200)  # Maximum lane width in pixels
         self.declare_parameter('lane_thickness_pixels', 8)  # Lane thickness for dense sampling
         self.declare_parameter('point_spacing_pixels', 2.0)  # Distance between sampled points
-        
+
+        # Which physical camera this instance is processing - lets multiple
+        # instances (front ZED vs. remapped side cameras) each stamp their
+        # output with their own TF frame and ground-plane geometry instead of
+        # all sharing the front camera's values.
+        self.declare_parameter('camera_frame_id', 'camera_link_optical')
+        self.declare_parameter('camera_mount_height', 0.315)  # meters above ground
+        self.declare_parameter('camera_mount_pitch', 0.0)  # radians (0 = looking straight ahead)
+        # Hard cutoff on published point distance - projection noise grows with
+        # range, so a tighter value here biases output toward closer, more
+        # trustworthy detections instead of noisy far ones.
+        self.declare_parameter('max_lane_range', 8.0)
+
         # Get parameters
         self.show_viz = self.get_parameter('show_visualization').value
         self.white_low = self.get_parameter('white_threshold_low').value
@@ -47,6 +59,10 @@ class LaneDetectionNode(Node):
         self.max_lane_width = self.get_parameter('max_lane_width').value
         self.lane_thickness = self.get_parameter('lane_thickness_pixels').value
         self.point_spacing = self.get_parameter('point_spacing_pixels').value
+        self.camera_frame_id = self.get_parameter('camera_frame_id').value
+        self.camera_mount_height = self.get_parameter('camera_mount_height').value
+        self.camera_mount_pitch = self.get_parameter('camera_mount_pitch').value
+        self.max_lane_range = self.get_parameter('max_lane_range').value
         
         # CV Bridge for ROS-OpenCV conversion
         self.bridge = CvBridge()
@@ -413,7 +429,7 @@ class LaneDetectionNode(Node):
                            (650, 390),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
                 
-                cv2.imshow('Lane Detection - ESDA STEREO', combined_resized)
+                cv2.imshow(f'Lane Detection - {self.get_name()}', combined_resized)
                 cv2.waitKey(1)
             
             # Publish markers for detected lanes
@@ -421,7 +437,7 @@ class LaneDetectionNode(Node):
                 # Convert to format expected by publish_lane_markers
                 lines_array = [[line] for line in self.latest_lines]
                 header = msg.header
-                header.frame_id = 'camera_link_optical' # Use the optical frame for projection
+                header.frame_id = self.camera_frame_id # Use this instance's own optical frame for projection
                 
                 self.publish_lane_markers(lines_array, header)
                 
@@ -450,8 +466,8 @@ class LaneDetectionNode(Node):
         cy = 240
         
         # Camera height and tilt for ground plane fallback
-        camera_height = 0.315  # meters above ground
-        camera_pitch = 0.0  # radians (0 = looking straight ahead)
+        camera_height = self.camera_mount_height  # meters above ground
+        camera_pitch = self.camera_mount_pitch  # radians (0 = looking straight ahead)
         
         valid_depth_count = 0
         fallback_count = 0
@@ -554,7 +570,10 @@ class LaneDetectionNode(Node):
                             continue
                             
                         valid_depth_count += 1
-                    
+
+                    if z > self.max_lane_range:
+                        continue
+
                     # Add to points list (as native Python floats)
                     points.append([float(x), float(y), float(z)])
                     self.latest_3d_points.append((float(x), float(y), float(z)))
@@ -608,8 +627,8 @@ class LaneDetectionNode(Node):
         fy = fx
         cx = 320
         cy = 240
-        camera_height = 0.315
-        camera_pitch = 0.0
+        camera_height = self.camera_mount_height
+        camera_pitch = self.camera_mount_pitch
 
         marker_id = 0
 
@@ -668,6 +687,9 @@ class LaneDetectionNode(Node):
                             y_3d = float(t_intersect * ray_y_rot)
 
                 if x_3d is None:
+                    continue
+
+                if z_3d > self.max_lane_range:
                     continue
 
                 # Store point for control logic

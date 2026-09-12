@@ -115,6 +115,10 @@ class SimManager(ctk.CTk):
         self.lidar_check = ctk.CTkCheckBox(self.sim_frame, text="Enable LIDAR", variable=self.lidar_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
         self.lidar_check.grid(row=0, column=0, padx=10, pady=6, sticky="w")
 
+        self.dual_camera_var = ctk.BooleanVar(value=False)
+        self.dual_camera_check = ctk.CTkCheckBox(self.sim_frame, text="Dual Side Cameras (Test)", variable=self.dual_camera_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.dual_camera_check.grid(row=2, column=0, padx=10, pady=(0, 8), sticky="w")
+
         self.lane_detection_var = ctk.BooleanVar(value=True)
         self.lane_detection_check = ctk.CTkCheckBox(self.sim_frame, text="Enable Lane Detection", variable=self.lane_detection_var, font=("Orbitron", 14), text_color=self.accent_purple, bg_color=self.bg_panel)
         self.lane_detection_check.grid(row=0, column=1, padx=10, pady=6, sticky="w")
@@ -170,43 +174,28 @@ class SimManager(ctk.CTk):
         self.modules_frame.grid(row=6, column=0, pady=6, padx=12, sticky="ew")
 
 
-        self.robot_localization_button = ctk.CTkButton(
-            self.modules_frame,
-            text="Launch Robot Localization",
-            command=self.toggle_robot_localization,
-            font=("Orbitron", 12),
-            fg_color=self.accent_purple,
-            hover_color="#5F27CD",
-            text_color=self.bg_dark
-        )
-
-        self.robot_localization_button.grid(
-            row=0,
-            column=0,
-            columnspan=2,   # <-- spans both columns
-            padx=6,
-            pady=6,
-            sticky="ew"
-        )
+        # EKF (robot localization) now launches automatically as part of the
+        # sim (see launch_sim.launch.py) - a separate button here would let
+        # you spawn a second, conflicting ekf_filter_node instance.
 
         self.slam_button = ctk.CTkButton(self.modules_frame, text="Launch SLAM", command=self.toggle_slam, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
-        self.slam_button.grid(row=1, column=0, padx=6, pady=6, sticky="ew")
+        self.slam_button.grid(row=0, column=0, padx=6, pady=6, sticky="ew")
         self.amcl_button = ctk.CTkButton(self.modules_frame, text="Launch AMCL", command=self.toggle_amcl, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
-        self.amcl_button.grid(row=1, column=1, padx=6, pady=6, sticky="ew")
+        self.amcl_button.grid(row=0, column=1, padx=6, pady=6, sticky="ew")
         self.nav_button = ctk.CTkButton(self.modules_frame, text="Launch Nav2", command=self.toggle_nav, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
-        self.nav_button.grid(row=2, column=0, padx=6, pady=6, sticky="ew")
+        self.nav_button.grid(row=1, column=0, padx=6, pady=6, sticky="ew")
         self.rviz_button = ctk.CTkButton(self.modules_frame, text="Launch RViz2", command=self.toggle_rviz, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
-        self.rviz_button.grid(row=2, column=1, padx=6, pady=6, sticky="ew")
+        self.rviz_button.grid(row=1, column=1, padx=6, pady=6, sticky="ew")
         self.follow_the_gap_button = ctk.CTkButton(self.modules_frame, text="Follow the Gap Algorithm", command=self.toggle_follow_the_gap, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
-        self.follow_the_gap_button.grid(row=3, column=0, padx=6, pady=6, sticky="ew")
+        self.follow_the_gap_button.grid(row=2, column=0, padx=6, pady=6, sticky="ew")
         self.track_follower_button = ctk.CTkButton(self.modules_frame, text="Track Follower Algorithm", command=self.launch_track_follower, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
-        self.track_follower_button.grid(row=3, column=1, padx=6, pady=6, sticky="ew")
+        self.track_follower_button.grid(row=2, column=1, padx=6, pady=6, sticky="ew")
         self.modules_frame.grid_columnconfigure((0,1), weight=1)
 
 
         self.behaviour_tree_button = ctk.CTkButton(self.modules_frame, text="Launch Behaviour Tree", command=self.launch_behaviour_tree, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
-        self.behaviour_tree_button.grid(row=4, column=0, columnspan=2, padx=6, pady=6, sticky="ew")
-        self.modules_frame.grid_rowconfigure((0,1,2,3,4), weight=1)
+        self.behaviour_tree_button.grid(row=3, column=0, columnspan=2, padx=6, pady=6, sticky="ew")
+        self.modules_frame.grid_rowconfigure((0,1,2,3), weight=1)
 
         # Teleop and Waypoint Section
         self.teleop_frame = ctk.CTkFrame(self, fg_color=self.bg_panel)
@@ -247,7 +236,6 @@ class SimManager(ctk.CTk):
             "RVIZ": self.rviz_button.cget("fg_color"),
             "TELEOP": self.teleop_button.cget("fg_color"),
             "LANE": self.lane_detection_button.cget("fg_color"),
-            "EKF": self.robot_localization_button.cget("fg_color")
         }
 
     def scan_world_files(self):
@@ -362,7 +350,6 @@ class SimManager(ctk.CTk):
         elif name == "RVIZ": self.rviz_button.configure(fg_color=color)
         elif name == "TELEOP": self.teleop_button.configure(fg_color=color)
         elif name == "LANE": self.lane_detection_button.configure(fg_color=color)
-        elif name == "EKF": self.robot_localization_button.configure(fg_color=color)
 
     def check_xterm(self):
         """Check if xterm is installed"""
@@ -385,6 +372,7 @@ class SimManager(ctk.CTk):
 
     def toggle_sim(self):
         lidar = "true" if self.lidar_var.get() else "false"
+        robot_model = "robot_dual_camera.urdf.xacro" if self.dual_camera_var.get() else "robot.urdf.xacro"
         selected_world_name = self.selected_world.get()
         # Find full path of selected world
         world_file = next((f for f in self.world_files if os.path.basename(f) == selected_world_name), None)
@@ -402,7 +390,7 @@ class SimManager(ctk.CTk):
         # Build then launch as requested
         cmd = (f"cd {self.workspace_root} && "
                f"colcon build --packages-select esda_simulation_2025 && "
-               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y}")
+               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y} robot_model:={robot_model}")
         self.run_in_terminal("SIM", cmd)
 
     def toggle_slam(self):
@@ -500,6 +488,29 @@ class SimManager(ctk.CTk):
             )
 
         self.run_in_terminal("LANE", lane_cmd)
+
+        # Side cameras have no stereo pair - remap left/right/depth to the same
+        # monocular feed and its depth sensor, and remap outputs so they don't
+        # collide with the front camera's /lane_markers, /lane_obstacles, /scan_fused.
+        if self.dual_camera_var.get():
+            for side in ("left_camera", "right_camera"):
+                side_lane_cmd = (
+                    f"ros2 run esda_simulation_2025 lane_detection.py "
+                    f"--ros-args "
+                    f"-r __node:=lane_detection_{side} "
+                    f"-r /camera/left/image_raw:=/camera/{side}/image_raw "
+                    f"-r /camera/right/image_raw:=/camera/{side}/image_raw "
+                    f"-r /camera/depth/image_raw:=/camera/{side}/depth/image_raw "
+                    f"-r /lane_markers:=/lane_markers_{side} "
+                    f"-r /lane_obstacles:=/lane_obstacles_{side} "
+                    f"-r /scan_fused:=/scan_fused_{side} "
+                    f"-p camera_frame_id:={side}_link_optical "
+                    f"-p camera_mount_height:=0.3 "
+                    f"-p camera_mount_pitch:=-0.1 "
+                    f"-p max_lane_range:=3.0 "
+                    f"-p show_visualization:={show_visualization}"
+                )
+                self.run_in_terminal(f"LANE_{side.upper()}", side_lane_cmd)
 
     def toggle_amcl(self):
         if not self.is_sim_running():
@@ -666,13 +677,7 @@ class SimManager(ctk.CTk):
         except Exception as e:
             self.status_label.configure(text=f"Error launching: {str(e)}", text_color="#E74C3C")
 
-    def toggle_robot_localization(self):
-        
-        if not self.is_sim_running():
-            self.status_label.configure(text="Error: Launch Simulation first!", text_color="#E74C3C")
-            return
-        cmd = f"ros2 launch esda_simulation_2025 robot_localization_ekf.launch.py use_sim_time:=true"
-        self.run_in_terminal("EKF", cmd)
+    # EKF now launches automatically as part of launch_sim.launch.py.
 
 if __name__ == "__main__":
     app = SimManager()

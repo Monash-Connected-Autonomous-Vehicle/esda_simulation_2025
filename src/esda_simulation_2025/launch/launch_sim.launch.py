@@ -19,6 +19,7 @@ def generate_launch_description():
     world_file = LaunchConfiguration('world_file')
     spawn_x = LaunchConfiguration('spawn_x', default='0.0')
     spawn_y = LaunchConfiguration('spawn_y', default='0.0')
+    robot_model = LaunchConfiguration('robot_model', default='robot.urdf.xacro')
     package_name = 'esda_simulation_2025'
     
     # ROS Controller Files:
@@ -38,8 +39,18 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': 'true',
             'use_ros2_control': 'true',
-            'use_lidar': use_lidar
+            'use_lidar': use_lidar,
+            'robot_model': robot_model
         }.items()
+    )
+
+    # EKF (IMU + wheel odom fusion) - the sole publisher of odom->base_link TF.
+    # Launched here (not as a bare Node) so it stays in sync with
+    # robot_localization_ekf.launch.py if that ever changes.
+    ekf_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory(package_name), 'launch', 'robot_localization_ekf.launch.py')
+        )
     )
 
     # --- 2) Launch Ignition sim server + client ---
@@ -131,18 +142,26 @@ def generate_launch_description():
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/cmd_vel@geometry_msgs/msg/Twist[gz.msgs.Twist',
-            #'/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
+            '/imu/data@sensor_msgs/msg/Imu[gz.msgs.IMU',
             '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
             '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
             '/camera/left@sensor_msgs/msg/Image[gz.msgs.Image',
             '/camera/right@sensor_msgs/msg/Image[gz.msgs.Image',
             '/camera/depth@sensor_msgs/msg/Image[gz.msgs.Image',
-            '/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo'
+            '/camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
+            '/camera/left_camera@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/camera/right_camera@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/camera/left_camera/depth@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/camera/right_camera/depth@sensor_msgs/msg/Image[gz.msgs.Image'
         ],
         remappings=[
             ('/camera/left', '/camera/left/image_raw'),
             ('/camera/right', '/camera/right/image_raw'),
             ('/camera/depth', '/camera/depth/image_raw'),
+            ('/camera/left_camera', '/camera/left_camera/image_raw'),
+            ('/camera/right_camera', '/camera/right_camera/image_raw'),
+            ('/camera/left_camera/depth', '/camera/left_camera/depth/image_raw'),
+            ('/camera/right_camera/depth', '/camera/right_camera/depth/image_raw'),
         ],
         output='screen'
     )
@@ -158,22 +177,9 @@ def generate_launch_description():
     
     # --- 7) Static TF publishers are handled by robot_state_publisher ---
     # The laser_frame → my_robot_1/base_link/laser_frame transform comes from URDF
-    ekf_config_path = os.path.join(
-        get_package_share_directory('esda_simulation_2025'),
-        'config',
-        'ekf.yaml'
-    )
-
-
-    # 2. Define the node execution parameters
-    ekf_node = Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        output='screen',
-        parameters=[ekf_config_path] # This maps your yaml settings into the node
-    )
-
+    # EKF is launched separately via robot_localization_ekf.launch.py (the UI's
+    # "Launch Robot Localization" button) - starting it here too would spawn a
+    # second node with the same name, and both would fight over odom->base_link TF.
 
     return LaunchDescription([
       DeclareLaunchArgument('use_sim_time',    default_value='true'),
@@ -183,7 +189,10 @@ def generate_launch_description():
       DeclareLaunchArgument('spawn_y',         default_value='0.0'),
       DeclareLaunchArgument('world_file',      default_value=os.path.join(
           get_package_share_directory(package_name), 'worlds', 'igvc.sdf')),
+      DeclareLaunchArgument('robot_model',     default_value='robot.urdf.xacro',
+          description='xacro filename under description/ to load (e.g. robot_dual_camera.urdf.xacro)'),
       rsp,
+      ekf_launch,
       ign_resource_path,
       ign_resource_path_legacy,
       bridge,
@@ -191,6 +200,5 @@ def generate_launch_description():
       ign_launch,
       spawn_entity,
       joint_broad_spawner,
-      diff_drive_spawner,
-      ekf_node
+      diff_drive_spawner
     ])

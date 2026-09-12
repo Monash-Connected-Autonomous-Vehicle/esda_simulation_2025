@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    Macro: side_camera
+    A single monocular camera, mountable at any name/pose so it can be
+    instantiated more than once without link/joint/sensor name collisions.
+
+    Params:
+      name    : unique prefix for this camera's links/joints/sensor/topic (e.g. "left_camera")
+      parent  : link to attach to (e.g. "chassis")
+      *origin : <origin xyz="..." rpy="..."/> block, position+orientation relative to parent
+  -->
+  <xacro:macro name="side_camera" params="name parent *origin">
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${name}_link">
+      <visual>
+        <geometry>
+          <box size="0.03 0.03 0.03"/>
+        </geometry>
+        <material name="black"/>
+      </visual>
+    </link>
+
+    <joint name="${name}_optical_joint" type="fixed">
+      <parent link="${name}_link"/>
+      <child link="${name}_link_optical"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+    <link name="${name}_link_optical"></link>
+
+    <gazebo reference="${name}_link">
+      <material>Gazebo/Black</material>
+      <sensor name="${name}_sensor" type="camera">
+        <pose>0 0 0 0 0 0</pose>
+        <visualize>false</visualize>
+        <update_rate>10</update_rate>
+        <topic>camera/${name}</topic>
+        <gz_frame_id>${name}_link_optical</gz_frame_id>
+        <camera>
+          <horizontal_fov>1.089</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>8.0</far>
+          </clip>
+        </camera>
+      </sensor>
+
+      <!-- Depth sensor, needed so lane_detection.py can 3D-project detected lane points -->
+      <sensor name="${name}_depth_sensor" type="depth_camera">
+        <pose>0 0 0 0 0 0</pose>
+        <update_rate>10</update_rate>
+        <topic>camera/${name}/depth</topic>
+        <gz_frame_id>${name}_link_optical</gz_frame_id>
+        <camera>
+          <horizontal_fov>1.089</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R_FLOAT32</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>10.0</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+</robot>

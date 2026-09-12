@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"  name="robot">
+
+    <xacro:arg name="use_ros2_control" default="true"/>
+    <xacro:arg name="sim_mode" default="false"/>
+    <xacro:arg name="use_lidar" default="true"/>
+
+    <xacro:include filename="robot_core_ref.xacro" />
+
+    <xacro:if value="$(arg use_ros2_control)">
+        <xacro:include filename="ros2_control_2wd.xacro" />
+    </xacro:if>
+    <xacro:unless value="$(arg use_ros2_control)">
+        <xacro:include filename="gazebo_control.xacro" />
+    </xacro:unless>
+    
+    <xacro:if value="$(arg use_lidar)">
+        <xacro:include filename="lidar.xacro" />
+    </xacro:if>
+    
+    <xacro:include filename="camera.xacro" />
+
+    <xacro:include filename="side_camera.xacro" />
+
+    <!-- Left camera: faces outward along +y (REP-103: +y = left), pitched down ~29 deg
+         so it looks at the ground near the robot instead of the horizon -->
+    <xacro:side_camera name="left_camera" parent="chassis">
+      <origin xyz="${chassis_length/2} ${chassis_width/2} 0.3" rpy="0 0.1 ${pi/2}"/>
+    </xacro:side_camera>
+
+    <!-- Right camera: faces outward along -y, same downward pitch -->
+    <xacro:side_camera name="right_camera" parent="chassis">
+      <origin xyz="${chassis_length/2} ${-chassis_width/2} 0.3" rpy="0 0.1 ${-pi/2}"/>
+    </xacro:side_camera>
+
+</robot>

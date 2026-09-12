@@ -6,7 +6,7 @@ ekf_filter_node:
     sensor_timeout: 0.1               # Period (seconds) before a sensor times out
     two_d_mode: true                  # Set to true for planar/2D environments
     print_diagnostics: true           # Publishes diagnostic data to /diagnostics
-    use_sim_time: false               # Set to true if running inside a simulator (e.g., Gazebo)
+    use_sim_time: true                # Set to true if running inside a simulator (e.g., Gazebo)
 
     # 2. Coordinate Frames
     map_frame: map                    # Global frame (used if fusing absolute global data like GPS)
