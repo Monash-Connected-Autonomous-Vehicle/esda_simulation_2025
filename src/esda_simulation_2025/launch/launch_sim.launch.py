@@ -131,7 +131,7 @@ def generate_launch_description():
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/cmd_vel@geometry_msgs/msg/Twist[gz.msgs.Twist',
-            '/imu/data@sensor_msgs/msg/Imu[gz.msgs.IMU',
+            #'/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
             '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
             '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
             '/camera/left@sensor_msgs/msg/Image[gz.msgs.Image',
