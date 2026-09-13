@@ -7,9 +7,13 @@ import py_trees_ros
 import sys
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+from sensor_msgs.msg import LaserScan
 
 def create_tree(navigator):
-    pass
+    # Create the root of the behaviour tree
+    root = py_trees.composites.Sequence(name="ESDA Behaviour Tree", memory=True)
+
+    return root
 
 # Waypoint Class to represent a waypoint with x, y coordinates and a name
 class Waypoint:
@@ -27,10 +31,25 @@ class ObstacleDetected(py_trees.behaviour.Behaviour):
         self.publisher = None
         self.node = None
 
+
+
     def setup(self, **kwargs):
         self.node = kwargs["node"]
-        pass
 
+        self.laser_scan_subscriber = self.create_subscription(
+            LaserScan,
+            '/scan',
+            self.scan_callback,
+            10
+        )
+        
+        self.local_costmap_subscriber = self.create_subscription(
+    
+    def scan_callback(self, msg):
+        if len(msg.ranges) > 0:
+            # Check if any range is below a certain threshold (e.g., 1.0 meter)
+            self.obstacle_detected = any(range < 1.0 for range in msg.ranges)
+    
 class GenerateObstacleGoal(py_trees.behaviour.Behaviour):
     pass
 
@@ -76,7 +95,7 @@ class ESDABehaviourTreeNode(Node):
         self.navigator = BasicNavigator()
         root = create_tree(self.navigator)
 
-        self.
+        
 
 def main(args=None):
     pass
