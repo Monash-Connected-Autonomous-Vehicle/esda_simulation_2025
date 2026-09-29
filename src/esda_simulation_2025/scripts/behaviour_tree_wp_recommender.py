@@ -43,7 +43,7 @@ class ObstacleDetected(py_trees.behaviour.Behaviour):
             10
         )
         
-        self.local_costmap_subscriber = self.create_subscription(
+        # self.local_costmap_subscriber = self.create_subscription(
     
     def scan_callback(self, msg):
         if len(msg.ranges) > 0:

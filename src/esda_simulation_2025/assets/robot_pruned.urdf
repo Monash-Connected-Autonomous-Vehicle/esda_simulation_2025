@@ -1,0 +1,4791 @@
+<?xml version="1.0" ?>
+<!-- Pruned from robot.urdf (onshape-to-robot export, Onshape doc acc92a6723f39233e3428ad9). -->
+<!-- Fastener/electronics/logo clutter removed; wheels/caster/chassis regrouped into separate links with joints. -->
+<!-- Drive-wheel rim/tire/output-carrier geometry is NOT present in this export -> drive wheel links are empty stubs. -->
+<!-- Per-link inertials are placeholders: the source export only provided one aggregate inertial for the whole robot. -->
+<robot name="pruned_robot">
+  <link name="chassis">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="20.0"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+    <!-- Part eenc_fan_filter_top -->
+    <visual>
+      <origin xyz="-0.155962 0.429192 0.155029" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_top.stl"/>
+      </geometry>
+      <material name="eenc_fan_filter_top_material">
+        <color rgba="0.196078 0.196078 0.196078 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.155962 0.429192 0.155029" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_top.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_panel_l_asterius__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="0.000784221 0.164298 0.1525" rpy="-0 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_panel_l_asterius__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_panel_l_asterius__configuration_ali_2mm_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.000784221 0.164298 0.1525" rpy="-0 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_panel_l_asterius__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part propeller -->
+    <visual>
+      <origin xyz="-0.149597 0.42858 0.155027" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/propeller.stl"/>
+      </geometry>
+      <material name="propeller_material">
+        <color rgba="0.0980392 0.0980392 0.0980392 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.149597 0.42858 0.155027" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/propeller.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_rear__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="-0.00101407 0.163498 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_rear__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_rear__configuration_ali_2mm_material">
+        <color rgba="0.294118 0.180392 0.560784 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00101407 0.163498 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_rear__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part frame -->
+    <visual>
+      <origin xyz="0.149565 0.42858 0.155027" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/frame.stl"/>
+      </geometry>
+      <material name="frame_material">
+        <color rgba="0.0980392 0.0980392 0.0980392 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.149565 0.42858 0.155027" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/frame.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_fan_filter_bottom -->
+    <visual>
+      <origin xyz="-0.155962 0.429192 0.155029" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_bottom.stl"/>
+      </geometry>
+      <material name="eenc_fan_filter_bottom_material">
+        <color rgba="0.196078 0.196078 0.196078 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.155962 0.429192 0.155029" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_bottom.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_11 -->
+    <visual>
+      <origin xyz="-0.00151628 0.161999 0.162327" rpy="-0.0171754 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_11.stl"/>
+      </geometry>
+      <material name="part_11_material">
+        <color rgba="0.917647 0.913725 0.913725 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151628 0.161999 0.162327" rpy="-0.0171754 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_11.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part base -->
+    <visual>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/base.stl"/>
+      </geometry>
+      <material name="base_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/base.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_3 -->
+    <visual>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_3.stl"/>
+      </geometry>
+      <material name="louvre_3_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_3.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part propeller_2 -->
+    <visual>
+      <origin xyz="0.149565 0.42858 0.155027" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/propeller.stl"/>
+      </geometry>
+      <material name="propeller_2_material">
+        <color rgba="0.0980392 0.0980392 0.0980392 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.149565 0.42858 0.155027" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/propeller.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_2 -->
+    <visual>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_2.stl"/>
+      </geometry>
+      <material name="louvre_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_estop_cover -->
+    <visual>
+      <origin xyz="-0.00151578 0.161915 0.160318" rpy="-0.0171796 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_estop_cover.stl"/>
+      </geometry>
+      <material name="fcid_estop_cover_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.161915 0.160318" rpy="-0.0171796 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_estop_cover.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_lid__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="-0.00151578 0.16416 0.1517" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_lid__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_lid__configuration_ali_2mm_material">
+        <color rgba="0.294118 0.180392 0.560784 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.16416 0.1517" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_lid__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_4 -->
+    <visual>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_4.stl"/>
+      </geometry>
+      <material name="louvre_4_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_4.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_1 -->
+    <visual>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_1.stl"/>
+      </geometry>
+      <material name="louvre_1_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_1.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1 -->
+    <visual>
+      <origin xyz="-0.00151578 -0.183504 0.256794" rpy="0.453786 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1.stl"/>
+      </geometry>
+      <material name="part_1_material">
+        <color rgba="0.647059 0.647059 0.647059 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 -0.183504 0.256794" rpy="0.453786 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_gps_tail -->
+    <visual>
+      <origin xyz="-0.00151578 0.161915 0.160318" rpy="-0.0171796 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_gps_tail.stl"/>
+      </geometry>
+      <material name="fcid_gps_tail_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.161915 0.160318" rpy="-0.0171796 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_gps_tail.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_fan_mesh -->
+    <visual>
+      <origin xyz="-0.155962 0.429192 0.155029" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_mesh.stl"/>
+      </geometry>
+      <material name="eenc_fan_mesh_material">
+        <color rgba="0.968627 0.976471 0.980392 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.155962 0.429192 0.155029" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_mesh.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_body_right__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="-0.000510605 0.16579 0.1525" rpy="0 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_body_right__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_body_right__configuration_ali_2mm_material">
+        <color rgba="0.368627 0.25098 0.643137 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.000510605 0.16579 0.1525" rpy="0 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_body_right__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_estop_arm -->
+    <visual>
+      <origin xyz="-0.00151578 0.161915 0.160318" rpy="-0.0171796 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_estop_arm.stl"/>
+      </geometry>
+      <material name="fcid_estop_arm_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.161915 0.160318" rpy="-0.0171796 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_estop_arm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_5 -->
+    <visual>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_5.stl"/>
+      </geometry>
+      <material name="louvre_5_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.161688 0.369443 0.0950293" rpy="-0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_5.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part frame_2 -->
+    <visual>
+      <origin xyz="-0.149597 0.42858 0.155027" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/frame.stl"/>
+      </geometry>
+      <material name="frame_2_material">
+        <color rgba="0.0980392 0.0980392 0.0980392 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.149597 0.42858 0.155027" rpy="0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/frame.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_panel_r_mcav__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="-0.000815779 0.164298 0.1525" rpy="0 0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_panel_r_mcav__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_panel_r_mcav__configuration_ali_2mm_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.000815779 0.164298 0.1525" rpy="0 0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_panel_r_mcav__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bort_motor -->
+    <visual>
+      <origin xyz="-0.220011 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bort_motor.stl"/>
+      </geometry>
+      <material name="bort_motor_material">
+        <color rgba="0.654902 0.823529 0.576471 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.220011 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bort_motor.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_arm_bracket -->
+    <visual>
+      <origin xyz="-0.199761 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_arm_bracket.stl"/>
+      </geometry>
+      <material name="drve_arm_bracket_material">
+        <color rgba="0.235294 0.294118 0.329412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.199761 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_arm_bracket.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_motor_cover -->
+    <visual>
+      <origin xyz="-0.184011 -0.322325 -0.000342304" rpy="1.5708 1.53332 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_motor_cover.stl"/>
+      </geometry>
+      <material name="drve_motor_cover_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.184011 -0.322325 -0.000342304" rpy="1.5708 1.53332 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_motor_cover.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_bottom_plate -->
+    <visual>
+      <origin xyz="-0.220011 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_bottom_plate.stl"/>
+      </geometry>
+      <material name="drve_bottom_plate_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.220011 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_bottom_plate.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_top_plate -->
+    <visual>
+      <origin xyz="-0.219711 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_top_plate.stl"/>
+      </geometry>
+      <material name="drve_top_plate_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.219711 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_top_plate.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_middle -->
+    <visual>
+      <origin xyz="-0.219811 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_middle.stl"/>
+      </geometry>
+      <material name="drve_middle_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.219811 -0.322325 -0.000342304" rpy="-0.0374768 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_middle.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part spring_mount_bottom -->
+    <visual>
+      <origin xyz="-0.0014309 0.403618 -0.0631366" rpy="-0.0538913 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_mount_bottom.stl"/>
+      </geometry>
+      <material name="spring_mount_bottom_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0014309 0.403618 -0.0631366" rpy="-0.0538913 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_mount_bottom.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_2 -->
+    <visual>
+      <origin xyz="-0.0320031 0.352438 -0.071" rpy="0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__2.stl"/>
+      </geometry>
+      <material name="part_1_2_material">
+        <color rgba="0.647059 0.647059 0.647059 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0320031 0.352438 -0.071" rpy="0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_3 -->
+    <visual>
+      <origin xyz="-0.00156314 0.408317 0.024" rpy="-1.59893 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__3.stl"/>
+      </geometry>
+      <material name="part_1_3_material">
+        <color rgba="0.6 0.6 0.6 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00156314 0.408317 0.024" rpy="-1.59893 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__3.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part spring_mount_top -->
+    <visual>
+      <origin xyz="-0.00140706 0.402771 -0.0788464" rpy="0.0538913 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_mount_top.stl"/>
+      </geometry>
+      <material name="spring_mount_top_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00140706 0.402771 -0.0788464" rpy="0.0538913 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_mount_top.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part spring_guide -->
+    <visual>
+      <origin xyz="-0.0014309 0.403618 -0.0631366" rpy="0.0538913 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_guide.stl"/>
+      </geometry>
+      <material name="spring_guide_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0014309 0.403618 -0.0631366" rpy="0.0538913 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_guide.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bracket_dowell -->
+    <visual>
+      <origin xyz="-0.0158521 0.75054 -0.166037" rpy="3.14159 2.74638e-06 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bracket_dowell.stl"/>
+      </geometry>
+      <material name="bracket_dowell_material">
+        <color rgba="0.647059 0.647059 0.647059 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0158521 0.75054 -0.166037" rpy="3.14159 2.74638e-06 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bracket_dowell.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part spring_top -->
+    <visual>
+      <origin xyz="-0.00139948 0.402502 -0.0838391" rpy="-0 -0.0538913 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_top.stl"/>
+      </geometry>
+      <material name="spring_top_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00139948 0.402502 -0.0838391" rpy="-0 -0.0538913 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_top.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_4 -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.353338 -0.071" rpy="0 1.4281 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__4.stl"/>
+      </geometry>
+      <material name="part_1_4_material">
+        <color rgba="0.6 0.6 0.6 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.353338 -0.071" rpy="0 1.4281 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__4.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_5 -->
+    <visual>
+      <origin xyz="0.0329712 0.354267 -0.071" rpy="0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__2.stl"/>
+      </geometry>
+      <material name="part_1_5_material">
+        <color rgba="0.647059 0.647059 0.647059 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0329712 0.354267 -0.071" rpy="0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_6 -->
+    <visual>
+      <origin xyz="-0.00140818 0.402811 -0.0781108" rpy="-0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__5.stl"/>
+      </geometry>
+      <material name="part_1_6_material">
+        <color rgba="0.6 0.6 0.6 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00140818 0.402811 -0.0781108" rpy="-0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__5.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part spring_bottom -->
+    <visual>
+      <origin xyz="-0.00143848 0.403887 -0.0581439" rpy="-0 -0.0538913 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_bottom.stl"/>
+      </geometry>
+      <material name="spring_bottom_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00143848 0.403887 -0.0581439" rpy="-0 -0.0538913 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/spring_bottom.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_7 -->
+    <visual>
+      <origin xyz="-0.000437787 0.368332 -0.0388377" rpy="0 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__6.stl"/>
+      </geometry>
+      <material name="part_1_7_material">
+        <color rgba="0.235294 0.294118 0.329412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.000437787 0.368332 -0.0388377" rpy="0 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__6.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part zed2_ip_outer_with_lens_v8 -->
+    <visual>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/zed2_ip_outer_with_lens_v8.stl"/>
+      </geometry>
+      <material name="zed2_ip_outer_with_lens_v8_material">
+        <color rgba="0.964706 0.964706 0.952941 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/zed2_ip_outer_with_lens_v8.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_8 -->
+    <visual>
+      <origin xyz="-0.00151578 0.0710557 1.3132" rpy="-3.14159 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__7.stl"/>
+      </geometry>
+      <material name="part_1_8_material">
+        <color rgba="0.647059 0.647059 0.647059 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.0710557 1.3132" rpy="-3.14159 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__7.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part zed2_ip_outer_with_lens_v8_2 -->
+    <visual>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/zed2_ip_outer_with_lens_v8__2.stl"/>
+      </geometry>
+      <material name="zed2_ip_outer_with_lens_v8_2_material">
+        <color rgba="0.964706 0.964706 0.952941 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/zed2_ip_outer_with_lens_v8__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part zed2_ip_outer_with_lens_v8_3 -->
+    <visual>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/zed2_ip_outer_with_lens_v8__3.stl"/>
+      </geometry>
+      <material name="zed2_ip_outer_with_lens_v8_3_material">
+        <color rgba="0.286275 0.286275 0.286275 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/zed2_ip_outer_with_lens_v8__3.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_9 -->
+    <visual>
+      <origin xyz="-0.00151578 0.0710557 0.3132" rpy="3.14159 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__8.stl"/>
+      </geometry>
+      <material name="part_1_9_material">
+        <color rgba="0.647059 0.647059 0.647059 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.0710557 0.3132" rpy="3.14159 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__8.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_5 -->
+    <visual>
+      <origin xyz="-0.00151578 0.0710557 1.3272" rpy="-0 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_5.stl"/>
+      </geometry>
+      <material name="part_5_material">
+        <color rgba="0.490196 0.0862745 0.556863 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.0710557 1.3272" rpy="-0 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_5.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part velodyne_vlp16 -->
+    <visual>
+      <origin xyz="-0.00151578 0.0710557 1.3272" rpy="-0 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/velodyne_vlp16.stl"/>
+      </geometry>
+      <material name="velodyne_vlp16_material">
+        <color rgba="0.74902 0.74902 0.74902 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00151578 0.0710557 1.3272" rpy="-0 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/velodyne_vlp16.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_8 -->
+    <visual>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_8.stl"/>
+      </geometry>
+      <material name="part_8_material">
+        <color rgba="0.596078 0.121569 0.67451 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.00750399 0.00962535 1.3042" rpy="0.266096 4.32043e-05 1.15766e-05"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_8.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_fan_mesh_2 -->
+    <visual>
+      <origin xyz="0.15593 0.429192 0.155029" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_mesh.stl"/>
+      </geometry>
+      <material name="eenc_fan_mesh_2_material">
+        <color rgba="0.968627 0.976471 0.980392 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.15593 0.429192 0.155029" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_mesh.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part base_2 -->
+    <visual>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/base.stl"/>
+      </geometry>
+      <material name="base_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/base.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_4_2 -->
+    <visual>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_4.stl"/>
+      </geometry>
+      <material name="louvre_4_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_4.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_3_2 -->
+    <visual>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_3.stl"/>
+      </geometry>
+      <material name="louvre_3_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_3.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_2_2 -->
+    <visual>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_2.stl"/>
+      </geometry>
+      <material name="louvre_2_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_fan_filter_bottom_2 -->
+    <visual>
+      <origin xyz="0.15593 0.429192 0.155029" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_bottom.stl"/>
+      </geometry>
+      <material name="eenc_fan_filter_bottom_2_material">
+        <color rgba="0.196078 0.196078 0.196078 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.15593 0.429192 0.155029" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_bottom.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_fan_filter_top_2 -->
+    <visual>
+      <origin xyz="0.15593 0.429192 0.155029" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_top.stl"/>
+      </geometry>
+      <material name="eenc_fan_filter_top_2_material">
+        <color rgba="0.196078 0.196078 0.196078 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.15593 0.429192 0.155029" rpy="0.0955418 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_fan_filter_top.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_1_2 -->
+    <visual>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_1.stl"/>
+      </geometry>
+      <material name="louvre_1_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_1.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part louvre_5_2 -->
+    <visual>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_5.stl"/>
+      </geometry>
+      <material name="louvre_5_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.161656 0.369443 0.215029" rpy="-0.0955418 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/louvre_5.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part battery_plate -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.452979 0.084" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/battery_plate.stl"/>
+      </geometry>
+      <material name="battery_plate_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.452979 0.084" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/battery_plate.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports -->
+    <visual>
+      <origin xyz="-0.140802 0.539159 0.072" rpy="-0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.140802 0.539159 0.072" rpy="-0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_2 -->
+    <visual>
+      <origin xyz="0.162113 0.316454 0.072" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_2_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.162113 0.316454 0.072" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_3 -->
+    <visual>
+      <origin xyz="-0.162717 0.310482 0.072" rpy="-0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_3_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.162717 0.310482 0.072" rpy="-0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_4 -->
+    <visual>
+      <origin xyz="-0.155112 0.389843 0.072" rpy="-0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_4_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.155112 0.389843 0.072" rpy="-0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_5 -->
+    <visual>
+      <origin xyz="0.154508 0.395816 0.072" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_5_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.154508 0.395816 0.072" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_6 -->
+    <visual>
+      <origin xyz="0.140198 0.545132 0.072" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_6_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.140198 0.545132 0.072" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing -->
+    <visual>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part inner_bushing -->
+    <visual>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+      <material name="inner_bushing_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shaft -->
+    <visual>
+      <origin xyz="-0.201511 -0.0895033 0.162961" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shaft.stl"/>
+      </geometry>
+      <material name="shaft_material">
+        <color rgba="0.6 0.580392 0.529412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.0895033 0.162961" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shaft.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part lock_switch -->
+    <visual>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/lock_switch.stl"/>
+      </geometry>
+      <material name="lock_switch_material">
+        <color rgba="0.231373 0.380392 0.705882 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/lock_switch.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing_2 -->
+    <visual>
+      <origin xyz="-0.182511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_2_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.182511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part damping_adjuster -->
+    <visual>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/damping_adjuster.stl"/>
+      </geometry>
+      <material name="damping_adjuster_material">
+        <color rgba="0.792157 0.0431373 0.00392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/damping_adjuster.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part inner_bushing_2 -->
+    <visual>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+      <material name="inner_bushing_2_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_esc_insert_holder -->
+    <visual>
+      <origin xyz="-0.207511 -0.323287 -0.00061547" rpy="-1.5708 0.276682 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_insert_holder.stl"/>
+      </geometry>
+      <material name="eenc_esc_insert_holder_material">
+        <color rgba="0.737255 0.937255 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.207511 -0.323287 -0.00061547" rpy="-1.5708 0.276682 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_insert_holder.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shock_chassis_mount -->
+    <visual>
+      <origin xyz="-0.173011 -0.037068 0.2595" rpy="-0 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+      <material name="shock_chassis_mount_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.173011 -0.037068 0.2595" rpy="-0 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_esc_holder_top -->
+    <visual>
+      <origin xyz="-0.207511 -0.229014 0.0261548" rpy="1.5708 -0.276682 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_top.stl"/>
+      </geometry>
+      <material name="eenc_esc_holder_top_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.207511 -0.229014 0.0261548" rpy="1.5708 -0.276682 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_top.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_10 -->
+    <visual>
+      <origin xyz="-0.152011 -6.57818e-05 0.0911682" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_10_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -6.57818e-05 0.0911682" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part arm_endcap -->
+    <visual>
+      <origin xyz="-0.201511 -0.168418 -0.00544703" rpy="0.0374768 0 3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_endcap.stl"/>
+      </geometry>
+      <material name="arm_endcap_material">
+        <color rgba="0.235294 0.294118 0.329412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.168418 -0.00544703" rpy="0.0374768 0 3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_endcap.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing_3 -->
+    <visual>
+      <origin xyz="-0.182511 -0.168257 0.0179683" rpy="0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_3_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.182511 -0.168257 0.0179683" rpy="0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_11 -->
+    <visual>
+      <origin xyz="0.151484 -0.0121132 0.1046" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_11_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.0121132 0.1046" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_12 -->
+    <visual>
+      <origin xyz="0.151484 -0.0342902 0.0654441" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_12_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.0342902 0.0654441" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part lock_switch_2 -->
+    <visual>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/lock_switch.stl"/>
+      </geometry>
+      <material name="lock_switch_2_material">
+        <color rgba="0.231373 0.380392 0.705882 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/lock_switch.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_5_2 -->
+    <visual>
+      <origin xyz="-0.207511 -0.134741 0.052925" rpy="-1.5708 0.276682 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_5__2.stl"/>
+      </geometry>
+      <material name="part_5_2_material">
+        <color rgba="0.737255 0.937255 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.207511 -0.134741 0.052925" rpy="-1.5708 0.276682 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_5__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shock_mount_arm -->
+    <visual>
+      <origin xyz="0.200984 -0.105693 0.101096" rpy="0.270069 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_mount_arm.stl"/>
+      </geometry>
+      <material name="shock_mount_arm_material">
+        <color rgba="0.701961 0.701961 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.105693 0.101096" rpy="0.270069 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_mount_arm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_13 -->
+    <visual>
+      <origin xyz="-0.152011 -0.0107513 0.104673" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_13_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -0.0107513 0.104673" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_14 -->
+    <visual>
+      <origin xyz="0.151484 -0.0448862 0.079019" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_14_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.0448862 0.079019" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shock_mount_arm_2 -->
+    <visual>
+      <origin xyz="-0.201511 -0.104306 0.10055" rpy="0.276682 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_mount_arm.stl"/>
+      </geometry>
+      <material name="shock_mount_arm_2_material">
+        <color rgba="0.701961 0.701961 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.104306 0.10055" rpy="0.276682 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_mount_arm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing_4 -->
+    <visual>
+      <origin xyz="-0.201511 -0.168257 0.0179683" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_4_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.168257 0.0179683" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part mamba_monster_x_8s_no_fan -->
+    <visual>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mamba_monster_x_8s_no_fan.stl"/>
+      </geometry>
+      <material name="mamba_monster_x_8s_no_fan_material">
+        <color rgba="0.262745 0.282353 0.301961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mamba_monster_x_8s_no_fan.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_15 -->
+    <visual>
+      <origin xyz="-0.152011 -0.0020592 0.0740632" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_15_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -0.0020592 0.0740632" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_16 -->
+    <visual>
+      <origin xyz="-0.190011 -0.153019 0.0477349" rpy="-1.29411 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__10.stl"/>
+      </geometry>
+      <material name="part_1_16_material">
+        <color rgba="0.301961 0.301961 0.301961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.190011 -0.153019 0.0477349" rpy="-1.29411 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__10.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_17 -->
+    <visual>
+      <origin xyz="0.151484 -0.0292047 0.106706" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_17_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.0292047 0.106706" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing_5 -->
+    <visual>
+      <origin xyz="0.200984 -0.169529 0.0185775" rpy="0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_5_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.169529 0.0185775" rpy="0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_esc_insert_holder_2 -->
+    <visual>
+      <origin xyz="0.206984 -0.136443 0.0536732" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_insert_holder.stl"/>
+      </geometry>
+      <material name="eenc_esc_insert_holder_2_material">
+        <color rgba="0.737255 0.937255 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.206984 -0.136443 0.0536732" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_insert_holder.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part damping_adjuster_2 -->
+    <visual>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/damping_adjuster.stl"/>
+      </geometry>
+      <material name="damping_adjuster_2_material">
+        <color rgba="0.792157 0.0431373 0.00392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/damping_adjuster.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part inner_bushing_3 -->
+    <visual>
+      <origin xyz="0.200984 -0.169529 0.0185775" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+      <material name="inner_bushing_3_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.169529 0.0185775" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_18 -->
+    <visual>
+      <origin xyz="0.189484 -0.154754 0.0486041" rpy="0.287522 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__10.stl"/>
+      </geometry>
+      <material name="part_1_18_material">
+        <color rgba="0.301961 0.301961 0.301961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.189484 -0.154754 0.0486041" rpy="0.287522 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__10.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_esc_holder_bottom -->
+    <visual>
+      <origin xyz="-0.207511 -0.229014 0.0261548" rpy="1.5708 -0.276682 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_bottom.stl"/>
+      </geometry>
+      <material name="eenc_esc_holder_bottom_material">
+        <color rgba="0.654902 0.823529 0.576471 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.207511 -0.229014 0.0261548" rpy="1.5708 -0.276682 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_bottom.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shaft_2 -->
+    <visual>
+      <origin xyz="0.200984 -0.0907237 0.163542" rpy="0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shaft.stl"/>
+      </geometry>
+      <material name="shaft_2_material">
+        <color rgba="0.6 0.580392 0.529412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.0907237 0.163542" rpy="0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shaft.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_19 -->
+    <visual>
+      <origin xyz="-0.152011 -0.0326688 0.0653712" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_19_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -0.0326688 0.0653712" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shock_chassis_mount_2 -->
+    <visual>
+      <origin xyz="-0.171011 -0.037068 0.2595" rpy="3.14159 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+      <material name="shock_chassis_mount_2_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.171011 -0.037068 0.2595" rpy="3.14159 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_20 -->
+    <visual>
+      <origin xyz="-0.152011 -0.0413609 0.0959808" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_20_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -0.0413609 0.0959808" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_21 -->
+    <visual>
+      <origin xyz="0.151484 -0.00151729 0.091025" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_21_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.00151729 0.091025" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part inner_bushing_4 -->
+    <visual>
+      <origin xyz="-0.201511 -0.168257 0.0179683" rpy="0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+      <material name="inner_bushing_4_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.168257 0.0179683" rpy="0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/inner_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shock_chassis_mount_3 -->
+    <visual>
+      <origin xyz="0.172484 -0.0385597 0.2595" rpy="3.14159 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+      <material name="shock_chassis_mount_3_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.172484 -0.0385597 0.2595" rpy="3.14159 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part mamba_monster_x_8s_no_fan_2 -->
+    <visual>
+      <origin xyz="-0.207511 -0.229014 0.0261548" rpy="1.5708 -0.276682 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mamba_monster_x_8s_no_fan.stl"/>
+      </geometry>
+      <material name="mamba_monster_x_8s_no_fan_2_material">
+        <color rgba="0.262745 0.282353 0.301961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.207511 -0.229014 0.0261548" rpy="1.5708 -0.276682 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mamba_monster_x_8s_no_fan.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_22 -->
+    <visual>
+      <origin xyz="-0.152011 -0.0155638 0.0633777" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_22_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -0.0155638 0.0633777" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing_6 -->
+    <visual>
+      <origin xyz="0.219984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_6_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.219984 -0.0959918 0.153851" rpy="-0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_esc_holder_top_2 -->
+    <visual>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_top.stl"/>
+      </geometry>
+      <material name="eenc_esc_holder_top_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_top.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part arm_endcap_2 -->
+    <visual>
+      <origin xyz="0.200984 -0.170505 -0.00447482" rpy="0.0440902 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_endcap.stl"/>
+      </geometry>
+      <material name="arm_endcap_2_material">
+        <color rgba="0.235294 0.294118 0.329412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.170505 -0.00447482" rpy="0.0440902 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_endcap.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing_7 -->
+    <visual>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_7_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.0944624 0.153831" rpy="-0 -0.497571 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part arm_rhs -->
+    <visual>
+      <origin xyz="-0.201511 -0.17243 -0.00596251" rpy="0.0374768 0 3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_rhs.stl"/>
+      </geometry>
+      <material name="arm_rhs_material">
+        <color rgba="0.235294 0.294118 0.329412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.201511 -0.17243 -0.00596251" rpy="0.0374768 0 3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_rhs.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_5_3 -->
+    <visual>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="1.5708 0.270069 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_5__2.stl"/>
+      </geometry>
+      <material name="part_5_3_material">
+        <color rgba="0.737255 0.937255 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="1.5708 0.270069 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_5__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_23 -->
+    <visual>
+      <origin xyz="0.151484 -0.0171988 0.0633376" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_23_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.0171988 0.0633376" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_24 -->
+    <visual>
+      <origin xyz="0.213484 -0.0232017 0.085022" rpy="1.5708 0.986568 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__11.stl"/>
+      </geometry>
+      <material name="part_1_24_material">
+        <color rgba="0.121569 0.121569 0.121569 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.213484 -0.0232017 0.085022" rpy="1.5708 0.986568 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__11.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_25 -->
+    <visual>
+      <origin xyz="0.151484 -0.0427797 0.0961105" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_25_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.0427797 0.0961105" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_26 -->
+    <visual>
+      <origin xyz="-0.152011 -0.0433543 0.0788758" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_26_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -0.0433543 0.0788758" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_27 -->
+    <visual>
+      <origin xyz="-0.214011 -0.02171 0.085022" rpy="-1.5708 -1.53332 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__11.stl"/>
+      </geometry>
+      <material name="part_1_27_material">
+        <color rgba="0.121569 0.121569 0.121569 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.214011 -0.02171 0.085022" rpy="-1.5708 -1.53332 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__11.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_esc_holder_bottom_2 -->
+    <visual>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_bottom.stl"/>
+      </geometry>
+      <material name="eenc_esc_holder_bottom_2_material">
+        <color rgba="0.654902 0.823529 0.576471 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.206984 -0.23089 0.027527" rpy="-1.5708 -0.270069 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_esc_holder_bottom.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shock_chassis_mount_4 -->
+    <visual>
+      <origin xyz="0.170484 -0.0385597 0.2595" rpy="-0 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+      <material name="shock_chassis_mount_4_material">
+        <color rgba="0.901961 0.901961 0.901961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.170484 -0.0385597 0.2595" rpy="-0 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shock_chassis_mount.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_28 -->
+    <visual>
+      <origin xyz="-0.152011 -0.0278563 0.106666" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_28_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.152011 -0.0278563 0.106666" rpy="1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part outer_bushing_8 -->
+    <visual>
+      <origin xyz="0.219984 -0.169529 0.0185775" rpy="0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+      <material name="outer_bushing_8_material">
+        <color rgba="0.0392157 0.0392157 0.0392157 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.219984 -0.169529 0.0185775" rpy="0 -0.497927 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/outer_bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_29 -->
+    <visual>
+      <origin xyz="0.151484 -0.00362379 0.0739335" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+      <material name="part_1_29_material">
+        <color rgba="0.623529 0.666667 0.701961 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.151484 -0.00362379 0.0739335" rpy="1.5708 0.515329 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__9.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part arm_rhs_2 -->
+    <visual>
+      <origin xyz="0.200984 -0.199254 0.084381" rpy="-2.55736 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_rhs.stl"/>
+      </geometry>
+      <material name="arm_rhs_2_material">
+        <color rgba="0.235294 0.294118 0.329412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.200984 -0.199254 0.084381" rpy="-2.55736 0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/arm_rhs.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bort_motor_2 -->
+    <visual>
+      <origin xyz="0.219484 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bort_motor.stl"/>
+      </geometry>
+      <material name="bort_motor_2_material">
+        <color rgba="0.654902 0.823529 0.576471 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.219484 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bort_motor.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_arm_bracket_2 -->
+    <visual>
+      <origin xyz="0.199234 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_arm_bracket.stl"/>
+      </geometry>
+      <material name="drve_arm_bracket_2_material">
+        <color rgba="0.235294 0.294118 0.329412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.199234 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_arm_bracket.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_motor_cover_2 -->
+    <visual>
+      <origin xyz="0.183484 -0.324374 0.00164764" rpy="-1.5708 -0.986568 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_motor_cover.stl"/>
+      </geometry>
+      <material name="drve_motor_cover_2_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.183484 -0.324374 0.00164764" rpy="-1.5708 -0.986568 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_motor_cover.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_bottom_plate_2 -->
+    <visual>
+      <origin xyz="0.219484 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_bottom_plate.stl"/>
+      </geometry>
+      <material name="drve_bottom_plate_2_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.219484 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_bottom_plate.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_top_plate_2 -->
+    <visual>
+      <origin xyz="0.219184 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_top_plate.stl"/>
+      </geometry>
+      <material name="drve_top_plate_2_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.219184 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_top_plate.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part drve_middle_2 -->
+    <visual>
+      <origin xyz="0.219284 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_middle.stl"/>
+      </geometry>
+      <material name="drve_middle_2_material">
+        <color rgba="0.662745 0.662745 0.662745 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.219284 -0.324374 0.00164764" rpy="2.55736 -0 -3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/drve_middle.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_rear__configuration_ali_2mm_2 -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.164291 0.1525" rpy="-0 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_rear__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_rear__configuration_ali_2mm_2_material">
+        <color rgba="0.294118 0.180392 0.560784 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.164291 0.1525" rpy="-0 -0 -0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_rear__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_bellypan__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_bellypan__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_bellypan__configuration_ali_2mm_material">
+        <color rgba="0.294118 0.180392 0.560784 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_bellypan__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_lid__configuration_ali_2mm_2 -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_lid__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_lid__configuration_ali_2mm_2_material">
+        <color rgba="0.294118 0.180392 0.560784 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_lid__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_body_right__configuration_ali_2mm_2 -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_body_right__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_body_right__configuration_ali_2mm_2_material">
+        <color rgba="0.368627 0.25098 0.643137 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_body_right__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_body_left__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_body_left__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_body_left__configuration_ali_2mm_material">
+        <color rgba="0.294118 0.180392 0.560784 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_body_left__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fcid_divider_mount__configuration_ali_2mm -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_divider_mount__configuration_ali_2mm.stl"/>
+      </geometry>
+      <material name="fcid_divider_mount__configuration_ali_2mm_material">
+        <color rgba="0.368627 0.25098 0.643137 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.164298 0.1525" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/fcid_divider_mount__configuration_ali_2mm.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_7 -->
+    <visual>
+      <origin xyz="0.158265 0.365998 0.17" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_7_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.158265 0.365998 0.17" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_8 -->
+    <visual>
+      <origin xyz="-0.140744 0.549159 0.17" rpy="0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_8_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.140744 0.549159 0.17" rpy="0 -0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part jetson_orin_nano -->
+    <visual>
+      <origin xyz="0.00744023 0.374543 0.1854" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/jetson_orin_nano.stl"/>
+      </geometry>
+      <material name="jetson_orin_nano_material">
+        <color rgba="0.878431 0.870588 0.870588 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.00744023 0.374543 0.1854" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/jetson_orin_nano.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part component_plate -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.454772 0.182" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/component_plate.stl"/>
+      </geometry>
+      <material name="component_plate_material">
+        <color rgba="0.917647 0.917647 0.917647 0.537255"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.454772 0.182" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/component_plate.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_30 -->
+    <visual>
+      <origin xyz="-1.57788e-05 0.378188 0.236" rpy="3.14159 -0 3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__12.stl"/>
+      </geometry>
+      <material name="part_1_30_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-1.57788e-05 0.378188 0.236" rpy="3.14159 -0 3.14159"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__12.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_9 -->
+    <visual>
+      <origin xyz="-0.158869 0.360026 0.17" rpy="0 0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_9_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.158869 0.360026 0.17" rpy="0 0 3.04605"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part shelf_supports_10 -->
+    <visual>
+      <origin xyz="0.14014 0.555132 0.17" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+      <material name="shelf_supports_10_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.14014 0.555132 0.17" rpy="0 -0 0.0955418"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/shelf_supports.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part rod -->
+    <visual>
+      <origin xyz="-0.0713925 0.489109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+      <material name="rod_material">
+        <color rgba="0.498039 0.498039 0.498039 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0713925 0.489109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery -->
+    <visual>
+      <origin xyz="-0.0743925 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bearing_bracket -->
+    <visual>
+      <origin xyz="-0.189011 -0.02171 0.085022" rpy="-1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bearing_bracket.stl"/>
+      </geometry>
+      <material name="bearing_bracket_material">
+        <color rgba="0.827451 0.827451 0.827451 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.189011 -0.02171 0.085022" rpy="-1.5708 1.06208 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bearing_bracket.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bearing_bracket_2 -->
+    <visual>
+      <origin xyz="0.188484 -0.0232017 0.085022" rpy="1.5708 -0.515329 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bearing_bracket.stl"/>
+      </geometry>
+      <material name="bearing_bracket_2_material">
+        <color rgba="0.827451 0.827451 0.827451 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.188484 -0.0232017 0.085022" rpy="1.5708 -0.515329 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bearing_bracket.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_31 -->
+    <visual>
+      <origin xyz="0.0636075 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_31_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_32 -->
+    <visual>
+      <origin xyz="-0.0743925 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_32_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_33 -->
+    <visual>
+      <origin xyz="-0.00539253 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_33_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_34 -->
+    <visual>
+      <origin xyz="0.0406075 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_34_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_35 -->
+    <visual>
+      <origin xyz="-0.0283925 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_35_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_36 -->
+    <visual>
+      <origin xyz="-0.0513925 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_36_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_37 -->
+    <visual>
+      <origin xyz="0.0176075 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_37_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_38 -->
+    <visual>
+      <origin xyz="0.0176075 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_38_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_39 -->
+    <visual>
+      <origin xyz="-0.0283925 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_39_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_40 -->
+    <visual>
+      <origin xyz="-0.0513925 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_40_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part batteryholderaltp2 -->
+    <visual>
+      <origin xyz="-0.532331 0.0540609 -0.0208509" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/batteryholderaltp2.stl"/>
+      </geometry>
+      <material name="batteryholderaltp2_material">
+        <color rgba="0.768627 0.886275 0.952941 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.532331 0.0540609 -0.0208509" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/batteryholderaltp2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_41 -->
+    <visual>
+      <origin xyz="-0.0743925 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_41_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_42 -->
+    <visual>
+      <origin xyz="-0.0513925 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_42_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_43 -->
+    <visual>
+      <origin xyz="-0.00539253 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_43_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_44 -->
+    <visual>
+      <origin xyz="0.0406075 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_44_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_45 -->
+    <visual>
+      <origin xyz="0.0176075 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_45_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_46 -->
+    <visual>
+      <origin xyz="0.0176075 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_46_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_47 -->
+    <visual>
+      <origin xyz="0.0406075 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_47_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_48 -->
+    <visual>
+      <origin xyz="0.0406075 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_48_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_49 -->
+    <visual>
+      <origin xyz="0.0636075 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_49_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_50 -->
+    <visual>
+      <origin xyz="-0.0743925 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_50_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_51 -->
+    <visual>
+      <origin xyz="-0.00539253 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_51_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_52 -->
+    <visual>
+      <origin xyz="-0.0283925 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_52_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_53 -->
+    <visual>
+      <origin xyz="-0.0743925 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_53_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_54 -->
+    <visual>
+      <origin xyz="-0.00539253 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_54_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_55 -->
+    <visual>
+      <origin xyz="0.0176075 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_55_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_56 -->
+    <visual>
+      <origin xyz="0.0636075 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_56_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_57 -->
+    <visual>
+      <origin xyz="0.0406075 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_57_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_58 -->
+    <visual>
+      <origin xyz="-0.0743925 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_58_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_59 -->
+    <visual>
+      <origin xyz="0.0406075 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_59_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_60 -->
+    <visual>
+      <origin xyz="-0.0743925 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_60_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_61 -->
+    <visual>
+      <origin xyz="-0.0283925 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_61_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.378409 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_62 -->
+    <visual>
+      <origin xyz="0.0636075 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_62_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_63 -->
+    <visual>
+      <origin xyz="-0.0513925 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_63_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_64 -->
+    <visual>
+      <origin xyz="-0.00539253 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_64_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.401709 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_65 -->
+    <visual>
+      <origin xyz="-0.0513925 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_65_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_66 -->
+    <visual>
+      <origin xyz="0.0176075 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_66_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_67 -->
+    <visual>
+      <origin xyz="-0.00539253 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_67_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_68 -->
+    <visual>
+      <origin xyz="-0.0513925 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_68_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.355109 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_69 -->
+    <visual>
+      <origin xyz="-0.0283925 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_69_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.448309 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_70 -->
+    <visual>
+      <origin xyz="0.0636075 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_70_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_71 -->
+    <visual>
+      <origin xyz="0.0636075 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_71_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.471609 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_72 -->
+    <visual>
+      <origin xyz="-0.0283925 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_72_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.425009 0.0944115" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_2 -->
+    <visual>
+      <origin xyz="0.0176075 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_2_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_3 -->
+    <visual>
+      <origin xyz="-0.0743925 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_3_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_4 -->
+    <visual>
+      <origin xyz="-0.00539253 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_4_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_5 -->
+    <visual>
+      <origin xyz="-0.00539253 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_5_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_6 -->
+    <visual>
+      <origin xyz="-0.0513925 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_6_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_7 -->
+    <visual>
+      <origin xyz="0.0636075 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_7_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_8 -->
+    <visual>
+      <origin xyz="0.0176075 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_8_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_9 -->
+    <visual>
+      <origin xyz="0.0636075 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_9_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_10 -->
+    <visual>
+      <origin xyz="0.0406075 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_10_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_11 -->
+    <visual>
+      <origin xyz="-0.0283925 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_11_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_12 -->
+    <visual>
+      <origin xyz="-0.0283925 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_12_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_13 -->
+    <visual>
+      <origin xyz="0.0406075 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_13_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_14 -->
+    <visual>
+      <origin xyz="0.0636075 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_14_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_15 -->
+    <visual>
+      <origin xyz="0.0176075 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_15_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_16 -->
+    <visual>
+      <origin xyz="0.0636075 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_16_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_17 -->
+    <visual>
+      <origin xyz="-0.0513925 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_17_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_18 -->
+    <visual>
+      <origin xyz="-0.00539253 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_18_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_19 -->
+    <visual>
+      <origin xyz="0.0176075 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_19_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_20 -->
+    <visual>
+      <origin xyz="-0.0283925 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_20_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_21 -->
+    <visual>
+      <origin xyz="0.0636075 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_21_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_22 -->
+    <visual>
+      <origin xyz="-0.0743925 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_22_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_23 -->
+    <visual>
+      <origin xyz="-0.00539253 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_23_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_24 -->
+    <visual>
+      <origin xyz="0.0176075 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_24_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_25 -->
+    <visual>
+      <origin xyz="0.0176075 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_25_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_26 -->
+    <visual>
+      <origin xyz="0.0406075 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_26_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_27 -->
+    <visual>
+      <origin xyz="-0.00539253 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_27_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_28 -->
+    <visual>
+      <origin xyz="-0.0513925 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_28_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_29 -->
+    <visual>
+      <origin xyz="-0.0743925 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_29_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_30 -->
+    <visual>
+      <origin xyz="-0.0513925 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_30_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.378409 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_31 -->
+    <visual>
+      <origin xyz="-0.0743925 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_31_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_32 -->
+    <visual>
+      <origin xyz="-0.0513925 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_32_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_33 -->
+    <visual>
+      <origin xyz="0.0406075 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_33_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_34 -->
+    <visual>
+      <origin xyz="-0.0743925 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_34_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_35 -->
+    <visual>
+      <origin xyz="-0.0283925 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_35_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_36 -->
+    <visual>
+      <origin xyz="0.0636075 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_36_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_37 -->
+    <visual>
+      <origin xyz="-0.0513925 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_37_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.425009 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_38 -->
+    <visual>
+      <origin xyz="-0.0283925 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_38_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_39 -->
+    <visual>
+      <origin xyz="0.0406075 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_39_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.401709 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_40 -->
+    <visual>
+      <origin xyz="-0.00539253 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_40_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.471609 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_41 -->
+    <visual>
+      <origin xyz="-0.0283925 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_41_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.355109 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part eenc_18650_battery_42 -->
+    <visual>
+      <origin xyz="0.0406075 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+      <material name="eenc_18650_battery_42_material">
+        <color rgba="0.121569 0.176471 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.448309 0.164261" rpy="-0 1.5708 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/eenc_18650_battery.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part rod_2 -->
+    <visual>
+      <origin xyz="-0.228893 0.329109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+      <material name="rod_2_material">
+        <color rgba="0.498039 0.498039 0.498039 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.228893 0.329109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part rod_3 -->
+    <visual>
+      <origin xyz="-0.228893 0.489109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+      <material name="rod_3_material">
+        <color rgba="0.498039 0.498039 0.498039 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.228893 0.489109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part rod_4 -->
+    <visual>
+      <origin xyz="-0.0713925 0.329109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+      <material name="rod_4_material">
+        <color rgba="0.498039 0.498039 0.498039 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0713925 0.329109 0.094" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/rod.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_73 -->
+    <visual>
+      <origin xyz="-0.0743925 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_73_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part batteryholderaltp2_2 -->
+    <visual>
+      <origin xyz="-0.448288 -0.145348 -0.0334613" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/batteryholderaltp2.stl"/>
+      </geometry>
+      <material name="batteryholderaltp2_2_material">
+        <color rgba="0.768627 0.886275 0.952941 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.448288 -0.145348 -0.0334613" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/batteryholderaltp2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_74 -->
+    <visual>
+      <origin xyz="0.0176075 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_74_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_75 -->
+    <visual>
+      <origin xyz="0.0636075 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_75_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_76 -->
+    <visual>
+      <origin xyz="0.0636075 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_76_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_77 -->
+    <visual>
+      <origin xyz="-0.00539253 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_77_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_78 -->
+    <visual>
+      <origin xyz="-0.0283925 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_78_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_79 -->
+    <visual>
+      <origin xyz="0.0176075 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_79_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_80 -->
+    <visual>
+      <origin xyz="-0.0513925 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_80_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_81 -->
+    <visual>
+      <origin xyz="0.0176075 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_81_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_82 -->
+    <visual>
+      <origin xyz="-0.00539253 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_82_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_83 -->
+    <visual>
+      <origin xyz="0.0636075 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_83_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_84 -->
+    <visual>
+      <origin xyz="-0.00539253 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_84_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_85 -->
+    <visual>
+      <origin xyz="0.0176075 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_85_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_86 -->
+    <visual>
+      <origin xyz="0.0406075 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_86_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_87 -->
+    <visual>
+      <origin xyz="-0.00539253 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_87_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_88 -->
+    <visual>
+      <origin xyz="-0.0283925 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_88_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_89 -->
+    <visual>
+      <origin xyz="0.0406075 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_89_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_90 -->
+    <visual>
+      <origin xyz="-0.0513925 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_90_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_91 -->
+    <visual>
+      <origin xyz="0.0636075 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_91_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_92 -->
+    <visual>
+      <origin xyz="-0.0743925 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_92_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_93 -->
+    <visual>
+      <origin xyz="-0.0743925 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_93_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_94 -->
+    <visual>
+      <origin xyz="-0.0283925 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_94_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_95 -->
+    <visual>
+      <origin xyz="-0.0513925 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_95_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_96 -->
+    <visual>
+      <origin xyz="0.0406075 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_96_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_97 -->
+    <visual>
+      <origin xyz="-0.0743925 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_97_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_98 -->
+    <visual>
+      <origin xyz="-0.0513925 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_98_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_99 -->
+    <visual>
+      <origin xyz="0.0406075 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_99_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_100 -->
+    <visual>
+      <origin xyz="-0.0513925 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_100_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_101 -->
+    <visual>
+      <origin xyz="-0.00539253 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_101_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_102 -->
+    <visual>
+      <origin xyz="0.0176075 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_102_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.471609 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_103 -->
+    <visual>
+      <origin xyz="0.0406075 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_103_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_104 -->
+    <visual>
+      <origin xyz="0.0176075 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_104_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0176075 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_105 -->
+    <visual>
+      <origin xyz="0.0636075 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_105_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_106 -->
+    <visual>
+      <origin xyz="-0.0283925 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_106_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_107 -->
+    <visual>
+      <origin xyz="-0.0743925 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_107_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.401709 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_108 -->
+    <visual>
+      <origin xyz="-0.0743925 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_108_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0743925 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_109 -->
+    <visual>
+      <origin xyz="0.0636075 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_109_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0636075 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_110 -->
+    <visual>
+      <origin xyz="-0.00539253 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_110_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.00539253 0.378409 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_111 -->
+    <visual>
+      <origin xyz="0.0406075 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_111_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0406075 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_112 -->
+    <visual>
+      <origin xyz="-0.0513925 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_112_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0513925 0.448309 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_113 -->
+    <visual>
+      <origin xyz="-0.0283925 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_113_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.355109 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part part_1_114 -->
+    <visual>
+      <origin xyz="-0.0283925 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+      <material name="part_1_114_material">
+        <color rgba="0.615686 0.811765 0.929412 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0283925 0.425009 0.169411" rpy="3.14159 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/part_1__13.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part mid_body -->
+    <visual>
+      <origin xyz="-0.0219628 0.504375 0.201836" rpy="0 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mid_body.stl"/>
+      </geometry>
+      <material name="mid_body_material">
+        <color rgba="0.827451 0.827451 0.827451 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0219628 0.504375 0.201836" rpy="0 -0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mid_body.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part mid_body_2 -->
+    <visual>
+      <origin xyz="0.0389284 0.535435 0.201836" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mid_body__2.stl"/>
+      </geometry>
+      <material name="mid_body_2_material">
+        <color rgba="0.827451 0.827451 0.827451 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0389284 0.535435 0.201836" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/mid_body__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Placeholder sensor mast: no mount/strut mesh exists in the source export between the -->
+    <!-- chassis (z~0.2) and the Velodyne/ZED2 cluster (z~1.3). Modeled here as a 40x40mm SHS -->
+    <!-- (square hollow section) box primitive; outer dimensions only, since URDF box/collision -->
+    <!-- primitives can't represent a hollow cross-section. Replace with a real mesh once the -->
+    <!-- mast/strut is modeled in the source CAD. -->
+    <visual>
+      <origin xyz="0.0036384 0.0359526 0.75" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 1.10"/>
+      </geometry>
+      <material name="sensor_mast_shs_material">
+        <color rgba="0.6 0.6 0.6 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0036384 0.0359526 0.75" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 1.10"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="caster_arm">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+    <!-- Part bushing -->
+    <visual>
+      <origin xyz="-0.0671208 -0.122832 0.136436" rpy="0 -0 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing.stl"/>
+      </geometry>
+      <material name="bushing_material">
+        <color rgba="0 0.4 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0671208 -0.122832 0.136436" rpy="0 -0 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bushing_2 -->
+    <visual>
+      <origin xyz="-0.0376775 -0.127513 0.0343252" rpy="3.14159 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing__2.stl"/>
+      </geometry>
+      <material name="bushing_2_material">
+        <color rgba="0 0.4 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0376775 -0.127513 0.0343252" rpy="3.14159 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part caster_arm_r -->
+    <visual>
+      <origin xyz="0.0304879 0.000858 0" rpy="-0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/caster_arm_r.stl"/>
+      </geometry>
+      <material name="caster_arm_r_material">
+        <color rgba="0 0.4 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0304879 0.000858 0" rpy="-0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/caster_arm_r.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bushing_3 -->
+    <visual>
+      <origin xyz="-0.0194897 -0.121491 0.136436" rpy="0 -0 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing.stl"/>
+      </geometry>
+      <material name="bushing_3_material">
+        <color rgba="0 0.4 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0194897 -0.121491 0.136436" rpy="0 -0 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bearing_spacer -->
+    <visual>
+      <origin xyz="-0.0509293 -0.177398 0.163436" rpy="0 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bearing_spacer.stl"/>
+      </geometry>
+      <material name="bearing_spacer_material">
+        <color rgba="0 0.4 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0509293 -0.177398 0.163436" rpy="0 -0 -3.11346"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bearing_spacer.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part caster_arm_r_2 -->
+    <visual>
+      <origin xyz="-0.0304879 -0.000858 0" rpy="0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/caster_arm_r.stl"/>
+      </geometry>
+      <material name="caster_arm_r_2_material">
+        <color rgba="0 0.4 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0304879 -0.000858 0" rpy="0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/caster_arm_r.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part bushing_4 -->
+    <visual>
+      <origin xyz="-0.0669659 -0.128338 0.0343252" rpy="-0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing__2.stl"/>
+      </geometry>
+      <material name="bushing_4_material">
+        <color rgba="0 0.4 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0669659 -0.128338 0.0343252" rpy="-0 -0.1427 -1.54266"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/bushing__2.stl"/>
+      </geometry>
+    </collision>
+    <!-- Placeholder caster axle pin: bridges the ~6.1cm gap between the caster fork -->
+    <!-- and the wheel hub, which the source export leaves empty since the actual axle bolt/pin -->
+    <!-- was classified as fastener hardware and pruned out along with the other screws/bolts. -->
+    <visual>
+      <origin xyz="-0.0276925 -0.0095435 0.00934075" rpy="0.796134 -1.12147 -0.51636"/>
+      <geometry>
+        <cylinder radius="0.01" length="0.0614883"/>
+      </geometry>
+      <material name="caster_axle_pin_material">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0276925 -0.0095435 0.00934075" rpy="0.796134 -1.12147 -0.51636"/>
+      <geometry>
+        <cylinder radius="0.01" length="0.0614883"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="caster_wheel">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.3"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+    <!-- Part cstr_wheel_bearing -->
+    <visual>
+      <origin xyz="0 0 0" rpy="1.4281 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/cstr_wheel_bearing.stl"/>
+      </geometry>
+      <material name="cstr_wheel_bearing_material">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.4281 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/cstr_wheel_bearing.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part cstr_wheel_rim -->
+    <visual>
+      <origin xyz="0 0 0" rpy="1.4281 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/cstr_wheel_rim.stl"/>
+      </geometry>
+      <material name="cstr_wheel_rim_material">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.4281 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/cstr_wheel_rim.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part cstr_wheel_tyre -->
+    <visual>
+      <origin xyz="0 0 0" rpy="1.4281 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/cstr_wheel_tyre.stl"/>
+      </geometry>
+      <material name="cstr_wheel_tyre_material">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.4281 0 0.0281376"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/pruned/cstr_wheel_tyre.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="drive_wheel_left">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <!-- Placeholder wheel: no rim/tire/output-carrier mesh exists in the source export for -->
+    <!-- the drive wheels. Borrowed from the older CAD revision already in assets/ (bort_rim/bort_tire). -->
+    <!-- Replace once the current design's drive-wheel geometry is modeled/exported. -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_rim.stl"/>
+      </geometry>
+      <material name="drive_wheel_left_rim_material">
+        <color rgba="0.372549 0.368627 0.368627 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_rim.stl"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_tire.stl"/>
+      </geometry>
+      <material name="drive_wheel_left_tire_material">
+        <color rgba="0.141176 0.141176 0.141176 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_tire.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="drive_wheel_right">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <!-- Placeholder wheel: no rim/tire/output-carrier mesh exists in the source export for -->
+    <!-- the drive wheels. Borrowed from the older CAD revision already in assets/ (bort_rim/bort_tire). -->
+    <!-- Replace once the current design's drive-wheel geometry is modeled/exported. -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_rim.stl"/>
+      </geometry>
+      <material name="drive_wheel_right_rim_material">
+        <color rgba="0.372549 0.368627 0.368627 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_rim.stl"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_tire.stl"/>
+      </geometry>
+      <material name="drive_wheel_right_tire_material">
+        <color rgba="0.141176 0.141176 0.141176 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+      <geometry>
+        <mesh filename="package://esda_simulation_2025/assets/bort_tire.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="caster_steer" type="revolute">
+    <origin xyz="0.0509135 0.530736 -0.112436" rpy="0 0 0"/>
+    <parent link="chassis"/>
+    <child link="caster_arm"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+  </joint>
+
+  <joint name="caster_wheel_spin" type="continuous">
+    <origin xyz="-0.055385 -0.019087 0.0186815" rpy="0 0 0"/>
+    <parent link="caster_arm"/>
+    <child link="caster_wheel"/>
+    <axis xyz="-0.999604 -0.0281312 0"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+  </joint>
+
+  <joint name="wheel_left_spin" type="continuous">
+    <origin xyz="-0.220011 -0.322325 -0.000342304" rpy="0 0 0"/>
+    <parent link="chassis"/>
+    <child link="drive_wheel_left"/>
+    <axis xyz="0.999979 -0.00466207 0.0045277"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+  </joint>
+
+  <joint name="wheel_right_spin" type="continuous">
+    <origin xyz="0.219484 -0.324374 0.00164764" rpy="0 0 0"/>
+    <parent link="chassis"/>
+    <child link="drive_wheel_right"/>
+    <axis xyz="0.999979 -0.00466207 0.0045277"/>
+    <limit effort="10" velocity="10" lower="-3.141592653589793" upper="3.141592653589793"/>
+  </joint>
+
+</robot>
