@@ -3,6 +3,10 @@
 
   <xacro:arg name="namespace" default="" />
   <xacro:arg name="sim_mode" default="false" />
+  <!-- Overridable so launch_hardware.launch.py can point this at the ESP32
+       (typically /dev/ttyUSB0) instead of the STM32's /dev/ttyACM0. -->
+  <xacro:arg name="serial_device" default="/dev/ttyACM0" />
+  <xacro:arg name="serial_baud_rate" default="57600" />
 
   <!--
   <xacro:unless value="$(arg sim_mode)">
@@ -29,8 +33,8 @@
         <param name="left_wheel_name">left_wheel_joint</param>
         <param name="right_wheel_name">right_wheel_joint</param>
         <param name="loop_rate">30</param>
-        <param name="device">/dev/ttyACM0</param>
-        <param name="baud_rate">57600</param>
+        <param name="device">$(arg serial_device)</param>
+        <param name="baud_rate">$(arg serial_baud_rate)</param>
         <param name="timeout_ms">1000</param>
         <param name="open_loop">false</param>
         <param name="enc_counts_per_rev">3436</param>

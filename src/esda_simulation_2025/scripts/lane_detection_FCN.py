@@ -286,9 +286,13 @@ class LaneDetectionFCNNode(LaneDetectionNode):
             filtered_lines = []
 
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Cone rejection (see verify_line_profile in the base class) - the FCN
+        # mask can pick up a cone's white stripe just as easily as classical
+        # thresholding can, so it needs the same HSV check.
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV) if self.reject_orange_cones else None
         valid_lines = self.filter_valid_lanes(
             np.array([[line] for line in filtered_lines], dtype=np.int32),
-            gray, image.shape[0], image.shape[1]
+            gray, image.shape[0], image.shape[1], hsv
         ) if len(filtered_lines) > 0 else []
 
         return valid_lines, white_mask, edges

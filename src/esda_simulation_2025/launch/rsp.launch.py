@@ -18,13 +18,16 @@ def generate_launch_description():
     use_ros2_control = LaunchConfiguration('use_ros2_control')
     use_lidar = LaunchConfiguration('use_lidar')
     robot_model = LaunchConfiguration('robot_model')
+    camera_mount = LaunchConfiguration('camera_mount')
+    lidar_mount = LaunchConfiguration('lidar_mount')
 
     # Process the URDF file
     pkg_path = os.path.join(get_package_share_directory('esda_simulation_2025'))
     xacro_file = PathJoinSubstitution([pkg_path, 'description', robot_model])
     # robot_description_config = xacro.process_file(xacro_file).toxml()
     robot_description_config = ParameterValue(
-        Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time, ' use_lidar:=', use_lidar]),
+        Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time,
+                 ' use_lidar:=', use_lidar, ' camera_mount:=', camera_mount, ' lidar_mount:=', lidar_mount]),
         value_type=str
     )
     # Create a robot_state_publisher node
@@ -55,6 +58,14 @@ def generate_launch_description():
             'robot_model',
             default_value='robot.urdf.xacro',
             description='xacro filename under description/ to load'),
+        DeclareLaunchArgument(
+            'camera_mount',
+            default_value='front',
+            description='ZED mount point: "front" (low, forward) or "pole_top" (on the LiDAR pole)'),
+        DeclareLaunchArgument(
+            'lidar_mount',
+            default_value='pole_top',
+            description='LiDAR mount point: "pole_top" (on the mounting pole) or "low" (original, directly on chassis)'),
 
         node_robot_state_publisher
     ])

@@ -134,15 +134,90 @@ class SimManager(ctk.CTk):
         self.sim_button = ctk.CTkButton(self.sim_frame, text="2. Launch Simulation", command=self.toggle_sim, font=("Orbitron", 16, "bold"), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.sim_button.grid(row=0, column=3, padx=10, pady=6, sticky="e")
 
+        # Shared by both "2. Launch Simulation" and "3. Launch Real Hardware" below -
+        # both build the same robot.urdf.xacro.
+        self.camera_mount_label = ctk.CTkLabel(self.sim_frame, text="ZED Mount:", font=("Orbitron", 11), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.camera_mount_label.grid(row=1, column=0, padx=10, pady=(0, 8), sticky="w")
+        self.camera_mount_var = ctk.StringVar(value="front")
+        self.camera_mount_dropdown = ctk.CTkOptionMenu(
+            self.sim_frame,
+            variable=self.camera_mount_var,
+            values=["front", "pole_top"],
+            width=110,
+            fg_color=self.bg_dark,
+            button_color=self.accent_purple,
+            text_color=self.fg_text
+        )
+        self.camera_mount_dropdown.grid(row=1, column=1, padx=10, pady=(0, 8), sticky="w")
+
+        self.lidar_mount_label = ctk.CTkLabel(self.sim_frame, text="LiDAR Mount:", font=("Orbitron", 11), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.lidar_mount_label.grid(row=1, column=2, padx=10, pady=(0, 8), sticky="w")
+        self.lidar_mount_var = ctk.StringVar(value="pole_top")
+        self.lidar_mount_dropdown = ctk.CTkOptionMenu(
+            self.sim_frame,
+            variable=self.lidar_mount_var,
+            values=["pole_top", "low"],
+            width=110,
+            fg_color=self.bg_dark,
+            button_color=self.accent_purple,
+            text_color=self.fg_text
+        )
+        self.lidar_mount_dropdown.grid(row=1, column=3, padx=10, pady=(0, 8), sticky="w")
+
         # Remove SLAM Options Section (now merged)
+
+        # Real Hardware Bring-Up Section
+        # LiDAR / Lane Detection / Lane Mode checkboxes above are shared with
+        # this launch. SLAM vs AMCL follows the Costmap YAML selector above:
+        # "[New Costmap]" = build a new map with SLAM, otherwise localize
+        # with AMCL against that saved map - same convention the SLAM/AMCL
+        # buttons below already use.
+        self.hw_label = ctk.CTkLabel(self, text="REAL HARDWARE (LiDAR + ZED + ESP32 Serial)", font=("Orbitron", 13, "italic"), text_color=self.accent_green, bg_color=self.bg_dark)
+        self.hw_label.grid(row=4, column=0, pady=(8, 2))
+
+        self.hw_config_frame = ctk.CTkFrame(self, fg_color=self.bg_panel)
+        self.hw_config_frame.grid(row=5, column=0, pady=6, padx=12, sticky="ew")
+        self.hw_config_frame.grid_columnconfigure((1, 3, 5), weight=1)
+
+        self.hw_serial_label = ctk.CTkLabel(self.hw_config_frame, text="ESP32 Port:", font=("Orbitron", 11), text_color=self.accent_green, bg_color=self.bg_panel)
+        self.hw_serial_label.grid(row=0, column=0, padx=6, pady=6, sticky="w")
+        self.hw_serial_port = ctk.CTkEntry(self.hw_config_frame, width=110, fg_color=self.bg_dark, text_color=self.fg_text)
+        self.hw_serial_port.insert(0, "/dev/ttyUSB0")
+        self.hw_serial_port.grid(row=0, column=1, padx=6, pady=6, sticky="ew")
+
+        self.hw_baud_label = ctk.CTkLabel(self.hw_config_frame, text="Baud:", font=("Orbitron", 11), text_color=self.accent_green, bg_color=self.bg_panel)
+        self.hw_baud_label.grid(row=0, column=2, padx=6, pady=6, sticky="w")
+        self.hw_baud_rate = ctk.CTkEntry(self.hw_config_frame, width=90, fg_color=self.bg_dark, text_color=self.fg_text)
+        self.hw_baud_rate.insert(0, "115200")
+        self.hw_baud_rate.grid(row=0, column=3, padx=6, pady=6, sticky="ew")
+
+        self.hw_camera_label = ctk.CTkLabel(self.hw_config_frame, text="ZED Model:", font=("Orbitron", 11), text_color=self.accent_green, bg_color=self.bg_panel)
+        self.hw_camera_label.grid(row=0, column=4, padx=6, pady=6, sticky="w")
+        self.hw_camera_model = ctk.CTkOptionMenu(self.hw_config_frame, values=["zed2i", "zed2"], width=100, fg_color=self.bg_dark, button_color=self.accent_green, text_color=self.fg_text)
+        self.hw_camera_model.grid(row=0, column=5, padx=6, pady=6, sticky="ew")
+
+        self.hw_controls_frame = ctk.CTkFrame(self, fg_color=self.bg_panel)
+        self.hw_controls_frame.grid(row=6, column=0, pady=6, padx=12, sticky="ew")
+        self.hw_controls_frame.grid_columnconfigure((0, 1), weight=1)
+
+        self.hw_zed_var = ctk.BooleanVar(value=True)
+        self.hw_zed_check = ctk.CTkCheckBox(self.hw_controls_frame, text="Enable ZED Camera", variable=self.hw_zed_var, font=("Orbitron", 13), text_color=self.accent_green, bg_color=self.bg_panel)
+        self.hw_zed_check.grid(row=0, column=0, padx=10, pady=6, sticky="w")
+
+        self.hw_autonomy_var = ctk.BooleanVar(value=True)
+        self.hw_autonomy_check = ctk.CTkCheckBox(self.hw_controls_frame, text="Enable Nav2 + Waypoint Nav", variable=self.hw_autonomy_var, font=("Orbitron", 13), text_color=self.accent_green, bg_color=self.bg_panel)
+        self.hw_autonomy_check.grid(row=0, column=1, padx=10, pady=6, sticky="w")
+
+        self.hardware_button = ctk.CTkButton(self.hw_controls_frame, text="3. Launch Real Hardware", command=self.toggle_hardware, font=("Orbitron", 14, "bold"), fg_color=self.accent_green, hover_color="#00B37A", text_color=self.bg_dark)
+        self.hardware_button.grid(row=0, column=2, padx=10, pady=6, sticky="e")
 
         # Modules Label
         self.mod_label = ctk.CTkLabel(self, text="Navigation & SLAM Modules", font=("Orbitron", 13, "italic"), text_color=self.accent_blue, bg_color=self.bg_dark)
-        self.mod_label.grid(row=5, column=0, pady=(8, 2))
+        self.mod_label.grid(row=7, column=0, pady=(8, 2))
 
         # Modules Section
         self.modules_frame = ctk.CTkFrame(self, fg_color=self.bg_panel)
-        self.modules_frame.grid(row=6, column=0, pady=6, padx=12, sticky="ew")
+        self.modules_frame.grid(row=8, column=0, pady=6, padx=12, sticky="ew")
         
         self.slam_button = ctk.CTkButton(self.modules_frame, text="Launch SLAM", command=self.toggle_slam, font=("Orbitron", 12), fg_color=self.accent_purple, hover_color="#5F27CD", text_color=self.bg_dark)
         self.slam_button.grid(row=0, column=0, padx=6, pady=6, sticky="ew")
@@ -156,7 +231,7 @@ class SimManager(ctk.CTk):
 
         # Teleop and Waypoint Section
         self.teleop_frame = ctk.CTkFrame(self, fg_color=self.bg_panel)
-        self.teleop_frame.grid(row=7, column=0, pady=6, padx=12, sticky="ew")
+        self.teleop_frame.grid(row=9, column=0, pady=6, padx=12, sticky="ew")
         self.teleop_frame.grid_columnconfigure((0,1), weight=1)
         
         self.teleop_button = ctk.CTkButton(self.teleop_frame, text="WASD Teleop", command=self.toggle_teleop,
@@ -171,15 +246,15 @@ class SimManager(ctk.CTk):
         # Diagnostics Section
         self.diag_button = ctk.CTkButton(self, text="Check /clock Topic (Diagnostics)", command=self.check_clock,
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 11), text_color=self.bg_dark)
-        self.diag_button.grid(row=8, column=0, pady=3, padx=12, sticky="ew")
+        self.diag_button.grid(row=10, column=0, pady=3, padx=12, sticky="ew")
 
         # Emergency Section
         self.kill_button = ctk.CTkButton(self, text="KILL ALL PROCESSES & RESET GAZEBO", command=self.kill_all, 
                          fg_color=self.accent_red, hover_color="#7B241C", font=("Orbitron", 12, "bold"), text_color=self.bg_dark)
-        self.kill_button.grid(row=9, column=0, pady=10, padx=12, sticky="ew")
+        self.kill_button.grid(row=11, column=0, pady=10, padx=12, sticky="ew")
 
         self.status_label = ctk.CTkLabel(self, text="System Ready", text_color=self.fg_dim, font=("Orbitron", 10), bg_color=self.bg_dark)
-        self.status_label.grid(row=10, column=0, pady=4)
+        self.status_label.grid(row=12, column=0, pady=4)
 
         # Check for xterm
         self.check_xterm()
@@ -192,7 +267,8 @@ class SimManager(ctk.CTk):
             "NAV": self.nav_button.cget("fg_color"),
             "RVIZ": self.rviz_button.cget("fg_color"),
             "TELEOP": self.teleop_button.cget("fg_color"),
-            "LANE": self.slam_button.cget("fg_color")
+            "LANE": self.slam_button.cget("fg_color"),
+            "HARDWARE": self.hardware_button.cget("fg_color")
         }
 
     def scan_world_files(self):
@@ -306,6 +382,7 @@ class SimManager(ctk.CTk):
         elif name == "NAV": self.nav_button.configure(fg_color=color)
         elif name == "RVIZ": self.rviz_button.configure(fg_color=color)
         elif name == "TELEOP": self.teleop_button.configure(fg_color=color)
+        elif name == "HARDWARE": self.hardware_button.configure(fg_color=color)
         elif name == "LANE":
             # Lane detection doesn't have its own button, just update status
             pass
@@ -348,8 +425,68 @@ class SimManager(ctk.CTk):
         # Build then launch as requested
         cmd = (f"cd {self.workspace_root} && "
                f"colcon build --packages-select esda_simulation_2025 && "
-               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y}")
+               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y} camera_mount:={self.camera_mount_var.get()} lidar_mount:={self.lidar_mount_var.get()}")
         self.run_in_terminal("SIM", cmd)
+
+    def toggle_hardware(self):
+        """Launch (or stop) the real-hardware stack: Velodyne + ZED + ESP32 serial + Nav2 + waypoint nav."""
+        serial_port = self.hw_serial_port.get().strip() or "/dev/ttyUSB0"
+        baud_rate = self.hw_baud_rate.get().strip() or "115200"
+        camera_model = self.hw_camera_model.get()
+
+        launch_lidar = "true" if self.lidar_var.get() else "false"
+        launch_zed = "true" if self.hw_zed_var.get() else "false"
+        launch_lane_detection = "true" if self.lane_detection_var.get() else "false"
+        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
+        lane_mode = self.lane_detector_mode.get()
+        autonomy = "true" if self.hw_autonomy_var.get() else "false"
+
+        # SLAM vs AMCL follows the same Costmap YAML selector the sim SLAM/AMCL
+        # buttons use below: "[New Costmap]" builds a new map, anything else
+        # localizes against that saved map.
+        selected_costmap_name = self.selected_costmap.get()
+        if selected_costmap_name == "[New Costmap]":
+            slam_mode = "true"
+            map_arg = ""
+        else:
+            costmap_file = next((f for f in self.costmap_files if os.path.basename(f) == selected_costmap_name), None)
+            if not costmap_file:
+                self.status_label.configure(text="Error: Costmap file not found", text_color="#E74C3C")
+                return
+            slam_mode = "false"
+            map_arg = f"map:={costmap_file}"
+
+        cmd_parts = [
+            "ros2 launch esda_simulation_2025 launch_hardware.launch.py",
+            f"serial_port:={serial_port}",
+            f"serial_baud_rate:={baud_rate}",
+            f"camera_model:={camera_model}",
+            f"camera_mount:={self.camera_mount_var.get()}",
+            f"lidar_mount:={self.lidar_mount_var.get()}",
+            f"launch_lidar:={launch_lidar}",
+            f"launch_zed:={launch_zed}",
+            f"launch_lane_detection:={launch_lane_detection}",
+            f"lane_detector_mode:={lane_mode}",
+            f"scan_topic:={scan_topic}",
+            f"slam_mode:={slam_mode}",
+            map_arg,
+            f"launch_nav2:={autonomy}",
+            f"launch_waypoint_navigator:={autonomy}",
+            # RViz has its own button below; don't launch a second instance.
+            "launch_rviz:=false",
+        ]
+        cmd = " ".join(part for part in cmd_parts if part)
+
+        # velodyne + zed_wrapper live in a separate overlay workspace that
+        # this repo does not build itself.
+        zed_ws_setup = "/home/esda/Workspaces/install/setup.bash"
+        if os.path.exists(zed_ws_setup):
+            cmd = f"source {zed_ws_setup} && {cmd}"
+        else:
+            cmd = (f"echo 'WARNING: {zed_ws_setup} not found - velodyne/zed_wrapper "
+                   f"packages will fail to resolve' && {cmd}")
+
+        self.run_in_terminal("HARDWARE", cmd)
 
     def toggle_slam(self):
         if not self.is_sim_running():

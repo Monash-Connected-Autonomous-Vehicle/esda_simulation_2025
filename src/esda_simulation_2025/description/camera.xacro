@@ -1,11 +1,47 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
-    <joint name="camera_joint" type="fixed">
-        <parent link="chassis"/>
-        <child link="camera_link"/>
-        <origin xyz="0.8 0 0.315" rpy="0 0 0"/> <!--TODO: need to change to our actual camera location. the 0.005 is because the camera has a thickness-->
-    </joint>
+    <!-- camera_mount: "front" (default) is the original low, forward-facing
+         mount. "pole_top" mounts the camera on the LiDAR pole (lidar.xacro),
+         just below the LiDAR itself. Select with e.g.
+         `xacro robot.urdf.xacro camera_mount:=pole_top`.
+
+         x below MUST match lidar_mount_x in lidar.xacro - that's the pole's
+         actual x station on our chassis. (The raw xyz from
+         assets/robot_pruned.urdf's ZED placement can't be reused directly:
+         that file's "chassis" origin is a different reference point than
+         ours - copying its numbers put the camera at the back of the robot
+         instead of on the pole.)
+
+         y is offset off the pole's own y=0 (a short side bracket) rather
+         than sharing it exactly - otherwise the camera sits directly behind
+         the LiDAR in every view instead of beside it.
+
+         The CAD reference's rpy put its 15 deg tilt on roll (rpy="0.266 0 0"),
+         which only spins the image about the boresight - it doesn't tilt the
+         camera up/down. A downward tilt is pitch (rotation about Y): with
+         ROS's X-forward/Z-up convention, positive pitch tips +X toward -Z,
+         i.e. downward. -->
+    <xacro:arg name="camera_mount" default="front" />
+
+    <xacro:if value="${'$(arg camera_mount)' == 'pole_top'}">
+        <joint name="camera_joint" type="fixed">
+            <parent link="chassis"/>
+            <child link="camera_link"/>
+            <!-- x = lidar_mount_x (0.560407); y = +0.10 (side bracket off the
+                 pole); z = 1.30, ~8.5cm below the pole-top LiDAR
+                 (lidar_pole_base_z 0.385 + lidar_pole_length 1.0 = 1.385);
+                 pitch = 15 deg down (see note above) -->
+            <origin xyz="0.560407 0.10 1.30" rpy="0 0.2618 0"/>
+        </joint>
+    </xacro:if>
+    <xacro:unless value="${'$(arg camera_mount)' == 'pole_top'}">
+        <joint name="camera_joint" type="fixed">
+            <parent link="chassis"/>
+            <child link="camera_link"/>
+            <origin xyz="0.8 0 0.315" rpy="0 0 0"/> <!--TODO: need to change to our actual camera location. the 0.005 is because the camera has a thickness-->
+        </joint>
+    </xacro:unless>
 
     <link name="camera_link">
         <visual>

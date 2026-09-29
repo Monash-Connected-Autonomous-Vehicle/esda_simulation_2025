@@ -37,6 +37,19 @@ class LaneDetectionNode(Node):
         self.declare_parameter('lane_thickness_pixels', 8)  # Lane thickness for dense sampling
         self.declare_parameter('point_spacing_pixels', 2.0)  # Distance between sampled points
 
+        # Cone rejection: a cone's white reflective stripe is genuinely white
+        # (grayscale/dark-white-dark checks alone can't tell it apart from
+        # paint), but it always sits directly against the cone's orange body.
+        # Reject any candidate line with a significant patch of saturated
+        # orange nearby - real lane paint never borders orange.
+        self.declare_parameter('reject_orange_cones', True)
+        self.declare_parameter('orange_hue_low', 5)      # OpenCV HSV hue is 0-179
+        self.declare_parameter('orange_hue_high', 25)
+        self.declare_parameter('orange_sat_min', 100)    # 0-255; cone orange is highly saturated
+        self.declare_parameter('orange_val_min', 70)     # 0-255; excludes near-black false matches
+        self.declare_parameter('orange_check_radius', 10)       # pixels; where the perpendicular search starts
+        self.declare_parameter('orange_search_max_radius', 80)  # pixels; where it gives up
+
         # Which physical camera this instance is processing - lets multiple
         # instances (front ZED vs. remapped side cameras) each stamp their
         # output with their own TF frame and ground-plane geometry instead of
@@ -63,6 +76,13 @@ class LaneDetectionNode(Node):
         self.camera_mount_height = self.get_parameter('camera_mount_height').value
         self.camera_mount_pitch = self.get_parameter('camera_mount_pitch').value
         self.max_lane_range = self.get_parameter('max_lane_range').value
+        self.reject_orange_cones = self.get_parameter('reject_orange_cones').value
+        self.orange_hue_low = self.get_parameter('orange_hue_low').value
+        self.orange_hue_high = self.get_parameter('orange_hue_high').value
+        self.orange_sat_min = self.get_parameter('orange_sat_min').value
+        self.orange_val_min = self.get_parameter('orange_val_min').value
+        self.orange_check_radius = self.get_parameter('orange_check_radius').value
+        self.orange_search_max_radius = self.get_parameter('orange_search_max_radius').value
         
         # CV Bridge for ROS-OpenCV conversion
         self.bridge = CvBridge()
@@ -250,6 +270,10 @@ class LaneDetectionNode(Node):
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         height, width = gray.shape
+
+        # HSV for cone rejection (see verify_line_profile) - grayscale alone
+        # can't tell a cone's white stripe apart from real lane paint.
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV) if self.reject_orange_cones else None
         
         # Restrict ROI to lower half of the image
         roi_mask = np.zeros_like(gray)
@@ -285,69 +309,107 @@ class LaneDetectionNode(Node):
         )
         
         # Filter lines to find valid white strips (Dark-White-Dark)
-        valid_lines = self.filter_valid_lanes(lines, gray, height, width) if lines is not None else []
+        valid_lines = self.filter_valid_lanes(lines, gray, height, width, hsv) if lines is not None else []
         
         return valid_lines, white_mask, edges
     
-    def filter_valid_lanes(self, lines, gray, height, width):
+    def filter_valid_lanes(self, lines, gray, height, width, hsv=None):
         """
         Filter for lines that look like lane markings (white on dark)
         """
         valid_lines = []
         if lines is None:
             return []
-            
+
         for line in lines:
             x1, y1, x2, y2 = line[0]
-            
+
             # Calculate line length
             length = np.sqrt((x2-x1)**2 + (y2-y1)**2)
             if length < self.min_line_length:
                 continue
-                
+
             # Calculate angle (reject very horizontal lines, but be lenient)
             angle = np.abs(np.arctan2(y2-y1, x2-x1))
             if angle < 0.05: # Too horizontal
                 continue
-                
+
             # Verify Profile: Dark - White - Dark
-            if self.verify_line_profile(gray, x1, y1, x2, y2):
+            if self.verify_line_profile(gray, x1, y1, x2, y2, hsv):
                 valid_lines.append(line[0])
-                
+
         return valid_lines
-    
-    def verify_line_profile(self, gray, x1, y1, x2, y2):
+
+    def verify_line_profile(self, gray, x1, y1, x2, y2, hsv=None):
         """
         Check if the line sits on a white strip surrounded by dark
         """
         # Midpoint
         mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-        
+
         # Perpendicular direction
         dx, dy = x2 - x1, y2 - y1
         mag = np.sqrt(dx*dx + dy*dy)
         if mag == 0: return False
         dx, dy = dx/mag, dy/mag
-        
+
         # Normal vector (rotate 90 deg)
         nx, ny = -dy, dx
-        
+
         # Check profile at midpoint
         # Check center (should be white)
         if not self.is_pixel_white(gray, mx, my):
             return False
-            
+
         # Check sides (should be dark)
         # Check at distance ~10-12 pixels away (slightly shorter for more detection)
         check_dist = 12
         p1x, p1y = mx + nx * check_dist, my + ny * check_dist
         p2x, p2y = mx - nx * check_dist, my - ny * check_dist
-        
+
         is_dark_1 = self.is_pixel_dark(gray, p1x, p1y)
         is_dark_2 = self.is_pixel_dark(gray, p2x, p2y)
-        
+
         # Accept if at least one side is dark (less strict)
-        return is_dark_1 or is_dark_2
+        if not (is_dark_1 or is_dark_2):
+            return False
+
+        # Reject cone/barrel stripes: their white band is genuinely white and
+        # often has dark ground on one side too, so the checks above alone
+        # can't tell it apart from paint. What it always has that paint never
+        # does is saturated orange material bordering the stripe. A fixed
+        # small patch centered on the line isn't enough to find it though -
+        # on a wide object (a barrel's band can be tens of pixels thick) that
+        # patch can sit entirely inside the white band, never reaching the
+        # orange border. Instead, walk outward along the perpendicular on
+        # both sides until either the orange is found or the search gives up.
+        if hsv is not None and self.has_nearby_orange(hsv, mx, my, nx, ny):
+            return False
+
+        return True
+
+    def has_nearby_orange(self, hsv, x, y, nx, ny, near=None, far=None, steps=10):
+        """
+        True if a saturated-orange pixel is found by walking outward along
+        (nx, ny) - the line's perpendicular - from `near` to `far` pixels,
+        on both sides.
+        """
+        if near is None:
+            near = self.orange_check_radius
+        if far is None:
+            far = self.orange_search_max_radius
+
+        h, w = hsv.shape[:2]
+        for sign in (1.0, -1.0):
+            for t in np.linspace(near, far, steps):
+                px, py = int(x + sign * nx * t), int(y + sign * ny * t)
+                if 0 <= py < h and 0 <= px < w:
+                    hh, ss, vv = hsv[py, px]
+                    if (self.orange_hue_low <= hh <= self.orange_hue_high
+                            and ss >= self.orange_sat_min
+                            and vv >= self.orange_val_min):
+                        return True
+        return False
 
     def is_pixel_white(self, img, x, y):
         h, w = img.shape

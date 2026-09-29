@@ -119,6 +119,34 @@ class SimManager(ctk.CTk):
         self.dual_camera_check = ctk.CTkCheckBox(self.sim_frame, text="Dual Side Cameras (Test)", variable=self.dual_camera_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
         self.dual_camera_check.grid(row=2, column=0, padx=10, pady=(0, 8), sticky="w")
 
+        self.camera_mount_label = ctk.CTkLabel(self.sim_frame, text="ZED Mount:", font=("Orbitron", 11), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.camera_mount_label.grid(row=2, column=1, padx=(10, 0), pady=(0, 8), sticky="e")
+        self.camera_mount_var = ctk.StringVar(value="front")
+        self.camera_mount_dropdown = ctk.CTkOptionMenu(
+            self.sim_frame,
+            variable=self.camera_mount_var,
+            values=["front", "pole_top"],
+            width=110,
+            fg_color=self.bg_dark,
+            button_color=self.accent_purple,
+            text_color=self.fg_text
+        )
+        self.camera_mount_dropdown.grid(row=2, column=2, padx=10, pady=(0, 8), sticky="w")
+
+        self.lidar_mount_label = ctk.CTkLabel(self.sim_frame, text="LiDAR Mount:", font=("Orbitron", 11), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.lidar_mount_label.grid(row=3, column=0, padx=10, pady=(0, 8), sticky="w")
+        self.lidar_mount_var = ctk.StringVar(value="pole_top")
+        self.lidar_mount_dropdown = ctk.CTkOptionMenu(
+            self.sim_frame,
+            variable=self.lidar_mount_var,
+            values=["pole_top", "low"],
+            width=110,
+            fg_color=self.bg_dark,
+            button_color=self.accent_purple,
+            text_color=self.fg_text
+        )
+        self.lidar_mount_dropdown.grid(row=3, column=1, padx=10, pady=(0, 8), sticky="w")
+
         self.lane_detection_var = ctk.BooleanVar(value=True)
         self.lane_detection_check = ctk.CTkCheckBox(self.sim_frame, text="Enable Lane Detection", variable=self.lane_detection_var, font=("Orbitron", 14), text_color=self.accent_purple, bg_color=self.bg_panel)
         self.lane_detection_check.grid(row=0, column=1, padx=10, pady=6, sticky="w")
@@ -388,9 +416,12 @@ class SimManager(ctk.CTk):
             spawn_y = "0"
 
         # Build then launch as requested
+        camera_mount = self.camera_mount_var.get()
+        lidar_mount = self.lidar_mount_var.get()
+
         cmd = (f"cd {self.workspace_root} && "
                f"colcon build --packages-select esda_simulation_2025 && "
-               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y} robot_model:={robot_model}")
+               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y} robot_model:={robot_model} camera_mount:={camera_mount} lidar_mount:={lidar_mount}")
         self.run_in_terminal("SIM", cmd)
 
     def toggle_slam(self):

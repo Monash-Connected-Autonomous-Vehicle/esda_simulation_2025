@@ -287,30 +287,36 @@ local_costmap:
         lane:
           topic: /lane_obstacles
           max_obstacle_height: 2.0
-          clearing: False
+          clearing: True
           marking: True
           data_type: "PointCloud2"
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
           min_obstacle_height: -0.5
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
         lane_left:
           topic: /lane_obstacles_left_camera
           max_obstacle_height: 2.0
-          clearing: False
+          clearing: True
           marking: True
           data_type: "PointCloud2"
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
           min_obstacle_height: -0.5
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
         lane_right:
           topic: /lane_obstacles_right_camera
           max_obstacle_height: 2.0
-          clearing: False
+          clearing: True
           marking: True
           data_type: "PointCloud2"
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
           min_obstacle_height: -0.5
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -387,7 +393,7 @@ global_costmap:
 
           data_type: "PointCloud2"
 
-          clearing: False
+          clearing: True
           marking: True
 
           max_obstacle_height: 2.0
@@ -395,13 +401,16 @@ global_costmap:
 
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
+
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
 
         lane_left:
           topic: /lane_obstacles_left_camera
 
           data_type: "PointCloud2"
 
-          clearing: False
+          clearing: True
           marking: True
 
           max_obstacle_height: 2.0
@@ -409,13 +418,16 @@ global_costmap:
 
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
+
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
 
         lane_right:
           topic: /lane_obstacles_right_camera
 
           data_type: "PointCloud2"
 
-          clearing: False
+          clearing: True
           marking: True
 
           max_obstacle_height: 2.0
@@ -423,6 +435,9 @@ global_costmap:
 
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
+
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"

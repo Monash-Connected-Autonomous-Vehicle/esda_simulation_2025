@@ -1,11 +1,71 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
-    <joint name="laser_joint" type="fixed">
-        <parent link="chassis"/>
-        <child link="laser_frame"/>
-        <origin xyz="0.560407 0 0.385" rpy="0 0 0"/>
-    </joint>
+    <!-- lidar_mount: "pole_top" (default) raises the sensor on a mounting
+         pole above the chassis/camera so its 360 deg scan isn't blocked.
+         "low" reverts to the original single mount, directly on the chassis,
+         no pole. Select with e.g. `xacro robot.urdf.xacro lidar_mount:=low`.
+
+         camera.xacro's "pole_top" camera_mount option assumes this pole
+         exists (it reuses lidar_mount_x as its own x) - pairing
+         camera_mount:=pole_top with lidar_mount:=low doesn't make physical
+         sense (there is no pole to mount it on). -->
+    <xacro:arg name="lidar_mount" default="pole_top" />
+
+    <!-- Pole: square tube, sized to match the physical part
+         (assets/pruned/part_1__7.stl is 40x40mm x 1.0m). The base sits at
+         the old (pre-pole) sensor mount point; the sensor itself sits on
+         top of the pole, 1m higher, at the same x/y. -->
+    <xacro:property name="lidar_pole_width"  value="0.04"/>
+    <xacro:property name="lidar_pole_length" value="1.0"/>
+    <xacro:property name="lidar_pole_mass"   value="0.3"/>
+    <xacro:property name="lidar_mount_x"     value="0.560407"/>
+    <xacro:property name="lidar_mount_y"     value="0"/>
+    <xacro:property name="lidar_pole_base_z" value="0.385"/>
+
+    <xacro:if value="${'$(arg lidar_mount)' == 'pole_top'}">
+        <joint name="lidar_pole_joint" type="fixed">
+            <parent link="chassis"/>
+            <child link="lidar_pole"/>
+            <origin xyz="${lidar_mount_x} ${lidar_mount_y} ${lidar_pole_base_z}" rpy="0 0 0"/>
+        </joint>
+
+        <link name="lidar_pole">
+            <visual>
+                <origin xyz="0 0 ${lidar_pole_length/2}"/>
+                <geometry>
+                    <box size="${lidar_pole_width} ${lidar_pole_width} ${lidar_pole_length}"/>
+                </geometry>
+                <material name="grey"/>
+            </visual>
+            <collision>
+                <origin xyz="0 0 ${lidar_pole_length/2}"/>
+                <geometry>
+                    <box size="${lidar_pole_width} ${lidar_pole_width} ${lidar_pole_length}"/>
+                </geometry>
+            </collision>
+            <xacro:inertial_box mass="${lidar_pole_mass}" x="${lidar_pole_width}" y="${lidar_pole_width}" z="${lidar_pole_length}">
+                <origin xyz="0 0 ${lidar_pole_length/2}" rpy="0 0 0"/>
+            </xacro:inertial_box>
+        </link>
+
+        <gazebo reference="lidar_pole">
+            <material>Gazebo/Grey</material>
+        </gazebo>
+
+        <joint name="laser_joint" type="fixed">
+            <parent link="lidar_pole"/>
+            <child link="laser_frame"/>
+            <origin xyz="0 0 ${lidar_pole_length}" rpy="0 0 0"/>
+        </joint>
+    </xacro:if>
+    <xacro:unless value="${'$(arg lidar_mount)' == 'pole_top'}">
+        <joint name="laser_joint" type="fixed">
+            <parent link="chassis"/>
+            <child link="laser_frame"/>
+            <origin xyz="${lidar_mount_x} ${lidar_mount_y} ${lidar_pole_base_z}" rpy="0 0 0"/>
+        </joint>
+    </xacro:unless>
 
     <link name="laser_frame">
         <visual>
