@@ -21,10 +21,17 @@ class ThrottlePublisher(Node):
             10
         )
 
-        # Publish calculated throttle command
-        self.throttle_publisher = self.create_publisher(
+        # Publish calculated throttle command (right)
+        self.right_throttle_publisher = self.create_publisher(
             Float32,
-            '/esda_throttle_topic',
+            '/right_throttle',
+            10
+        )
+        
+        # Publish calculated throttle command (left)
+        self.left_throttle_publisher = self.create_subscription(
+            Float32,
+            '/left_throttle',
             10
         )
 
