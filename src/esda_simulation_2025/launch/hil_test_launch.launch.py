@@ -16,6 +16,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -29,6 +30,12 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     launch_rviz = LaunchConfiguration('launch_rviz')
     launch_teleop = LaunchConfiguration('launch_teleop')
+    left_port = LaunchConfiguration('left_port')
+    right_port = LaunchConfiguration('right_port')
+    gui_host = LaunchConfiguration('gui_host')
+    gui_port = LaunchConfiguration('gui_port')
+    max_forward_rpm = LaunchConfiguration('max_forward_rpm')
+    max_reverse_rpm = LaunchConfiguration('max_reverse_rpm')
 
 
     # ------------------------------------------------------------
@@ -59,6 +66,8 @@ def generate_launch_description():
     #
     # Publishes default positions for movable joints so that
     # robot_state_publisher can publish transforms for the wheels.
+    # Measured wheel positions from the ESP32 bridge are merged in
+    # via source_list, so the wheels spin in RViz.
     # ------------------------------------------------------------
 
     joint_state_publisher = Node(
@@ -71,6 +80,7 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'publish_default_positions': True,
                 'rate': 30.0,
+                'source_list': ['/esp32/joint_states'],
             }
         ]
     )
@@ -80,11 +90,18 @@ def generate_launch_description():
     # RViz
     # ------------------------------------------------------------
 
+    rviz_config = os.path.join(
+        get_package_share_directory(package_name),
+        'config',
+        'view_bot.rviz'
+    )
+
     rviz = Node(
         package='rviz2',
         executable='rviz2',
         name='rviz2',
         output='screen',
+        arguments=['-d', rviz_config],
         parameters=[
             {
                 'use_sim_time': use_sim_time
@@ -124,26 +141,41 @@ def generate_launch_description():
 
 
     # ------------------------------------------------------------
-    # Throttle Publisher
+    # ESP32 Wheel Bridge
     #
-    # This script should subscribe to:
+    # Subscribes to:
     #
     #   /cmd_vel
     #
-    # and publish:
+    # converts it to left/right wheel RPM and sends
+    # "VELOCITY <rpm>" over USB serial to the two
+    # wheel_controller ESP32s. Ports are auto-detected from the
+    # firmware's READY / CONFIG output unless set explicitly.
     #
-    #   /esda_throttle_topic
+    # Also serves the web GUI for setting velocities:
+    #
+    #   http://<gui_host>:<gui_port>
     #
     # ------------------------------------------------------------
 
-    throttle_script = 'src/esda_simulation_2025/scripts/throttle_publisher.py'
-
-    throttle_publisher = ExecuteProcess(
-        cmd=[
-            'python3',
-            throttle_script
-        ],
-        output='screen'
+    esp32_wheel_bridge = Node(
+        package=package_name,
+        executable='esp32_wheel_bridge.py',
+        name='esp32_wheel_bridge',
+        output='screen',
+        parameters=[
+            {
+                'left_port': left_port,
+                'right_port': right_port,
+                'gui_host': gui_host,
+                'gui_port': ParameterValue(gui_port, value_type=int),
+                'max_forward_rpm': ParameterValue(max_forward_rpm, value_type=float),
+                'max_reverse_rpm': ParameterValue(max_reverse_rpm, value_type=float),
+                'wheel_radius': 0.1625,
+                'wheel_separation': 0.5,
+                'cmd_vel_timeout': 0.5,
+            }
+        ]
     )
 
     odom_script = 'src/esda_simulation_2025/scripts/cmd_vel_odometry.py'
@@ -177,14 +209,47 @@ def generate_launch_description():
             default_value='true'
         ),
 
+        DeclareLaunchArgument(
+            'left_port',
+            default_value='auto',
+            description='Serial port of the left ESP32, e.g. /dev/ttyACM0 (auto = detect)'
+        ),
+
+        DeclareLaunchArgument(
+            'right_port',
+            default_value='auto',
+            description='Serial port of the right ESP32, e.g. /dev/ttyACM1 (auto = detect)'
+        ),
+
+        DeclareLaunchArgument(
+            'gui_host',
+            default_value='127.0.0.1',
+            description='Web GUI bind address (0.0.0.0 to reach it from another machine)'
+        ),
+
+        DeclareLaunchArgument(
+            'gui_port',
+            default_value='8767'
+        ),
+
+        DeclareLaunchArgument(
+            'max_forward_rpm',
+            default_value='35.0'
+        ),
+
+        DeclareLaunchArgument(
+            'max_reverse_rpm',
+            default_value='13.0'
+        ),
+
         # Robot model
         rsp,
 
         # Joint states for wheel transforms
         joint_state_publisher,
 
-        # Convert /cmd_vel -> throttle
-        throttle_publisher,
+        # /cmd_vel -> wheel RPM -> ESP32s, plus web GUI
+        esp32_wheel_bridge,
 
         cmd_vel_odometry,
 
