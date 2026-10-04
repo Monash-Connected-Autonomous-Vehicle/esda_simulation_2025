@@ -65,6 +65,7 @@ install(PROGRAMS
   scripts/throttle_publisher.py
   scripts/cmd_vel_odometry.py
   scripts/esp32_wheel_bridge.py
+  scripts/odrive_bridge.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

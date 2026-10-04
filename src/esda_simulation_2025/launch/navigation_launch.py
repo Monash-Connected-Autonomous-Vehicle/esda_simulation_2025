@@ -36,6 +36,7 @@ def generate_launch_description():
     autostart = LaunchConfiguration('autostart')
     params_file = LaunchConfiguration('params_file')
     scan_topic = LaunchConfiguration('scan_topic')
+    odom_topic = LaunchConfiguration('odom_topic')
     use_composition = LaunchConfiguration('use_composition')
     container_name = LaunchConfiguration('container_name')
     container_name_full = (namespace, '/', container_name)
@@ -63,7 +64,9 @@ def generate_launch_description():
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'autostart': autostart}
+        'autostart': autostart,
+        # Rewrites every odom_topic key (controller + velocity smoother).
+        'odom_topic': odom_topic}
 
     configured_params = ParameterFile(
         RewrittenYaml(
@@ -98,6 +101,11 @@ def generate_launch_description():
     declare_scan_topic_cmd = DeclareLaunchArgument(
         'scan_topic', default_value='/scan_fused',
         description='The topic to subscribe to for laser scans (costmaps)')
+
+    declare_odom_topic_cmd = DeclareLaunchArgument(
+        'odom_topic', default_value='odometry/filtered',
+        description='Odometry for the controller/velocity smoother: the sim EKF '
+                    'publishes odometry/filtered, the real robot odrive_bridge.py /odom')
 
     declare_use_composition_cmd = DeclareLaunchArgument(
         'use_composition', default_value='False',
@@ -269,6 +277,7 @@ def generate_launch_description():
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
     ld.add_action(declare_scan_topic_cmd)
+    ld.add_action(declare_odom_topic_cmd)
     ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_use_respawn_cmd)

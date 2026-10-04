@@ -14,7 +14,7 @@ class SimManager(ctk.CTk):
         super().__init__()
 
         self.title("ESDA SIMULATION SUITE")
-        self.geometry("700x700")
+        self.geometry("700x750")
 
         # Futuristic Appearance
         ctk.set_appearance_mode("dark")
@@ -238,7 +238,14 @@ class SimManager(ctk.CTk):
         self.waypoint_button = ctk.CTkButton(self.teleop_frame, text="Waypoint Nav", command=self.launch_waypoint_navigator,
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.waypoint_button.grid(row=0, column=1, pady=6, padx=6, sticky="ew")
-        
+
+        # Real robot on the Jetson: VLP-16 + ODrive bridge + RViz (no Gazebo).
+        # Uses the LIDAR checkbox and mount dropdowns above; teleop comes from
+        # the WASD Teleop button.
+        self.real_robot_button = ctk.CTkButton(self.teleop_frame, text="Launch Real Robot (ODrive + LiDAR)", command=self.toggle_real_robot,
+                         fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
+        self.real_robot_button.grid(row=1, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
+
         # Diagnostics Section
         self.diag_button = ctk.CTkButton(self, text="Check /clock Topic (Diagnostics)", command=self.check_clock,
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 11), text_color=self.bg_dark)
@@ -264,6 +271,7 @@ class SimManager(ctk.CTk):
             "RVIZ": self.rviz_button.cget("fg_color"),
             "TELEOP": self.teleop_button.cget("fg_color"),
             "LANE": self.lane_detection_button.cget("fg_color"),
+            "ROBOT": self.real_robot_button.cget("fg_color"),
         }
 
     def scan_world_files(self):
@@ -378,6 +386,7 @@ class SimManager(ctk.CTk):
         elif name == "RVIZ": self.rviz_button.configure(fg_color=color)
         elif name == "TELEOP": self.teleop_button.configure(fg_color=color)
         elif name == "LANE": self.lane_detection_button.configure(fg_color=color)
+        elif name == "ROBOT": self.real_robot_button.configure(fg_color=color)
 
     def check_xterm(self):
         """Check if xterm is installed"""
@@ -399,7 +408,10 @@ class SimManager(ctk.CTk):
         self.status_label.configure(text="Build attempt finished", text_color="#BDC3C7")
 
     def toggle_sim(self):
-        lidar = "true" if self.lidar_var.get() else "false"
+        if self.is_robot_running():
+            self.status_label.configure(text="Error: Stop the real robot first - both own /cmd_vel and /odom", text_color="#E74C3C")
+            return
+        lidar ="true" if self.lidar_var.get() else "false"
         robot_model = "robot_dual_camera.urdf.xacro" if self.dual_camera_var.get() else "robot.urdf.xacro"
         selected_world_name = self.selected_world.get()
         # Find full path of selected world
@@ -425,12 +437,11 @@ class SimManager(ctk.CTk):
         self.run_in_terminal("SIM", cmd)
 
     def toggle_slam(self):
-        if not self.is_sim_running():
-            self.status_label.configure(text="Error: Launch Simulation first!", text_color="#E74C3C")
+        if not self.require_robot_or_sim():
             return
         
         selected_costmap_name = self.selected_costmap.get()
-        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
+        scan_topic = self.nav_scan_topic()
         
         # Check if user wants to load an existing map
         if selected_costmap_name != "[New Costmap]":
@@ -448,7 +459,7 @@ class SimManager(ctk.CTk):
                 # Launch SLAM with preloaded map in mapping mode (allows adding to existing map)
                 # map_start_at_dock tells slam_toolbox to load and continue from the saved map
                 cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
-                       f"use_sim_time:=true "
+                       f"use_sim_time:={self.sim_time()} "
                        f"map_file_name:={map_file_base} "
                        f"map_start_at_dock:=true "
                        f"scan_topic:={scan_topic}")
@@ -458,12 +469,12 @@ class SimManager(ctk.CTk):
                 self.status_label.configure(text=f"Note: '{selected_costmap_name}' has no SLAM data. Starting new SLAM map...", text_color="#F39C12")
                 # Launch SLAM in new mapping mode
                 cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
-                       f"use_sim_time:=true "
+                       f"use_sim_time:={self.sim_time()} "
                        f"scan_topic:={scan_topic}")
         else:
             # Launch SLAM in mapping mode (create new map)
             cmd = (f"ros2 launch esda_simulation_2025 online_async_launch.py "
-                   f"use_sim_time:=true "
+                   f"use_sim_time:={self.sim_time()} "
                    f"scan_topic:={scan_topic}")
         
         self.status_label.configure(text="Waiting for simulation to stabilize...", text_color="#F1C40F")
@@ -544,8 +555,7 @@ class SimManager(ctk.CTk):
                 self.run_in_terminal(f"LANE_{side.upper()}", side_lane_cmd)
 
     def toggle_amcl(self):
-        if not self.is_sim_running():
-            self.status_label.configure(text="Error: Launch Simulation first!", text_color="#E74C3C")
+        if not self.require_robot_or_sim():
             return
         selected_costmap_name = self.selected_costmap.get()
         if selected_costmap_name == "[New Costmap]":
@@ -562,23 +572,22 @@ class SimManager(ctk.CTk):
     
     def _launch_amcl_delayed(self, costmap_file):
         time.sleep(3)  # Wait for simulation to be ready
-        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
+        scan_topic = self.nav_scan_topic()
         cmd = (f"ros2 launch esda_simulation_2025 localization_launch.py "
-               f"use_sim_time:=true map:={costmap_file} "
+               f"use_sim_time:={self.sim_time()} map:={costmap_file} "
                f"amcl_base_frame_id:=base_link amcl_odom_frame_id:=odom "
                f"scan_topic:={scan_topic}")
         self.run_in_terminal("AMCL", cmd)
 
     def toggle_nav(self):
-        if not self.is_sim_running():
-            self.status_label.configure(text="Error: Launch Simulation first!", text_color="#E74C3C")
+        if not self.require_robot_or_sim():
             return
         selected_costmap_name = self.selected_costmap.get()
-        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
+        scan_topic = self.nav_scan_topic()
         
         if selected_costmap_name == "[New Costmap]":
             # Launch Nav2 without a map (for SLAM mode)
-            cmd = (f"ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:=true "
+            cmd = (f"ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:={self.sim_time()} odom_topic:={self.nav_odom_topic()} "
                    f"map_subscribe_transient_local:=true "
                    f"scan_topic:={scan_topic}")
         else:
@@ -587,7 +596,7 @@ class SimManager(ctk.CTk):
             if not costmap_file:
                 self.status_label.configure(text="Error: Costmap file not found", text_color="#E74C3C")
                 return
-            cmd = (f"ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:=true "
+            cmd = (f"ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:={self.sim_time()} odom_topic:={self.nav_odom_topic()} "
                    f"map_subscribe_transient_local:=true "
                    f"map:={costmap_file} "
                    f"scan_topic:={scan_topic}")
@@ -634,13 +643,23 @@ class SimManager(ctk.CTk):
     
     def _launch_rviz_delayed(self, rviz_config):
         time.sleep(2)  # Wait for SLAM to publish the map
-        cmd = f"rviz2 -d {rviz_config} --ros-args -p use_sim_time:=true"
+        cmd = f"rviz2 -d {rviz_config} --ros-args -p use_sim_time:={self.sim_time()}"
         self.run_in_terminal("RVIZ", cmd)
 
     def toggle_teleop(self):
         # We need to run telemetry inside the script location
         cmd = f"python3 {self.workspace_root}/src/esda_simulation_2025/scripts/teleop_wasd.py"
         self.run_in_terminal("TELEOP", cmd)
+
+    def toggle_real_robot(self):
+        if self.is_sim_running():
+            self.status_label.configure(text="Error: Stop the simulation first - both own /cmd_vel and /odom", text_color="#E74C3C")
+            return
+        lidar = "true" if self.lidar_var.get() else "false"
+        cmd = (f"ros2 launch esda_simulation_2025 launch_odrive_robot.launch.py "
+               f"launch_lidar:={lidar} launch_teleop:=false "
+               f"camera_mount:={self.camera_mount_var.get()} lidar_mount:={self.lidar_mount_var.get()}")
+        self.run_in_terminal("ROBOT", cmd)
 
     def kill_all(self):
         self.status_label.configure(text="Cleaning up Gazebo and processes...", text_color="#E74C3C")
@@ -669,6 +688,31 @@ class SimManager(ctk.CTk):
     def is_sim_running(self):
         """Check if simulation is currently running"""
         return "SIM" in self.processes and self.processes["SIM"].poll() is None
+
+    def is_robot_running(self):
+        """Check if the real robot (launch_odrive_robot.launch.py) is running"""
+        return "ROBOT" in self.processes and self.processes["ROBOT"].poll() is None
+
+    def require_robot_or_sim(self):
+        if self.is_sim_running() or self.is_robot_running():
+            return True
+        self.status_label.configure(text="Error: Launch Simulation or Real Robot first!", text_color="#E74C3C")
+        return False
+
+    def sim_time(self):
+        return "true" if self.is_sim_running() else "false"
+
+    def nav_scan_topic(self):
+        # The real robot launch has no camera, so nothing publishes
+        # /scan_fused there - always use the LiDAR's /scan.
+        if self.is_robot_running():
+            return "/scan"
+        return "/scan_fused" if self.lane_detection_var.get() else "/scan"
+
+    def nav_odom_topic(self):
+        # The sim's EKF publishes odometry/filtered; on the real robot
+        # odrive_bridge.py publishes /odom and there is no EKF.
+        return "/odom" if self.is_robot_running() else "odometry/filtered"
     
     def check_clock(self):
         """Check if /clock topic is publishing (diagnostics)"""
