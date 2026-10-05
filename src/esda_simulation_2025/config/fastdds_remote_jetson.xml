@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    For a REMOTE machine (e.g. a laptop running RViz) talking to the Jetson's
+    ROS 2 graph over Tailscale. Tailscale doesn't carry multicast, so DDS
+    discovery has to be pointed at the Jetson by unicast:
+
+        export FASTRTPS_DEFAULT_PROFILES_FILE=/path/to/fastdds_remote_jetson.xml
+        rviz2
+
+    100.67.86.95 is asterius-desktop (the Jetson) on the tailnet. The Jetson
+    side needs no change: its participants answer the remote's announcements
+    directly. Each participant (one per node) listens for discovery on
+    7410 + 2*id in domain 0, so ids 0-49 are listed explicitly - the full
+    real-robot launch creates ~30.
+
+    UDP only (no shared memory), matching fastdds_noshm.xml on the Jetson.
+-->
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastrtps_profiles">
+    <transport_descriptors>
+        <transport_descriptor>
+            <transport_id>udp_transport</transport_id>
+            <type>UDPv4</type>
+        </transport_descriptor>
+    </transport_descriptors>
+
+    <participant profile_name="remote_jetson_profile" is_default_profile="true">
+        <rtps>
+            <userTransports>
+                <transport_id>udp_transport</transport_id>
+            </userTransports>
+            <useBuiltinTransports>false</useBuiltinTransports>
+            <builtin>
+                <initialPeersList>
+                    <locator><udpv4><address>100.67.86.95</address><port>7410</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7412</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7414</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7416</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7418</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7420</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7422</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7424</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7426</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7428</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7430</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7432</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7434</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7436</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7438</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7440</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7442</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7444</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7446</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7448</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7450</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7452</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7454</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7456</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7458</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7460</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7462</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7464</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7466</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7468</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7470</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7472</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7474</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7476</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7478</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7480</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7482</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7484</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7486</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7488</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7490</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7492</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7494</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7496</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7498</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7500</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7502</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7504</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7506</port></udpv4></locator>
+                    <locator><udpv4><address>100.67.86.95</address><port>7508</port></udpv4></locator>
+                </initialPeersList>
+            </builtin>
+        </rtps>
+    </participant>
+</profiles>

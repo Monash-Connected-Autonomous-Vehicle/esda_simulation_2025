@@ -276,7 +276,8 @@ def generate_launch_description():
                 'map_subscribe_transient_local': 'true',
                 'scan_topic': '/scan',
                 'odom_topic': '/odom',
-                'params_file': os.path.join(pkg_share, 'config', 'nav2_params.yaml'),
+                # Real-robot copy: larger inflation for the 0.45 m robot radius.
+                'params_file': os.path.join(pkg_share, 'config', 'nav2_params_real_robot.yaml'),
             }.items(),
         )],
     )

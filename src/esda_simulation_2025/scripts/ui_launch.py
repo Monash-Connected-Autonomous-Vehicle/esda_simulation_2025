@@ -612,6 +612,7 @@ class SimManager(ctk.CTk):
             # Launch Nav2 without a map (for SLAM mode)
             cmd = (f"ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:={self.sim_time()} odom_topic:={self.nav_odom_topic()} "
                    f"map_subscribe_transient_local:=true "
+                   f"params_file:={self.nav_params_file()} "
                    f"scan_topic:={scan_topic}")
         else:
             # Find full path of selected costmap
@@ -622,6 +623,7 @@ class SimManager(ctk.CTk):
             cmd = (f"ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:={self.sim_time()} odom_topic:={self.nav_odom_topic()} "
                    f"map_subscribe_transient_local:=true "
                    f"map:={costmap_file} "
+                   f"params_file:={self.nav_params_file()} "
                    f"scan_topic:={scan_topic}")
         self.status_label.configure(text="Waiting for localization to be ready...", text_color="#F1C40F")
         self.update()
@@ -846,6 +848,12 @@ class SimManager(ctk.CTk):
         if self.is_robot_running():
             return "/scan"
         return "/scan_fused" if self.lane_detection_var.get() else "/scan"
+
+    def nav_params_file(self):
+        # The real robot uses a copy with inflation sized to its 0.45 m
+        # radius; the sim keeps the tighter settings its lanes were tuned for.
+        name = "nav2_params_real_robot.yaml" if self.is_robot_running() else "nav2_params.yaml"
+        return f"{self.workspace_root}/install/esda_simulation_2025/share/esda_simulation_2025/config/{name}"
 
     def nav_odom_topic(self):
         # The sim's EKF publishes odometry/filtered; on the real robot
