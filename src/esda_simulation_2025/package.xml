@@ -20,6 +20,7 @@
   <depend>ros_gz_image</depend>
   <depend>ros_gz_sim</depend>
   <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>cv_bridge</depend>
   <!-- Used directly by the lane detectors and by the waypoint navigator's
        distance-transform clearance, so declare it rather than relying on

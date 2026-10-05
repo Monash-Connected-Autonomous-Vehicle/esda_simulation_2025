@@ -66,6 +66,7 @@ install(PROGRAMS
   scripts/cmd_vel_odometry.py
   scripts/esp32_wheel_bridge.py
   scripts/odrive_bridge.py
+  scripts/odrive_monitor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

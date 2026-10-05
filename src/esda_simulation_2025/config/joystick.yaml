@@ -17,7 +17,7 @@ teleop_node:
       yaw: 0
     scale_angular:
       yaw: 0.5
-    scale_linear_turbo:
+    scale_angular_turbo:
       yaw: 1.0
     
     enable_button: 6

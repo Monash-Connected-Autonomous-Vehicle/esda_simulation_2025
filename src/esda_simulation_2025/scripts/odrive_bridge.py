@@ -9,19 +9,34 @@ turns. The ODrive works in motor turns/s; everything on the ROS side is in
 wheel units (m/s, rad/s, rad).
 
 Publishes:
-  /odom              (Odometry, from the ODrive encoder positions)
+  /odom              (Odometry: pose integrated from encoder positions,
+                      twist from the ODrive's encoder vel_estimate)
   odom -> base_link  (TF, when publish_odom_tf is true)
-  /joint_states      (JointState, wheel angles so the wheels spin in RViz)
-  /odrive/vbus       (Float32, bus voltage)
+  /joint_states      (JointState, wheel angles so the wheels spin in RViz,
+                      velocities from vel_estimate)
+  /odrive/wheel_velocity  (JointState, measured wheel speeds in rad/s from
+                           the ODrive's encoder vel_estimate, forward positive)
+  /odrive/twist      (TwistStamped, measured body velocity from the same
+                      estimates: linear.x m/s, angular.z rad/s)
+
+Services:
+  ~/reset_odom       (std_srvs/Trigger) zero the odom pose (x, y, yaw) so
+                      base_link is back on the odom origin. Restart SLAM
+                      afterwards or it sees the jump as the robot moving.
+
+The ODrive's own config (control mode, vel_limit, ramp, current limits,
+calibration) is assumed to be set up and saved already. This node only
+clears errors, requests closed loop control and writes input_vel. It also
+feeds the axis watchdog every cycle, so a watchdog left enabled on the board
+doesn't disarm the axes (error 0x800); with it disabled that's a no-op.
 
 Safety:
   - Wheel speeds are clamped to max_motor_turns_per_s. When one wheel
     saturates, both are scaled together so the turn radius is kept.
   - Zero velocity is commanded when /cmd_vel stops arriving for longer than
     cmd_vel_timeout.
-  - Firmware 0.5.x keeps the last input_vel if USB drops, so the on-board
-    axis watchdog is enabled (odrive_watchdog_timeout). If the Jetson stops
-    feeding it, the ODrive disarms the axes by itself.
+  - An axis disarmed by an error (e.g. current limit violation) is zeroed,
+    its errors cleared and put back into closed loop.
   - Both axes are put back to IDLE on shutdown.
 """
 
@@ -32,10 +47,10 @@ import time
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, TransformStamped
+from geometry_msgs.msg import Twist, TwistStamped, TransformStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float32
+from std_srvs.srv import Trigger
 from tf2_ros import TransformBroadcaster
 
 # Optional: without the library the node still publishes
@@ -49,9 +64,6 @@ except ImportError:
 # depend on which odrive Python package version exposes which names.
 AXIS_STATE_IDLE = 1
 AXIS_STATE_CLOSED_LOOP_CONTROL = 8
-CONTROL_MODE_VELOCITY_CONTROL = 2
-INPUT_MODE_PASSTHROUGH = 1
-INPUT_MODE_VEL_RAMP = 2
 
 
 class OdriveBridge(Node):
@@ -60,20 +72,22 @@ class OdriveBridge(Node):
         super().__init__('odrive_bridge')
 
         self.declare_parameter('serial_number', '')  # '' = first ODrive found
-        self.declare_parameter('left_axis', 0)
-        self.declare_parameter('right_axis', 1)
+        self.declare_parameter('left_axis', 1)
+        self.declare_parameter('right_axis', 0)
         # The motors are mirrored on the chassis, so one of them has to turn
         # backwards to drive forwards. Flip these if a wheel spins the wrong way.
-        self.declare_parameter('left_direction', 1.0)
-        self.declare_parameter('right_direction', -1.0)
+        self.declare_parameter('left_direction', -1.0)
+        self.declare_parameter('right_direction', 1.0)
         self.declare_parameter('gear_ratio', 64.0)  # motor turns per wheel turn
-        self.declare_parameter('wheel_radius', 0.1625)
-        self.declare_parameter('wheel_separation', 0.5)
-        self.declare_parameter('max_motor_turns_per_s', 40.0)
-        self.declare_parameter('vel_ramp_rate', 40.0)  # motor turns/s^2, 0 = no ramp
+        self.declare_parameter('wheel_radius', 0.1552)
+        self.declare_parameter('wheel_separation', 0.66)
+        self.declare_parameter('max_motor_turns_per_s', 30.0)
         self.declare_parameter('cmd_vel_timeout', 0.5)
-        self.declare_parameter('odrive_watchdog_timeout', 0.5)  # 0 = disabled
-        self.declare_parameter('update_rate', 50.0)
+        self.declare_parameter('error_check_interval', 0.1)  # s between axis state checks
+        # Every cycle is ~9 USB round trips through the odrive library, which
+        # costs a full Jetson core at 50 Hz and starves SLAM. 20 Hz is plenty
+        # for teleop/Nav2 and stays well inside the 0.5 s watchdog.
+        self.declare_parameter('update_rate', 20.0)
         self.declare_parameter('publish_odom_tf', True)
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_link')
@@ -88,9 +102,8 @@ class OdriveBridge(Node):
         self.wheel_radius = float(p('wheel_radius'))
         self.wheel_separation = float(p('wheel_separation'))
         self.max_motor_vel = float(p('max_motor_turns_per_s'))
-        self.vel_ramp_rate = float(p('vel_ramp_rate'))
         self.cmd_vel_timeout = float(p('cmd_vel_timeout'))
-        self.watchdog_timeout = float(p('odrive_watchdog_timeout'))
+        self.error_check_interval = float(p('error_check_interval'))
         self.publish_odom_tf = bool(p('publish_odom_tf'))
         self.odom_frame = p('odom_frame')
         self.base_frame = p('base_frame')
@@ -102,6 +115,8 @@ class OdriveBridge(Node):
 
         self.target_wheel = [0.0, 0.0]  # rad/s
         self.last_cmd_time = 0.0
+        self.last_error_check = 0.0
+        self.reset_count = 0
 
         self.last_motor_pos = None  # motor turns, as read from the encoders
         self.wheel_angle = [0.0, 0.0]  # rad
@@ -110,9 +125,11 @@ class OdriveBridge(Node):
 
         self.odom_pub = self.create_publisher(Odometry, '/odom', 10)
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
-        self.vbus_pub = self.create_publisher(Float32, '/odrive/vbus', 10)
+        self.wheel_vel_pub = self.create_publisher(JointState, '/odrive/wheel_velocity', 10)
+        self.twist_pub = self.create_publisher(TwistStamped, '/odrive/twist', 10)
         self.tf_broadcaster = TransformBroadcaster(self)
         self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 10)
+        self.create_service(Trigger, '~/reset_odom', self.reset_odom_callback)
 
         self.period = 1.0 / float(p('update_rate'))
         self.create_timer(self.period, self.update)
@@ -174,32 +191,34 @@ class OdriveBridge(Node):
             f'fw {odrv.fw_version_major}.{odrv.fw_version_minor}.{odrv.fw_version_revision}, '
             f'vbus {odrv.vbus_voltage:.1f} V')
 
+        for name, axis in zip(('left', 'right'), axes):
+            if axis.config.enable_watchdog:
+                self.get_logger().info(
+                    f'{name} axis watchdog enabled ({axis.config.watchdog_timeout:.2f} s), '
+                    'feeding it every cycle')
+
+        for axis in axes:
+            axis.watchdog_feed()
         self.clear_errors(odrv, axes)
         for axis in axes:
-            axis.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
-            if self.vel_ramp_rate > 0.0:
-                axis.controller.config.vel_ramp_rate = self.vel_ramp_rate
-                axis.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-            else:
-                axis.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
-            # The factory vel_limit (2 turns/s) is ~0.03 m/s through a 64:1
-            # gearbox. Leave some headroom over the command clamp so the
-            # controller doesn't fault on overshoot.
-            axis.controller.config.vel_limit = self.max_motor_vel * 1.2
+            axis.watchdog_feed()
             axis.controller.input_vel = 0.0
-            if self.watchdog_timeout > 0.0:
-                axis.config.watchdog_timeout = self.watchdog_timeout
-                axis.watchdog_feed()
-                axis.config.enable_watchdog = True
             axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-        time.sleep(0.2)
+        # update() isn't feeding yet (self.axes is still None), so split the
+        # wait to stay inside short watchdog timeouts.
+        for _ in range(5):
+            time.sleep(0.1)
+            for axis in axes:
+                axis.watchdog_feed()
         for name, axis in zip(('left', 'right'), axes):
-            if axis.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL:
+            if axis.current_state == AXIS_STATE_CLOSED_LOOP_CONTROL:
+                self.get_logger().info(f'{name} axis: closed loop OK')
+            else:
                 self.get_logger().error(
                     f'{name} axis did not enter closed loop control '
                     f'(state {axis.current_state}): {self.describe_errors(axis)}. '
-                    'Is the motor/encoder calibrated and pre_calibrated saved?')
+                    'Will keep retrying.')
 
         # Hand over to update() only once fully configured.
         self.last_motor_pos = None
@@ -211,6 +230,7 @@ class OdriveBridge(Node):
         self.odrv = None
         self.axes = None
         self.last_motor_pos = None
+        self.wheel_vel = [0.0, 0.0]
         self.start_search()
 
     @staticmethod
@@ -225,6 +245,32 @@ class OdriveBridge(Node):
             axis.controller.error = 0
 
     @staticmethod
+    def has_error(axis):
+        return bool(axis.error or axis.motor.error or axis.encoder.error
+                    or axis.controller.error)
+
+    def reset_on_error(self):
+        """Re-arm any axis that was disarmed by an error (current limit
+        violation etc.). Its input_vel is zeroed first so it doesn't lurch."""
+        failed = [(name, axis) for name, axis in zip(('left', 'right'), self.axes)
+                  if axis.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL
+                  and self.has_error(axis)]
+        if not failed:
+            return
+
+        self.reset_count += 1
+        for name, axis in failed:
+            axis.controller.input_vel = 0.0
+            self.get_logger().warn(
+                f'ODrive reset #{self.reset_count}: {name} axis disarmed: '
+                f'{self.describe_errors(axis)}')
+
+        self.clear_errors(self.odrv, self.axes)
+        for axis in self.axes:
+            axis.watchdog_feed()
+            axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+
+    @staticmethod
     def describe_errors(axis):
         return (f'axis=0x{axis.error:X} motor=0x{axis.motor.error:X} '
                 f'encoder=0x{axis.encoder.error:X} controller=0x{axis.controller.error:X}')
@@ -235,7 +281,6 @@ class OdriveBridge(Node):
         try:
             for axis in self.axes:
                 axis.controller.input_vel = 0.0
-                axis.config.enable_watchdog = False
                 axis.requested_state = AXIS_STATE_IDLE
         except Exception as error:
             self.get_logger().warn(f'Could not idle ODrive axes: {error}')
@@ -260,6 +305,17 @@ class OdriveBridge(Node):
         self.target_wheel = [left, right]
         self.last_cmd_time = time.monotonic()
 
+    def reset_odom_callback(self, request, response):
+        # Same executor as update(), so this can't interleave with an
+        # odometry step. last_motor_pos is kept so the next step only adds
+        # motion from here on.
+        self.x = self.y = self.yaw = 0.0
+        self.wheel_angle = [0.0, 0.0]
+        self.get_logger().info('Odometry reset to the odom origin')
+        response.success = True
+        response.message = 'odom reset to x=0 y=0 yaw=0'
+        return response
+
     def update(self):
         if self.axes is None:
             # Keep odom -> base_link and the wheel TFs alive so the robot and
@@ -271,27 +327,57 @@ class OdriveBridge(Node):
             self.target_wheel = [0.0, 0.0]
 
         try:
+            now = time.monotonic()
+            if now - self.last_error_check > self.error_check_interval:
+                self.last_error_check = now
+                self.reset_on_error()
+
             motor_pos = []
+            motor_vel = []
             for axis, direction, target in zip(self.axes, self.directions, self.target_wheel):
                 axis.controller.input_vel = direction * self.wheel_to_motor(target)
-                if self.watchdog_timeout > 0.0:
-                    axis.watchdog_feed()
+                axis.watchdog_feed()
                 motor_pos.append(direction * axis.encoder.pos_estimate)
-            vbus = self.odrv.vbus_voltage
+                motor_vel.append(direction * axis.encoder.vel_estimate)
         except Exception as error:  # ObjectLostError etc. on USB disconnect
             self.disconnect(error)
             return
 
-        self.update_odometry(motor_pos)
-        self.vbus_pub.publish(Float32(data=float(vbus)))
+        linear, angular = self.update_odometry(motor_pos, motor_vel)
+        self.publish_measured_velocity(linear, angular)
+
+    def publish_measured_velocity(self, linear, angular):
+        stamp = self.get_clock().now().to_msg()
+
+        msg = JointState()
+        msg.header.stamp = stamp
+        msg.name = self.joint_names
+        msg.velocity = list(self.wheel_vel)
+        self.wheel_vel_pub.publish(msg)
+
+        twist = TwistStamped()
+        twist.header.stamp = stamp
+        twist.header.frame_id = self.base_frame
+        twist.twist.linear.x = linear
+        twist.twist.angular.z = angular
+        self.twist_pub.publish(twist)
 
     # ---- odometry -----------------------------------------------------
 
-    def update_odometry(self, motor_pos):
+    def update_odometry(self, motor_pos, motor_vel):
+        """Integrate the pose from encoder positions; take velocities from
+        the ODrive's vel_estimate, which is smoother than differencing
+        positions over a jittery timer period. Returns (linear, angular).
+        """
+        self.wheel_vel = [self.motor_to_wheel(v) for v in motor_vel]  # rad/s
+        linear = (self.wheel_vel[0] + self.wheel_vel[1]) / 2.0 * self.wheel_radius
+        angular = ((self.wheel_vel[1] - self.wheel_vel[0]) * self.wheel_radius
+                   / self.wheel_separation)
+
         if self.last_motor_pos is None:
             self.last_motor_pos = motor_pos
-            self.publish_state(0.0, 0.0)
-            return
+            self.publish_state(linear, angular)
+            return linear, angular
 
         d_wheel = [self.motor_to_wheel(now - before)
                    for now, before in zip(motor_pos, self.last_motor_pos)]
@@ -299,7 +385,6 @@ class OdriveBridge(Node):
 
         for i in range(2):
             self.wheel_angle[i] += d_wheel[i]
-            self.wheel_vel[i] = d_wheel[i] / self.period
 
         d_left = d_wheel[0] * self.wheel_radius
         d_right = d_wheel[1] * self.wheel_radius
@@ -312,7 +397,8 @@ class OdriveBridge(Node):
         self.y += d_dist * math.sin(mid_yaw)
         self.yaw = math.atan2(math.sin(self.yaw + d_yaw), math.cos(self.yaw + d_yaw))
 
-        self.publish_state(d_dist / self.period, d_yaw / self.period)
+        self.publish_state(linear, angular)
+        return linear, angular
 
     def publish_state(self, linear, angular):
         stamp = self.get_clock().now().to_msg()

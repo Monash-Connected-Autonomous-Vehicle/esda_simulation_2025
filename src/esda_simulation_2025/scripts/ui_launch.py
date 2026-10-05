@@ -239,12 +239,33 @@ class SimManager(ctk.CTk):
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.waypoint_button.grid(row=0, column=1, pady=6, padx=6, sticky="ew")
 
-        # Real robot on the Jetson: VLP-16 + ODrive bridge + RViz (no Gazebo).
+        # Real robot on the Jetson: VLP-16 + ODrive bridge (no Gazebo). RViz
+        # only if the "RViz (Real Robot)" box below is ticked.
         # Uses the LIDAR checkbox and mount dropdowns above; teleop comes from
         # the WASD Teleop button.
         self.real_robot_button = ctk.CTkButton(self.teleop_frame, text="Launch Real Robot (ODrive + LiDAR)", command=self.toggle_real_robot,
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.real_robot_button.grid(row=1, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
+
+        # Gamepad teleop (joy_node + teleop_twist_joy) inside the real robot launch.
+        self.joy_var = ctk.BooleanVar(value=False)
+        self.joy_check = ctk.CTkCheckBox(self.teleop_frame, text="Joystick Teleop (Real Robot)", variable=self.joy_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.joy_check.grid(row=2, column=0, pady=6, padx=6, sticky="w")
+
+        # RViz inside the real robot launch - off by default, it lags the laptop.
+        self.robot_rviz_var = ctk.BooleanVar(value=False)
+        self.robot_rviz_check = ctk.CTkCheckBox(self.teleop_frame, text="RViz (Real Robot)", variable=self.robot_rviz_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.robot_rviz_check.grid(row=2, column=1, pady=6, padx=6, sticky="w")
+
+        # Live /cmd_vel vs measured ODrive velocities (read-only).
+        self.monitor_button = ctk.CTkButton(self.teleop_frame, text="ODrive Monitor (cmd_vel vs measured)", command=self.toggle_odrive_monitor,
+                         fg_color=self.accent_blue, hover_color="#2E86C1", font=("Orbitron", 12), text_color=self.bg_dark)
+        self.monitor_button.grid(row=3, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
+
+        # Zero odrive_bridge's odom pose; restarts SLAM if it's running here.
+        self.reset_odom_button = ctk.CTkButton(self.teleop_frame, text="Reset Odom (+ restart SLAM)", command=self.reset_odom,
+                         fg_color=self.accent_orange, hover_color="#CC7000", font=("Orbitron", 12), text_color=self.bg_dark)
+        self.reset_odom_button.grid(row=4, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
 
         # Diagnostics Section
         self.diag_button = ctk.CTkButton(self, text="Check /clock Topic (Diagnostics)", command=self.check_clock,
@@ -272,6 +293,7 @@ class SimManager(ctk.CTk):
             "TELEOP": self.teleop_button.cget("fg_color"),
             "LANE": self.lane_detection_button.cget("fg_color"),
             "ROBOT": self.real_robot_button.cget("fg_color"),
+            "MONITOR": self.monitor_button.cget("fg_color"),
         }
 
     def scan_world_files(self):
@@ -387,6 +409,7 @@ class SimManager(ctk.CTk):
         elif name == "TELEOP": self.teleop_button.configure(fg_color=color)
         elif name == "LANE": self.lane_detection_button.configure(fg_color=color)
         elif name == "ROBOT": self.real_robot_button.configure(fg_color=color)
+        elif name == "MONITOR": self.monitor_button.configure(fg_color=color)
 
     def check_xterm(self):
         """Check if xterm is installed"""
@@ -651,13 +674,128 @@ class SimManager(ctk.CTk):
         cmd = f"python3 {self.workspace_root}/src/esda_simulation_2025/scripts/teleop_wasd.py"
         self.run_in_terminal("TELEOP", cmd)
 
+    def reset_odom(self):
+        """Call odrive_bridge's ~/reset_odom. If SLAM was started from this
+        UI, restart it too - otherwise it reads the odom jump as the robot
+        teleporting and smears the map."""
+        self.status_label.configure(text="Resetting odom...", text_color="#F1C40F")
+        ros_distro = os.environ.get("ROS_DISTRO", "humble")
+        local_setup = os.path.join(self.workspace_root, "install/setup.bash")
+        cmd = (f"export FASTRTPS_DEFAULT_PROFILES_FILE={self.workspace_root}/src/esda_simulation_2025/config/fastdds_noshm.xml && "
+               f"source /opt/ros/{ros_distro}/setup.bash && "
+               + (f"source {local_setup} && " if os.path.exists(local_setup) else "")
+               + "timeout 15 ros2 service call /odrive_bridge/reset_odom std_srvs/srv/Trigger")
+
+        def worker():
+            result = subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
+            self.after(0, self._reset_odom_done, result.returncode == 0 and "success=True" in result.stdout)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _reset_odom_done(self, ok):
+        if not ok:
+            self.status_label.configure(
+                text="Odom reset failed - is the real robot (odrive_bridge) running?", text_color="#E74C3C")
+            return
+        if "SLAM" in self.processes and self.processes["SLAM"].poll() is None:
+            self.stop_process("SLAM")
+            self.status_label.configure(text="Odom reset - restarting SLAM...", text_color="#F1C40F")
+            self.after(3000, self.toggle_slam)
+        else:
+            self.status_label.configure(text="Odom reset to x=0 y=0 yaw=0", text_color="#2ECC71")
+
+    def toggle_odrive_monitor(self):
+        """Show odrive_monitor.py's live output in a window of this UI
+        instead of an xterm. Clicking again (or closing the window) stops it."""
+        if "MONITOR" in self.processes and self.processes["MONITOR"].poll() is None:
+            self.close_odrive_monitor()
+            return
+        self.close_odrive_monitor()  # a window left over from a monitor that exited
+
+        ros_distro = os.environ.get("ROS_DISTRO", "humble")
+        local_setup = os.path.join(self.workspace_root, "install/setup.bash")
+        script = f"{self.workspace_root}/src/esda_simulation_2025/scripts/odrive_monitor.py"
+        cmd = (f"export FASTRTPS_DEFAULT_PROFILES_FILE={self.workspace_root}/src/esda_simulation_2025/config/fastdds_noshm.xml && "
+               f"source /opt/ros/{ros_distro}/setup.bash && "
+               + (f"source {local_setup} && " if os.path.exists(local_setup) else "")
+               + f"exec python3 -u {script}")
+        try:
+            process = subprocess.Popen(["bash", "-c", cmd], stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT, preexec_fn=os.setsid)
+        except Exception as e:
+            self.status_label.configure(text=f"Error: {str(e)}", text_color="#E74C3C")
+            return
+        self.processes["MONITOR"] = process
+        self.update_ui_state("MONITOR", True)
+        self.status_label.configure(text="Started ODrive monitor", text_color="#2ECC71")
+
+        self.monitor_frame_text = "Waiting for odrive_monitor.py..."
+        self.monitor_window = ctk.CTkToplevel(self)
+        self.monitor_window.title("ODrive Monitor")
+        self.monitor_window.geometry("620x440")
+        self.monitor_window.configure(fg_color=self.bg_dark)
+        self.monitor_window.protocol("WM_DELETE_WINDOW", self.close_odrive_monitor)
+        self.monitor_text = ctk.CTkTextbox(self.monitor_window, font=("DejaVu Sans Mono", 13),
+                                           fg_color=self.bg_panel, text_color=self.accent_green, wrap="none")
+        self.monitor_text.pack(fill="both", expand=True, padx=8, pady=8)
+
+        threading.Thread(target=self._read_odrive_monitor, args=(process,), daemon=True).start()
+        self._refresh_odrive_monitor()
+
+    def _read_odrive_monitor(self, process):
+        # odrive_monitor.py clears the screen before each frame, so the text
+        # after the last clear sequence is the latest full frame.
+        clear = b"\x1b[2J\x1b[H"
+        buffer = b""
+        fd = process.stdout.fileno()
+        while True:
+            chunk = os.read(fd, 4096)
+            if not chunk:
+                break
+            buffer += chunk
+            if clear in buffer:
+                frames = buffer.split(clear)
+                buffer = frames[-1]
+                complete = [f for f in frames[:-1] if f.strip()]
+                if complete:
+                    self.monitor_frame_text = complete[-1].decode(errors="replace")
+            elif len(buffer) > 4096:
+                # Startup errors etc. arrive without a clear sequence.
+                self.monitor_frame_text = buffer.decode(errors="replace")
+        if buffer.strip():
+            self.monitor_frame_text = buffer.decode(errors="replace")
+        self.monitor_frame_text += "\n\n[odrive_monitor.py exited]"
+
+    def _refresh_odrive_monitor(self):
+        window = getattr(self, "monitor_window", None)
+        if window is None or not window.winfo_exists():
+            return
+        self.monitor_text.configure(state="normal")
+        self.monitor_text.delete("1.0", "end")
+        self.monitor_text.insert("1.0", self.monitor_frame_text)
+        self.monitor_text.configure(state="disabled")
+        process = self.processes.get("MONITOR")
+        if process is not None and process.poll() is not None:
+            del self.processes["MONITOR"]
+            self.update_ui_state("MONITOR", False)
+        self.after(200, self._refresh_odrive_monitor)
+
+    def close_odrive_monitor(self):
+        self.stop_process("MONITOR")
+        window = getattr(self, "monitor_window", None)
+        if window is not None and window.winfo_exists():
+            window.destroy()
+        self.monitor_window = None
+
     def toggle_real_robot(self):
         if self.is_sim_running():
             self.status_label.configure(text="Error: Stop the simulation first - both own /cmd_vel and /odom", text_color="#E74C3C")
             return
         lidar = "true" if self.lidar_var.get() else "false"
+        joy = "true" if self.joy_var.get() else "false"
+        rviz = "true" if self.robot_rviz_var.get() else "false"
         cmd = (f"ros2 launch esda_simulation_2025 launch_odrive_robot.launch.py "
-               f"launch_lidar:={lidar} launch_teleop:=false "
+               f"launch_lidar:={lidar} launch_teleop:=false launch_joy:={joy} launch_rviz:={rviz} "
                f"camera_mount:={self.camera_mount_var.get()} lidar_mount:={self.lidar_mount_var.get()}")
         self.run_in_terminal("ROBOT", cmd)
 

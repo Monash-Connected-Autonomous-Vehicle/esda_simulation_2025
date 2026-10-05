@@ -67,8 +67,10 @@ def main():
     pub = node.create_publisher(Twist, '/cmd_vel', 10)
     
 
-    speed = 2
-    turn = 2
+    # /cmd_vel is in m/s and rad/s. The ODrive robot tops out at ~0.46 m/s
+    # (30 motor turns/s through 64:1), so anything above that is clamped.
+    speed = 0.3  # m/s
+    turn = 0.8  # rad/s
     x = 0.0
     th = 0.0
     last_key_time = 0.0
@@ -92,7 +94,7 @@ def main():
             elif key in speed_bindings.keys():
                 speed = speed * speed_bindings[key][0]
                 turn = turn * speed_bindings[key][1]
-                print(f"Currently: speed {speed:.2f}\tturn {turn:.2f}")
+                print(f"Currently: speed {speed:.2f} m/s\tturn {turn:.2f} rad/s")
             elif key == '\x03':  # CTRL-C
                 break
             else:

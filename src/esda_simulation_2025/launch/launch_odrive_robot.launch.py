@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Real-robot bring-up for the Jetson: Velodyne VLP-16 over ethernet + ODrive
-# v3.6 over USB + RViz, optionally SLAM Toolbox and Nav2. No ros2_control,
+# v3.6 over USB, optionally RViz (launch_rviz:=true), SLAM Toolbox and Nav2. No ros2_control,
 # no Gazebo.
 #
 #   /cmd_vel -> odrive_bridge.py -> ODrive axis0/axis1
@@ -16,6 +16,7 @@
 # Example:
 #     ros2 launch esda_simulation_2025 launch_odrive_robot.launch.py
 #     ros2 launch esda_simulation_2025 launch_odrive_robot.launch.py launch_slam:=true launch_nav2:=true
+#     ros2 launch esda_simulation_2025 launch_odrive_robot.launch.py launch_teleop:=false launch_joy:=true
 
 import math
 import os
@@ -58,6 +59,7 @@ def generate_launch_description():
     right_direction = LaunchConfiguration('right_direction')
     launch_rviz = LaunchConfiguration('launch_rviz')
     launch_teleop = LaunchConfiguration('launch_teleop')
+    launch_joy = LaunchConfiguration('launch_joy')
     launch_slam = LaunchConfiguration('launch_slam')
     launch_nav2 = LaunchConfiguration('launch_nav2')
 
@@ -98,8 +100,8 @@ def generate_launch_description():
                 'max_motor_turns_per_s': ParameterValue(max_motor_turns_per_s, value_type=float),
                 'left_direction': ParameterValue(left_direction, value_type=float),
                 'right_direction': ParameterValue(right_direction, value_type=float),
-                'wheel_radius': 0.1625,
-                'wheel_separation': 0.5,
+                'wheel_radius': 0.1552,
+                'wheel_separation': 0.66,
                 'cmd_vel_timeout': 0.5,
                 'publish_odom_tf': True,
             }
@@ -272,6 +274,34 @@ def generate_launch_description():
         condition=IfCondition(launch_teleop),
     )
 
+    # ------------------------------------------------------------
+    # Joystick teleop
+    #
+    # teleop_twist_joy publishes plain /cmd_vel, which is what
+    # odrive_bridge.py listens on - no remap to the ros2_control topic.
+    # Hold the enable button (config/joystick.yaml) to drive.
+    # ------------------------------------------------------------
+
+    joy_params = os.path.join(pkg_share, 'config', 'joystick.yaml')
+
+    joy_node = Node(
+        package='joy',
+        executable='joy_node',
+        name='joy_node',
+        parameters=[joy_params],
+        output='screen',
+        condition=IfCondition(launch_joy),
+    )
+
+    teleop_joy = Node(
+        package='teleop_twist_joy',
+        executable='teleop_node',
+        name='teleop_node',
+        parameters=[joy_params],
+        output='screen',
+        condition=IfCondition(launch_joy),
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'lidar_mount', default_value='pole_top',
@@ -291,16 +321,19 @@ def generate_launch_description():
             'gear_ratio', default_value='64.0',
             description='Motor turns per wheel turn'),
         DeclareLaunchArgument(
-            'max_motor_turns_per_s', default_value='40.0',
-            description='Motor-side speed clamp; 40 turns/s = ~0.64 m/s at 64:1'),
+            'max_motor_turns_per_s', default_value='30.0',
+            description='Motor-side speed clamp; 30 turns/s = ~0.46 m/s at 64:1'),
         DeclareLaunchArgument(
-            'left_direction', default_value='1.0',
+            'left_direction', default_value='-1.0',
             description='1.0 or -1.0; flip if the left wheel spins backwards'),
         DeclareLaunchArgument(
-            'right_direction', default_value='-1.0',
+            'right_direction', default_value='1.0',
             description='1.0 or -1.0; flip if the right wheel spins backwards'),
-        DeclareLaunchArgument('launch_rviz', default_value='true'),
+        DeclareLaunchArgument('launch_rviz', default_value='false'),
         DeclareLaunchArgument('launch_teleop', default_value='true'),
+        DeclareLaunchArgument(
+            'launch_joy', default_value='false',
+            description='Run joy_node + teleop_twist_joy on /cmd_vel'),
         DeclareLaunchArgument(
             'launch_slam', default_value='false',
             description='Run slam_toolbox (map -> odom) on /scan'),
@@ -321,4 +354,6 @@ def generate_launch_description():
 
         delayed_rviz,
         teleop,
+        joy_node,
+        teleop_joy,
     ])
