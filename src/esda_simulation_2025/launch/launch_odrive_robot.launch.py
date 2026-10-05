@@ -30,6 +30,7 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     ExecuteProcess,
+    GroupAction,
     IncludeLaunchDescription,
     LogInfo,
     TimerAction,
@@ -62,6 +63,7 @@ def generate_launch_description():
     launch_joy = LaunchConfiguration('launch_joy')
     launch_slam = LaunchConfiguration('launch_slam')
     launch_nav2 = LaunchConfiguration('launch_nav2')
+    viz_cloud_rate = LaunchConfiguration('viz_cloud_rate')
 
     # ------------------------------------------------------------
     # Robot State Publisher
@@ -217,31 +219,66 @@ def generate_launch_description():
                 'LiDAR. Install with: sudo apt install ros-humble-pointcloud-to-laserscan'
         )
 
+    # Viewer-only copy of the cloud for Foxglove over Tailscale: the full
+    # /velodyne_points is ~6.7 MB/s and backs up the link (odom/TF then
+    # arrive in bursts). SLAM/Nav2 keep using the full-rate topics.
+    cloud_viz = Node(
+        package=package_name,
+        executable='topic_throttle.py',
+        name='velodyne_points_viz_throttle',
+        output='screen',
+        parameters=[{
+            'input_topic': '/velodyne_points',
+            'output_topic': '/velodyne_points_viz',
+            'message_type': 'sensor_msgs/msg/PointCloud2',
+            'rate': ParameterValue(viz_cloud_rate, value_type=float),
+        }],
+        condition=IfCondition(launch_lidar),
+    )
+
     # ------------------------------------------------------------
     # SLAM Toolbox / Nav2 (optional - the GUI's SLAM and Nav2 buttons do
     # the same thing). Only resolved when enabled, so they don't need to be
     # installed to bring up the robot.
     # ------------------------------------------------------------
 
-    slam = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_share, 'launch', 'online_async_launch.py')
-        ),
-        launch_arguments={'use_sim_time': 'false', 'scan_topic': '/scan'}.items(),
+    #
+    # Both included launch files declare `params_file`, and an include does
+    # not scope its launch configurations - SLAM's mapper yaml leaked into
+    # Nav2, which then fell back to its defaults (DWB, "No critics defined
+    # for FollowPath") and aborted bringup. So each include gets its own
+    # scoped group and an explicit params_file.
+
+    slam = GroupAction(
+        scoped=True,
         condition=IfCondition(launch_slam),
+        actions=[IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(pkg_share, 'launch', 'online_async_launch.py')
+            ),
+            launch_arguments={
+                'use_sim_time': 'false',
+                'scan_topic': '/scan',
+                'params_file': os.path.join(pkg_share, 'config', 'mapper_params_online_async.yaml'),
+            }.items(),
+        )],
     )
 
-    nav2 = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_share, 'launch', 'navigation_launch.py')
-        ),
-        launch_arguments={
-            'use_sim_time': 'false',
-            'map_subscribe_transient_local': 'true',
-            'scan_topic': '/scan',
-            'odom_topic': '/odom',
-        }.items(),
+    nav2 = GroupAction(
+        scoped=True,
         condition=IfCondition(launch_nav2),
+        actions=[IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(pkg_share, 'launch', 'navigation_launch.py')
+            ),
+            launch_arguments={
+                'use_sim_time': 'false',
+                'map_subscribe_transient_local': 'true',
+                'scan_topic': '/scan',
+                'odom_topic': '/odom',
+                'params_file': os.path.join(pkg_share, 'config', 'nav2_params.yaml'),
+            }.items(),
+        )],
     )
     # Let the LiDAR, TF and SLAM's map come up before Nav2 starts.
     delayed_nav2 = TimerAction(period=8.0, actions=[nav2])
@@ -330,6 +367,9 @@ def generate_launch_description():
             'right_direction', default_value='1.0',
             description='1.0 or -1.0; flip if the right wheel spins backwards'),
         DeclareLaunchArgument('launch_rviz', default_value='false'),
+        DeclareLaunchArgument(
+            'viz_cloud_rate', default_value='2.0',
+            description='Hz for /velodyne_points_viz, the throttled cloud for Foxglove'),
         DeclareLaunchArgument('launch_teleop', default_value='true'),
         DeclareLaunchArgument(
             'launch_joy', default_value='false',
@@ -348,6 +388,7 @@ def generate_launch_description():
         velodyne_driver,
         velodyne_transform,
         cloud_to_scan,
+        cloud_viz,
 
         slam,
         delayed_nav2,

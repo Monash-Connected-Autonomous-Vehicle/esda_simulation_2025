@@ -67,6 +67,7 @@ install(PROGRAMS
   scripts/esp32_wheel_bridge.py
   scripts/odrive_bridge.py
   scripts/odrive_monitor.py
+  scripts/topic_throttle.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -10,14 +10,18 @@ wheel units (m/s, rad/s, rad).
 
 Publishes:
   /odom              (Odometry: pose integrated from encoder positions,
-                      twist from the ODrive's encoder vel_estimate)
+                      twist from the same positions differenced per cycle)
   odom -> base_link  (TF, when publish_odom_tf is true)
-  /joint_states      (JointState, wheel angles so the wheels spin in RViz,
-                      velocities from vel_estimate)
-  /odrive/wheel_velocity  (JointState, measured wheel speeds in rad/s from
-                           the ODrive's encoder vel_estimate, forward positive)
-  /odrive/twist      (TwistStamped, measured body velocity from the same
-                      estimates: linear.x m/s, angular.z rad/s)
+  /joint_states      (JointState, wheel angles so the wheels spin in RViz)
+  /odrive/wheel_velocity  (JointState, measured wheel speeds in rad/s,
+                           forward positive)
+  /odrive/twist      (TwistStamped, measured body velocity: linear.x m/s,
+                      angular.z rad/s)
+
+Every attribute access on the ODrive is a USB round trip costing a few ms of
+Python CPU, so a cycle only reads the two encoder positions. input_vel is
+written only when the target changes, and the watchdog is fed every
+watchdog_feed_interval rather than every cycle.
 
 Services:
   ~/reset_odom       (std_srvs/Trigger) zero the odom pose (x, y, yaw) so
@@ -84,10 +88,10 @@ class OdriveBridge(Node):
         self.declare_parameter('max_motor_turns_per_s', 30.0)
         self.declare_parameter('cmd_vel_timeout', 0.5)
         self.declare_parameter('error_check_interval', 0.1)  # s between axis state checks
-        # Every cycle is ~9 USB round trips through the odrive library, which
-        # costs a full Jetson core at 50 Hz and starves SLAM. 20 Hz is plenty
-        # for teleop/Nav2 and stays well inside the 0.5 s watchdog.
-        self.declare_parameter('update_rate', 20.0)
+        self.declare_parameter('update_rate', 50.0)
+        self.declare_parameter('watchdog_feed_interval', 0.1)  # s, board timeout is 0.5 s
+        # Low-pass on the position-differenced wheel speeds (1 = no filtering).
+        self.declare_parameter('velocity_filter_alpha', 0.5)
         self.declare_parameter('publish_odom_tf', True)
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_link')
@@ -104,6 +108,8 @@ class OdriveBridge(Node):
         self.max_motor_vel = float(p('max_motor_turns_per_s'))
         self.cmd_vel_timeout = float(p('cmd_vel_timeout'))
         self.error_check_interval = float(p('error_check_interval'))
+        self.watchdog_feed_interval = float(p('watchdog_feed_interval'))
+        self.velocity_alpha = float(p('velocity_filter_alpha'))
         self.publish_odom_tf = bool(p('publish_odom_tf'))
         self.odom_frame = p('odom_frame')
         self.base_frame = p('base_frame')
@@ -116,9 +122,12 @@ class OdriveBridge(Node):
         self.target_wheel = [0.0, 0.0]  # rad/s
         self.last_cmd_time = 0.0
         self.last_error_check = 0.0
+        self.last_watchdog_feed = 0.0
+        self.written_vel = None  # motor turns/s last sent per axis; None = resend
         self.reset_count = 0
 
         self.last_motor_pos = None  # motor turns, as read from the encoders
+        self.last_pos_time = None
         self.wheel_angle = [0.0, 0.0]  # rad
         self.wheel_vel = [0.0, 0.0]  # rad/s
         self.x = self.y = self.yaw = 0.0
@@ -222,6 +231,7 @@ class OdriveBridge(Node):
 
         # Hand over to update() only once fully configured.
         self.last_motor_pos = None
+        self.written_vel = None
         self.odrv = odrv
         self.axes = axes
 
@@ -269,6 +279,7 @@ class OdriveBridge(Node):
         for axis in self.axes:
             axis.watchdog_feed()
             axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+        self.written_vel = None  # failed axes were zeroed; resend targets
 
     @staticmethod
     def describe_errors(axis):
@@ -332,18 +343,26 @@ class OdriveBridge(Node):
                 self.last_error_check = now
                 self.reset_on_error()
 
-            motor_pos = []
-            motor_vel = []
-            for axis, direction, target in zip(self.axes, self.directions, self.target_wheel):
-                axis.controller.input_vel = direction * self.wheel_to_motor(target)
-                axis.watchdog_feed()
-                motor_pos.append(direction * axis.encoder.pos_estimate)
-                motor_vel.append(direction * axis.encoder.vel_estimate)
+            command = [direction * self.wheel_to_motor(target)
+                       for direction, target in zip(self.directions, self.target_wheel)]
+            if command != self.written_vel:
+                for axis, vel in zip(self.axes, command):
+                    axis.controller.input_vel = vel
+                self.written_vel = command
+
+            if now - self.last_watchdog_feed > self.watchdog_feed_interval:
+                self.last_watchdog_feed = now
+                for axis in self.axes:
+                    axis.watchdog_feed()
+
+            motor_pos = [direction * axis.encoder.pos_estimate
+                         for axis, direction in zip(self.axes, self.directions)]
+            pos_time = time.monotonic()
         except Exception as error:  # ObjectLostError etc. on USB disconnect
             self.disconnect(error)
             return
 
-        linear, angular = self.update_odometry(motor_pos, motor_vel)
+        linear, angular = self.update_odometry(motor_pos, pos_time)
         self.publish_measured_velocity(linear, angular)
 
     def publish_measured_velocity(self, linear, angular):
@@ -364,24 +383,31 @@ class OdriveBridge(Node):
 
     # ---- odometry -----------------------------------------------------
 
-    def update_odometry(self, motor_pos, motor_vel):
-        """Integrate the pose from encoder positions; take velocities from
-        the ODrive's vel_estimate, which is smoother than differencing
-        positions over a jittery timer period. Returns (linear, angular).
+    def update_odometry(self, motor_pos, pos_time):
+        """Integrate the pose from encoder positions, and get wheel speeds
+        by differencing them over the real time between reads (lightly
+        low-pass filtered). Returns (linear, angular).
         """
-        self.wheel_vel = [self.motor_to_wheel(v) for v in motor_vel]  # rad/s
-        linear = (self.wheel_vel[0] + self.wheel_vel[1]) / 2.0 * self.wheel_radius
-        angular = ((self.wheel_vel[1] - self.wheel_vel[0]) * self.wheel_radius
-                   / self.wheel_separation)
-
         if self.last_motor_pos is None:
             self.last_motor_pos = motor_pos
-            self.publish_state(linear, angular)
-            return linear, angular
+            self.last_pos_time = pos_time
+            self.wheel_vel = [0.0, 0.0]
+            self.publish_state(0.0, 0.0)
+            return 0.0, 0.0
 
         d_wheel = [self.motor_to_wheel(now - before)
                    for now, before in zip(motor_pos, self.last_motor_pos)]
+        dt = pos_time - self.last_pos_time
         self.last_motor_pos = motor_pos
+        self.last_pos_time = pos_time
+
+        if dt > 0.0:
+            a = self.velocity_alpha
+            self.wheel_vel = [a * (d / dt) + (1.0 - a) * v
+                              for d, v in zip(d_wheel, self.wheel_vel)]  # rad/s
+        linear = (self.wheel_vel[0] + self.wheel_vel[1]) / 2.0 * self.wheel_radius
+        angular = ((self.wheel_vel[1] - self.wheel_vel[0]) * self.wheel_radius
+                   / self.wheel_separation)
 
         for i in range(2):
             self.wheel_angle[i] += d_wheel[i]

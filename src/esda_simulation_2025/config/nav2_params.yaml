@@ -138,7 +138,10 @@ controller_server:
       vx_std: 0.15
       vy_std: 0.0
       wz_std: 0.3
-      vx_max: 1.0
+      # Real robot: ODrive bridge caps the motors at 30 turns/s, which is
+      # 30 / 64 * 2*pi * 0.1552 m = 0.457 m/s at the wheel, or 1.385 rad/s
+      # spinning on the spot (wheel_separation 0.66). Keep under both.
+      vx_max: 0.45
       vx_min: 0.0
       vy_max: 0.0
       wz_max: 1.2
@@ -615,10 +618,15 @@ velocity_smoother:
   ros__parameters:
     use_sim_time: True
     smoothing_frequency: 20.0
-    scale_velocities: False
+    # Scale all axes together when one hits its limit, so the path's
+    # curvature is kept rather than the turn being cut short.
+    scale_velocities: True
     feedback: "OPEN_LOOP"
-    max_velocity: [1.0, 0.0, 2.0]
-    min_velocity: [-0.5, 0.0, -2.0]
+    # Last stage before /cmd_vel, so this caps everything Nav2 sends
+    # (controller and recovery behaviours) at the ODrive's 30 turns/s:
+    # 0.457 m/s straight, 1.385 rad/s spinning - see the MPPI note above.
+    max_velocity: [0.45, 0.0, 1.38]
+    min_velocity: [-0.45, 0.0, -1.38]
     max_accel: [2.5, 0.0, 3.2]
     max_decel: [-2.5, 0.0, -3.2]
     odom_topic: "odometry/filtered"  # EKF-fused odom+IMU, not raw wheel odom

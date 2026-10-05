@@ -66,7 +66,11 @@ def generate_launch_description():
         'use_sim_time': use_sim_time,
         'autostart': autostart,
         # Rewrites every odom_topic key (controller + velocity smoother).
-        'odom_topic': odom_topic}
+        'odom_topic': odom_topic,
+        # nav2_params.yaml gives this relative to the workspace root, which
+        # only resolves when launched from there; pin it to the package.
+        'default_nav_to_pose_bt_xml': os.path.join(
+            pkg_path, 'behaviour_tree', 'navigate_recovery.xml')}
 
     configured_params = ParameterFile(
         RewrittenYaml(
