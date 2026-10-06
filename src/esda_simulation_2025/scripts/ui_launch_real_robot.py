@@ -418,7 +418,7 @@ class SimManager(ctk.CTk):
         # Set spawn coordinates based on world
         spawn_x = "0.0"
         spawn_y = "0.0"
-        if "igvc.sdf" in selected_world_name:
+        if selected_world_name.startswith("igvc"):
             spawn_x = "11.0"
             spawn_y = "0"
 
