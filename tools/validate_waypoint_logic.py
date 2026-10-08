@@ -367,6 +367,89 @@ def v8_scan_sectors():
           math.isinf(TARGET.scan_sector_clearance(empty, -100, -90)))
 
 
+def v14_far_goals():
+    print('\nV-14 far goals past cones')
+
+    # 10 x 8 m free field, robot at (1, 4) facing +x. Two cones (r = 0.25 m)
+    # stagger the straight line at x = 3 and x = 4.5, slalom-style.
+    resolution = 0.05
+    grid = np.zeros((160, 200), dtype=np.int8)
+    yy, xx = np.mgrid[0:160, 0:200]
+    cx, cy = (xx + 0.5) * resolution, (yy + 0.5) * resolution
+    for cone_x, cone_y in ((3.0, 4.0), (4.5, 4.6)):
+        grid[np.hypot(cx - cone_x, cy - cone_y) <= 0.25] = 100
+    # Unmapped shadow behind the first cone.
+    grid[(cx > 3.3) & (cx < 4.0) & (np.abs(cy - 4.0) < 0.3)] = -1
+    snap = make_snapshot(grid, resolution)
+
+    distances = [3.0, 4.0, 5.0, 6.0]
+    laterals = [k * 0.5 for k in range(-4, 5)]
+    found = TARGET.far_goal_candidates(
+        snap, 1.0, 4.0, 0.0, distances, laterals, 1.0, 0.8)
+
+    check('candidates exist past the cones', len(found) > 0,
+          f'{len(found)} candidates')
+
+    best = found[0]
+    check('best goal is beyond both cones', best[1] > 4.5,
+          f'x={best[1]:.2f}, y={best[2]:.2f}')
+
+    straight_blocked = TARGET.path_clearance(
+        snap, 1.0, 4.0, best[1], best[2], 0.8) < 0.9
+    check('it would have failed the short-goal straight-line check',
+          straight_blocked)
+
+    check('every candidate keeps 1.0 m clearance',
+          all(c[5] >= 1.0 for c in found))
+
+    on_unknown_or_occupied = [
+        c for c in found
+        if snap.grid[TARGET.world_to_grid(snap, c[1], c[2])[::-1]] != 0
+    ]
+    check('no candidate on unknown or occupied cells',
+          not on_unknown_or_occupied)
+
+    avoided = TARGET.far_goal_candidates(
+        snap, 1.0, 4.0, 0.0, distances, laterals, 1.0, 0.8,
+        avoid_points=[(best[1], best[2])], avoid_radius=0.8)
+    check('travel-history points are avoided',
+          all(math.hypot(c[1] - best[1], c[2] - best[2]) >= 0.8
+              for c in avoided))
+
+    check('polyline_length sums segments',
+          abs(TARGET.polyline_length([(0, 0), (3, 4), (3, 6)]) - 7.0) < 1e-9)
+
+
+def v15_lane_points_on_obstacles():
+    print('\nV-15 lane points on lidar obstacles (barrel stripes)')
+
+    # Barrel (r = 0.5 m) centred 2 m ahead; flat lidar ring sees its face.
+    ranges = []
+    for i in range(360):
+        angle = -math.pi + i * 2 * math.pi / 360
+        value = float('inf')
+        for step in range(1, 1000):
+            r = step * 0.01
+            if math.hypot(r * math.cos(angle) - 2.0, r * math.sin(angle)) <= 0.5:
+                value = r
+                break
+        ranges.append(value)
+    obstacles = TARGET.scan_points_xy(FakeScan(ranges), max_range=10.0)
+
+    check('scan_points_xy drops no-returns', 0 < len(obstacles) < 360,
+          f'{len(obstacles)} returns')
+
+    stripe = [(1.55, 0.2), (1.6, -0.25)]      # on the barrel's front face
+    paint = [(1.5, 1.2), (2.5, -1.3)]         # lane lines either side
+    kept = TARGET.points_away_from(stripe + paint, obstacles, 0.35)
+
+    check('barrel-stripe points are dropped',
+          not any(point in kept for point in stripe))
+    check('lane-paint points are kept', kept == paint)
+    check('no obstacles keeps everything',
+          TARGET.points_away_from(paint, np.zeros((0, 2)), 0.35) == paint)
+
+
 def v12_wall_vs_cone():
     print('\nV-12 side obstacle extent (wall vs cone)')
 
@@ -539,6 +622,8 @@ def main():
     v7_deadlock_table()
     v8_scan_sectors()
     v12_wall_vs_cone()
+    v14_far_goals()
+    v15_lane_points_on_obstacles()
     v9_travel_geometry()
     v10_yaml_lint()
     v11_timing(snap)

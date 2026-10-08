@@ -290,6 +290,118 @@ def scan_obstacle_extent(scan, angle_min_deg: float, angle_max_deg: float,
     return longest
 
 
+def far_goal_candidates(snapshot, base_x: float, base_y: float,
+                        direction_yaw: float, distances, lateral_offsets,
+                        min_clearance: float, unknown_allowance: float,
+                        avoid_points=(), avoid_radius: float = 0.0):
+    """
+    Score goals several metres ahead, returned best first as
+    (score, x, y, distance, lateral, clearance).
+
+    Unlike the short lane goals there is NO straight-line path check: a goal
+    past a cone almost always has the cone on the straight line, and routing
+    around it is the global planner's job. Instead each goal must:
+      - sit on a KNOWN free cell (not in the unmapped shadow behind a cone),
+      - have at least min_clearance from obstacles / unknown space,
+      - not be within avoid_radius of an avoid point (travel history).
+    Score favours progress, then clearance (capped, so open space far off
+    to the side does not beat a goal on the lane), minus lateral offset.
+    """
+    if snapshot is None:
+        return []
+
+    forward_x = math.cos(direction_yaw)
+    forward_y = math.sin(direction_yaw)
+    left_x = -forward_y
+    left_y = forward_x
+
+    candidates = []
+
+    for distance in distances:
+        for lateral in lateral_offsets:
+            x = base_x + distance * forward_x + lateral * left_x
+            y = base_y + distance * forward_y + lateral * left_y
+
+            grid_x, grid_y = world_to_grid(snapshot, x, y)
+
+            if not (0 <= grid_x < snapshot.width
+                    and 0 <= grid_y < snapshot.height):
+                continue
+
+            if snapshot.grid[grid_y, grid_x] != 0:
+                continue
+
+            clearance = map_clearance(snapshot, x, y, unknown_allowance)
+
+            if clearance < min_clearance:
+                continue
+
+            if any(math.hypot(x - ax, y - ay) < avoid_radius
+                   for ax, ay in avoid_points):
+                continue
+
+            score = (
+                2.0 * distance
+                + 3.0 * min(clearance, 2.0)
+                - 1.0 * abs(lateral)
+            )
+
+            candidates.append((score, x, y, distance, lateral, clearance))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+
+    return candidates
+
+
+def scan_points_xy(scan, max_range: float) -> np.ndarray:
+    """
+    Scan returns as an (N, 2) array of x, y in the scan's own frame.
+    No-returns (inf / NaN / 0.0) and anything beyond max_range are dropped.
+    """
+    ranges = np.asarray(scan.ranges, dtype=np.float64)
+
+    if ranges.size == 0:
+        return np.zeros((0, 2))
+
+    angles = scan.angle_min + np.arange(ranges.size) * scan.angle_increment
+
+    valid = np.isfinite(ranges) & (ranges > 0.05) & (ranges <= max_range)
+
+    return np.column_stack((
+        ranges[valid] * np.cos(angles[valid]),
+        ranges[valid] * np.sin(angles[valid]),
+    ))
+
+
+def points_away_from(points, obstacles: np.ndarray, radius: float):
+    """
+    The (x, y) points that are NOT within radius of any obstacle point.
+
+    Used to drop "lane" points that are really the white stripes on a
+    barrel: lane paint lies flat on the ground where the lidar cannot see
+    it, while a stripe sits on a surface the lidar also returns from.
+    """
+    if len(points) == 0 or len(obstacles) == 0:
+        return list(points)
+
+    xy = np.asarray(points, dtype=np.float64)
+    squared = (
+        (xy[:, None, 0] - obstacles[None, :, 0]) ** 2
+        + (xy[:, None, 1] - obstacles[None, :, 1]) ** 2
+    )
+    keep = squared.min(axis=1) > radius * radius
+
+    return [point for point, kept in zip(points, keep) if kept]
+
+
+def polyline_length(points) -> float:
+    """Total length of a list of (x, y) points."""
+    return float(sum(
+        math.hypot(x1 - x0, y1 - y0)
+        for (x0, y0), (x1, y1) in zip(points, points[1:])
+    ))
+
+
 def disc_offsets(radius_metres: float, resolution: float):
     """
     Integer cell offsets covering a disc, as (row_offsets, col_offsets).
@@ -359,6 +471,11 @@ class WaypointNavigator(Node):
         # original wide-sector (20-100 deg) reaction and hard wall penalties.
         self.declare_parameter('wall_min_length', 1.0)
 
+        # Lane points within this distance of a lidar return are dropped:
+        # the detector also picks up the white stripes on barrels, and a
+        # "lane" made of those runs straight between two cones. 0 disables.
+        self.declare_parameter('lane_point_obstacle_radius', 0.35)
+
         # ---- Replanning while a normal goal is active ----
         self.declare_parameter('replan_while_moving', True)
         # A new goal only preempts the active one if it points this far
@@ -379,6 +496,33 @@ class WaypointNavigator(Node):
         # every planning tick.
         self.declare_parameter('replan_min_interval', 1.0)
         self.declare_parameter('goal_send_period', 0.5)
+
+        # ---- Far goals (see calculate_far_goal) ----
+        # Goals placed past obstacles, a few metres down the lane; the
+        # global planner routes around the cones between here and there.
+        self.declare_parameter('enable_far_goals', True)
+        self.declare_parameter('far_goal_distances', [3.0, 4.0, 5.0, 6.0])
+        # A far goal may sit at most this far beyond the farthest lane
+        # centreline point actually detected.
+        self.declare_parameter('far_goal_lane_overshoot', 0.5)
+        # Sideways from the lane centre; kept inside a typical lane half-width.
+        self.declare_parameter('far_goal_lateral_range', 1.0)
+        self.declare_parameter('far_goal_lateral_step', 0.5)
+        self.declare_parameter('far_goal_min_clearance', 1.0)
+        # Global costmap value (0-100) a far goal may sit on. Lane lines,
+        # inflation and the travel keepout mask (~78) are all above this.
+        self.declare_parameter('far_goal_max_cost', 50)
+        # Candidates validated with Nav2 getPath when no goal is active.
+        self.declare_parameter('far_goal_path_checks', 3)
+        # Reject a goal whose planned path is longer than this multiple of
+        # the straight-line distance (it is behind a lane line / wall).
+        self.declare_parameter('far_goal_max_detour', 1.6)
+        # While a far goal is active, look for the next one only once the
+        # robot is this close to it.
+        self.declare_parameter('far_goal_refresh_distance', 1.5)
+        self.declare_parameter('far_goal_min_period', 2.0)
+        # After a far goal fails in Nav2, use short goals for this long.
+        self.declare_parameter('far_goal_retry_delay', 5.0)
 
         # self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
@@ -404,6 +548,8 @@ class WaypointNavigator(Node):
             'side_sector_max_deg').get_parameter_value().double_value
         self.wall_min_length = self.get_parameter(
             'wall_min_length').get_parameter_value().double_value
+        self.lane_point_obstacle_radius = self.get_parameter(
+            'lane_point_obstacle_radius').get_parameter_value().double_value
 
         self.replan_while_moving = self.get_parameter(
             'replan_while_moving').get_parameter_value().bool_value
@@ -417,6 +563,44 @@ class WaypointNavigator(Node):
             'replan_extend_distance').get_parameter_value().double_value
         self._replan_streak = 0
         self._replan_last_seen_goal = None
+
+        def far_param(name):
+            return self.get_parameter(name).get_parameter_value()
+
+        self.enable_far_goals = far_param('enable_far_goals').bool_value
+        self.far_goal_distances = list(
+            far_param('far_goal_distances').double_array_value)
+        far_range = far_param('far_goal_lateral_range').double_value
+        far_step = far_param('far_goal_lateral_step').double_value
+        far_steps = int(round(far_range / far_step)) if far_step > 0 else 0
+        self.far_goal_lateral_offsets = [
+            k * far_step for k in range(-far_steps, far_steps + 1)
+        ]
+        self.far_goal_lane_overshoot = far_param(
+            'far_goal_lane_overshoot').double_value
+        self.far_goal_min_clearance = far_param(
+            'far_goal_min_clearance').double_value
+        self.far_goal_max_cost = far_param('far_goal_max_cost').integer_value
+        self.far_goal_path_checks = far_param(
+            'far_goal_path_checks').integer_value
+        self.far_goal_max_detour = far_param(
+            'far_goal_max_detour').double_value
+        self.far_goal_refresh_distance = far_param(
+            'far_goal_refresh_distance').double_value
+        self.far_goal_min_period = far_param(
+            'far_goal_min_period').double_value
+        self.far_goal_retry_delay = far_param(
+            'far_goal_retry_delay').double_value
+
+        # Whether latest_forward_goal / the goal Nav2 is executing is a far
+        # goal. Far and short goals follow different replan rules.
+        self.latest_forward_goal_is_far = False
+        self.active_goal_is_far = False
+        self.last_far_goal_attempt = None
+        self.far_goal_suppressed_until = None
+        # Set when an active far goal turns out to need a long detour; the
+        # next short goal then replaces it immediately.
+        self.force_replan = False
         self.replan_min_interval = self.get_parameter(
             'replan_min_interval').get_parameter_value().double_value
         self.goal_send_period = self.get_parameter(
@@ -592,9 +776,6 @@ class WaypointNavigator(Node):
         self.stuck_nudge_timeout = 5.0  # seconds
         self.stuck_nudge_distance = 0.80  # metres
 
-        # Prevent repeatedly firing far goal attempts
-        self.far_goal_in_progress = False
-
         # Subscribe to the global costmap.
         # Nav2 publishes nav_msgs/OccupancyGrid here (nav2_msgs/Costmap goes to
         # .../costmap_raw), and the publisher is transient-local. always_send_
@@ -674,7 +855,8 @@ class WaypointNavigator(Node):
 
         self.publish_keepout_filter_info()
 
-    def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False):
+    def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False,
+                  is_far=False):
         """
         Send a Nav2 goal using BasicNavigator.
 
@@ -715,12 +897,16 @@ class WaypointNavigator(Node):
                 return
 
             self.navigation_mode = mode
+            self.active_goal_is_far = is_far
+            self.force_replan = False
             self.last_sent_goal = goal_pose
             self.last_goal_dispatch_time = self.get_clock().now()
             return
 
         self.goal_in_progress = True
         self.navigation_mode = mode
+        self.active_goal_is_far = is_far
+        self.force_replan = False
         self.last_sent_goal = goal_pose
         self.last_goal_dispatch_time = self.get_clock().now()
 
@@ -858,12 +1044,14 @@ class WaypointNavigator(Node):
                 return
 
         self.get_logger().info(
-            f"Sending forward waypoint: x={goal_x:.2f}, y={goal_y:.2f}"
+            f"Sending {'far' if self.latest_forward_goal_is_far else 'forward'}"
+            f" waypoint: x={goal_x:.2f}, y={goal_y:.2f}"
         )
 
         self.send_goal(
             self.latest_forward_goal,
-            mode="normal"
+            mode="normal",
+            is_far=self.latest_forward_goal_is_far
         )
 
     def can_replan_active_goal(self) -> bool:
@@ -931,7 +1119,9 @@ class WaypointNavigator(Node):
             else:
                 self._replan_streak = 0
 
-        if elapsed_since_dispatch < self.replan_min_interval:
+        force = self.force_replan and not self.latest_forward_goal_is_far
+
+        if not force and elapsed_since_dispatch < self.replan_min_interval:
             return
 
         active_goal_clearance = self.get_map_clearance(active_x, active_y)
@@ -939,28 +1129,41 @@ class WaypointNavigator(Node):
             active_goal_clearance < self.replan_blocked_clearance
         )
 
-        direction_changed = (
-            self._replan_streak >= self.replan_confirm_cycles
-        )
+        new_is_far = self.latest_forward_goal_is_far
+        reason = None
 
-        extend_goal = (
+        if force:
+            reason = 'far-detour'
+
+        elif active_goal_blocked and target_change >= 0.1:
+            reason = 'blocked'
+
+        elif self.active_goal_is_far:
+            # A far goal is only handed over to the NEXT far goal, once the
+            # robot is close to it. Short goals would otherwise pull it
+            # back to the cone it is routing around.
+            if (
+                new_is_far
+                and distance_to_active < self.far_goal_refresh_distance
+                and new_goal_along > distance_to_active + 0.3
+            ):
+                reason = 'far-next'
+
+        elif new_is_far:
+            # A far goal always beats an active short goal.
+            reason = 'far'
+
+        elif self._replan_streak >= self.replan_confirm_cycles:
+            reason = 'direction'
+
+        elif (
             distance_to_active < self.replan_extend_distance
             and new_goal_along > distance_to_active + 0.3
-        )
-
-        if not (
-            direction_changed
-            or extend_goal
-            or (active_goal_blocked and target_change >= 0.1)
         ):
-            return
-
-        if active_goal_blocked:
-            reason = 'blocked'
-        elif direction_changed:
-            reason = 'direction'
-        else:
             reason = 'extend'
+
+        if reason is None:
+            return
 
         self.get_logger().warn(
             f"REPLAN ({reason}) | sideways={sideways_change:.2f} m, "
@@ -971,7 +1174,8 @@ class WaypointNavigator(Node):
         self.send_goal(
             self.latest_forward_goal,
             mode="normal",
-            preempt=True
+            preempt=True,
+            is_far=new_is_far
         )
 
     def find_stuck_nudge_goal(self):
@@ -1178,6 +1382,7 @@ class WaypointNavigator(Node):
             return
 
         self.latest_forward_goal = None
+        self.latest_forward_goal_is_far = False
 
         # Bind the snapshot ONCE for this whole cycle.
         snapshot = self.map_snapshot
@@ -1200,6 +1405,15 @@ class WaypointNavigator(Node):
                 "Robot pose not available yet.",
                 throttle_duration_sec=2.0
             )
+            return
+
+        # Prefer a goal past the obstacles ahead; the short lane / forward
+        # goals below are the fallback when none is found.
+        far_goal = self.calculate_far_goal()
+
+        if far_goal is not None:
+            self.latest_forward_goal = far_goal
+            self.latest_forward_goal_is_far = True
             return
 
         lane_goal = self.calculate_lane_goal()
@@ -1478,25 +1692,44 @@ class WaypointNavigator(Node):
         left_points = []
         right_points = []
 
+        # One lookup per frame, not per marker: lane_detection publishes
+        # one marker per lane point, ~100 per message.
+        transforms = {}
+
         for marker in msg.markers:
             
             source_frame = marker.header.frame_id
 
-            try:
-                transform = self.tf_buffer.lookup_transform(
-                    self.frame_id,       # target: map
-                    source_frame,        # source: marker frame
-                    rclpy.time.Time()
-                )
-            except TransformException as ex:
-                self.get_logger().warn(
-                    f"TF not ready for lane markers: {ex}",
-                    throttle_duration_sec=2.0
-                )
-                continue 
+            if source_frame not in transforms:
+                try:
+                    transforms[source_frame] = self.tf_buffer.lookup_transform(
+                        self.frame_id,       # target: map
+                        source_frame,        # source: marker frame
+                        rclpy.time.Time()
+                    )
+                except TransformException as ex:
+                    self.get_logger().warn(
+                        f"TF not ready for lane markers: {ex}",
+                        throttle_duration_sec=2.0
+                    )
+                    transforms[source_frame] = None
+
+            transform = transforms[source_frame]
+
+            if transform is None:
+                continue
+
+            # lane_detection.py publishes each lane point as a CUBE marker
+            # whose position is marker.pose; points-based markers (POINTS,
+            # LINE_STRIP) carry them in marker.points. Reading only
+            # marker.points silently produced zero lane points, so lane and
+            # far goals never ran.
+            marker_points = (
+                marker.points if marker.points else [marker.pose.position]
+            )
 
             transformed_points = self.transform_marker_points(
-                marker.points,
+                marker_points,
                 source_frame,
                 transform
             )
@@ -1508,6 +1741,9 @@ class WaypointNavigator(Node):
                 elif marker.ns == "right_lane":
                     right_points.append((point_x, point_y))
 
+
+        left_points, right_points = self.drop_lane_points_on_obstacles(
+            left_points, right_points)
 
         self.get_logger().info(
             f"Left points: {len(left_points)}, "
@@ -1573,6 +1809,65 @@ class WaypointNavigator(Node):
             f"Updated lane centreline with "
             f"{len(self.lane_centreline)} points"
         )
+
+    def drop_lane_points_on_obstacles(self, left_points, right_points):
+        """
+        Remove lane points that sit on something the lidar can see (see
+        points_away_from). Returns the inputs unchanged when there is no
+        scan or no transform for it yet.
+        """
+        if self.lane_point_obstacle_radius <= 0.0 or self.latest_scan is None:
+            return left_points, right_points
+
+        scan = self.latest_scan
+
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.frame_id,
+                scan.header.frame_id,
+                rclpy.time.Time()
+            )
+        except TransformException:
+            return left_points, right_points
+
+        # Lane detection only reaches a few metres; nothing further away
+        # can be near a lane point.
+        local = scan_points_xy(scan, max_range=10.0)
+
+        if len(local) == 0:
+            return left_points, right_points
+
+        rotation = transform.transform.rotation
+        yaw = math.atan2(
+            2.0 * (rotation.w * rotation.z + rotation.x * rotation.y),
+            1.0 - 2.0 * (rotation.y * rotation.y + rotation.z * rotation.z)
+        )
+        cos_yaw, sin_yaw = math.cos(yaw), math.sin(yaw)
+        obstacles = np.column_stack((
+            transform.transform.translation.x
+            + cos_yaw * local[:, 0] - sin_yaw * local[:, 1],
+            transform.transform.translation.y
+            + sin_yaw * local[:, 0] + cos_yaw * local[:, 1],
+        ))
+
+        kept_left = points_away_from(
+            left_points, obstacles, self.lane_point_obstacle_radius)
+        kept_right = points_away_from(
+            right_points, obstacles, self.lane_point_obstacle_radius)
+
+        dropped = (
+            len(left_points) - len(kept_left)
+            + len(right_points) - len(kept_right)
+        )
+
+        if dropped:
+            self.get_logger().info(
+                f"Dropped {dropped} lane points on lidar obstacles "
+                f"(barrel stripes)",
+                throttle_duration_sec=1.0
+            )
+
+        return kept_left, kept_right
 
     def transform_marker_points(
         self,
@@ -3126,15 +3421,19 @@ class WaypointNavigator(Node):
                 f"recoveries={feedback.number_of_recoveries}"
             )
 
+            self.check_far_goal_detour(feedback)
+
         if not self.navigator.isTaskComplete():
             return
 
         result = self.navigator.getResult()
 
         completed_mode = self.navigation_mode
+        completed_was_far = self.active_goal_is_far
 
         self.goal_in_progress = False
         self.navigation_mode = None
+        self.active_goal_is_far = False
 
         self.latest_forward_goal = None
         self.last_sent_goal = None
@@ -3166,7 +3465,21 @@ class WaypointNavigator(Node):
         # Navigation failed
         # ------------------------------------------------------
 
-        if completed_mode == "normal":
+        if completed_mode == "normal" and completed_was_far:
+            # Usually the planner could not reach it (it was sent without a
+            # getPath check while another goal was active). Not a reason to
+            # recover: drop to short goals for a while instead.
+            self.get_logger().warn(
+                f"Far goal failed. Result: {result}. Using short goals "
+                f"for {self.far_goal_retry_delay:.1f} s."
+            )
+
+            self.far_goal_suppressed_until = (
+                self.get_clock().now().nanoseconds / 1e9
+                + self.far_goal_retry_delay
+            )
+
+        elif completed_mode == "normal":
             self.get_logger().error(
                 f"Normal navigation failed. Result: {result}. "
                 f"Entering recovery mode."
@@ -3183,6 +3496,55 @@ class WaypointNavigator(Node):
             self.enter_recovery_mode = True
             self.schedule_recovery_retry()
 
+    def check_far_goal_detour(self, feedback):
+        """
+        Validate an active far goal against the path Nav2 actually planned.
+
+        Far goals sent while moving skip getPath (see calculate_far_goal),
+        but Nav2's feedback reports distance_remaining along its current
+        path. If that is much longer than the straight line, the goal is
+        behind a lane line or wall: drop it, use short goals for a while,
+        and let the next short goal replace it straight away.
+        """
+        if not self.active_goal_is_far or self.last_sent_goal is None:
+            return
+
+        # Feedback right after a dispatch can still describe the old goal,
+        # and the first path takes a moment to plan.
+        elapsed = (
+            self.get_clock().now() - self.last_goal_dispatch_time
+        ).nanoseconds / 1e9
+
+        if elapsed < 1.0:
+            return
+
+        remaining = feedback.distance_remaining
+
+        straight = math.hypot(
+            self.last_sent_goal.pose.position.x - self.robot_x,
+            self.last_sent_goal.pose.position.y - self.robot_y
+        )
+
+        # Close to the goal the ratio is meaningless.
+        if remaining <= 0.0 or straight < 1.0:
+            return
+
+        if remaining <= self.far_goal_max_detour * straight:
+            return
+
+        self.get_logger().warn(
+            f"FAR GOAL | dropped, detour {remaining:.1f} m for "
+            f"{straight:.1f} m. Using short goals for "
+            f"{self.far_goal_retry_delay:.1f} s."
+        )
+
+        self.far_goal_suppressed_until = (
+            self.get_clock().now().nanoseconds / 1e9
+            + self.far_goal_retry_delay
+        )
+        self.active_goal_is_far = False
+        self.force_replan = True
+
     def schedule_recovery_retry(self):
         if hasattr(self, "recovery_retry_timer"):
             return
@@ -3196,20 +3558,230 @@ class WaypointNavigator(Node):
             self.retry_recovery_goal
         )
 
-    def send_far_goal(self, goal_pose: PoseStamped):
+    def get_far_goal_base(self):
         """
-        Send a goal that is far away from the current position.
-        Only used when the robot is completely stuck and needs to move to a distant location.
+        Where far-goal candidates are laid out from, as
+        (x, y, yaw, max_distance), or None without fresh lane data.
+
+        Far goals are only placed where the lanes have actually been seen:
+        the line starts at the lane centre beside the robot, runs along the
+        lane, and stops at the farthest detected centreline point. Without
+        lanes nothing ties a goal several metres away to the course, and
+        with the long-range lidar there is plenty of open, known-free space
+        off the track to put one in - so no lanes, no far goals.
+
+        The direction is kept within 60 deg of the heading so a noisy
+        centreline cannot send the robot back the way it came.
         """
+        if (
+            len(self.lane_centreline) < 2
+            or self.last_lane_update_time is None
+            or (
+                self.get_clock().now() - self.last_lane_update_time
+            ).nanoseconds / 1e9 > self.lane_centreline_timeout
+        ):
+            return None
 
-        goal_pose.header.frame_id = self.frame_id
-        goal_pose.header.stamp = self.get_clock().now().to_msg()
-        goal_pose.pose.position.x = 0.0
-        goal_pose.pose.position.y = 0.0
+        yaw = self.robot_yaw
+        forward_x, forward_y = math.cos(yaw), math.sin(yaw)
+        left_x, left_y = -forward_y, forward_x
 
+        ahead = []
+        for point_x, point_y in self.lane_centreline:
+            dx = point_x - self.robot_x
+            dy = point_y - self.robot_y
+            longitudinal = dx * forward_x + dy * forward_y
+            if longitudinal > 0.15:
+                ahead.append((longitudinal, dx * left_x + dy * left_y,
+                              point_x, point_y))
 
-        
-        pass
+        if len(ahead) < 2:
+            return None
+
+        ahead.sort()
+        near, far = ahead[0], ahead[-1]
+
+        # Too short a span gives a meaningless direction.
+        if far[0] - near[0] >= 1.0:
+            lane_yaw = math.atan2(far[3] - near[3], far[2] - near[2])
+            heading_error = math.atan2(
+                math.sin(lane_yaw - yaw), math.cos(lane_yaw - yaw))
+            yaw += max(-math.radians(60), min(math.radians(60),
+                                               heading_error))
+
+        # Start the line at the lane centre beside the robot.
+        base_x = self.robot_x + near[1] * left_x
+        base_y = self.robot_y + near[1] * left_y
+
+        max_distance = far[0] + self.far_goal_lane_overshoot
+
+        return base_x, base_y, yaw, max_distance
+
+    def far_goal_cost_ok(self, world_x: float, world_y: float) -> bool:
+        """
+        Whether the global costmap allows a far goal here: inside the
+        costmap, not unknown, and at most far_goal_max_cost (lane lines,
+        inflation and the travel keepout mask are all above it). Before the
+        first costmap arrives there is nothing to check against.
+        """
+        costmap = self.global_costmap_data
+
+        if costmap is None:
+            return True
+
+        info = costmap.info
+        grid_x = int((world_x - info.origin.position.x) / info.resolution)
+        grid_y = int((world_y - info.origin.position.y) / info.resolution)
+
+        if not (0 <= grid_x < info.width and 0 <= grid_y < info.height):
+            return False
+
+        value = costmap.data[grid_y * info.width + grid_x]
+
+        return 0 <= value <= self.far_goal_max_cost
+
+    def calculate_far_goal(self):
+        """
+        A goal past the obstacles ahead, for the global planner to route to.
+
+        Candidates come from far_goal_candidates (known free, clear, not on
+        the travel history), are filtered against the global costmap (lane
+        lines, inflation, keepout mask) and, when no goal is active, are
+        confirmed with Nav2 getPath and a detour limit.
+
+        getPath is skipped while a goal is active: the planner server takes
+        one request at a time, so a check here could preempt the replan
+        bt_navigator is running for the active goal. Nav2 then validates the
+        far goal on receipt, and a failure falls back to short goals (see
+        check_navigation_complete) instead of entering recovery.
+        """
+        if not self.enable_far_goals:
+            return None
+
+        now = self.get_clock().now()
+
+        if (
+            self.far_goal_suppressed_until is not None
+            and now.nanoseconds / 1e9 < self.far_goal_suppressed_until
+        ):
+            return None
+
+        # A far goal may replace an active short goal at any time, but an
+        # active far goal is only refreshed once the robot is close to it.
+        if self.goal_in_progress and self.active_goal_is_far:
+            if self.last_sent_goal is None or math.hypot(
+                self.last_sent_goal.pose.position.x - self.robot_x,
+                self.last_sent_goal.pose.position.y - self.robot_y
+            ) >= self.far_goal_refresh_distance:
+                return None
+
+        if (
+            self.last_far_goal_attempt is not None
+            and (now - self.last_far_goal_attempt).nanoseconds / 1e9
+            < self.far_goal_min_period
+        ):
+            return None
+
+        self.last_far_goal_attempt = now
+
+        base = self.get_far_goal_base()
+
+        if base is None:
+            return None
+
+        base_x, base_y, direction_yaw, max_distance = base
+
+        distances = [d for d in self.far_goal_distances if d <= max_distance]
+
+        if not distances:
+            return None
+
+        snapshot = self.map_snapshot
+
+        candidates = far_goal_candidates(
+            snapshot,
+            base_x,
+            base_y,
+            direction_yaw,
+            distances,
+            self.far_goal_lateral_offsets,
+            self.far_goal_min_clearance,
+            self.unknown_clearance_allowance,
+            self.published_travel_marks if self.enable_travel_keepout else (),
+            self.travel_mark_radius
+        )
+
+        filtered = [
+            candidate for candidate in candidates
+            if self.far_goal_cost_ok(candidate[1], candidate[2])
+        ]
+
+        if not filtered:
+            self.get_logger().info(
+                f"FAR GOAL | none: {len(candidates)} map candidates, "
+                f"0 under global cost {self.far_goal_max_cost}"
+            )
+            return None
+
+        def make_goal(x, y):
+            goal = PoseStamped()
+            goal.header.frame_id = self.frame_id
+            goal.header.stamp = now.to_msg()
+            goal.pose.position.x = x
+            goal.pose.position.y = y
+            goal.pose.orientation.z = math.sin(direction_yaw / 2.0)
+            goal.pose.orientation.w = math.cos(direction_yaw / 2.0)
+            return goal
+
+        if self.goal_in_progress:
+            score, x, y, distance, lateral, clearance = filtered[0]
+            self.get_logger().warn(
+                f"FAR GOAL | unvalidated (goal active) | "
+                f"distance={distance:.1f}, lateral={lateral:+.1f}, "
+                f"clearance={clearance:.2f}"
+            )
+            return make_goal(x, y)
+
+        start_pose = make_goal(self.robot_x, self.robot_y)
+
+        for score, x, y, distance, lateral, clearance in (
+            filtered[:self.far_goal_path_checks]
+        ):
+            goal = make_goal(x, y)
+
+            try:
+                path = self.navigator.getPath(start_pose, goal)
+            except Exception as ex:
+                self.get_logger().warn(f"FAR GOAL | getPath failed: {ex}")
+                continue
+
+            if path is None or len(path.poses) == 0:
+                self.get_logger().info(
+                    f"FAR GOAL | rejected, no path | "
+                    f"distance={distance:.1f}, lateral={lateral:+.1f}"
+                )
+                continue
+
+            path_length = polyline_length([
+                (p.pose.position.x, p.pose.position.y) for p in path.poses
+            ])
+            straight = math.hypot(x - self.robot_x, y - self.robot_y)
+
+            if path_length > self.far_goal_max_detour * max(straight, 1e-3):
+                self.get_logger().info(
+                    f"FAR GOAL | rejected, detour {path_length:.1f} m "
+                    f"for {straight:.1f} m"
+                )
+                continue
+
+            self.get_logger().warn(
+                f"FAR GOAL | distance={distance:.1f}, "
+                f"lateral={lateral:+.1f}, clearance={clearance:.2f}, "
+                f"path={path_length:.1f} m"
+            )
+            return goal
+
+        return None
     
     # ======================================================
     # Reset the timer for when no valid candidates are found
@@ -3295,8 +3867,8 @@ class WaypointNavigator(Node):
 
     def global_costmap_callback(self, msg: OccupancyGrid):
         # Store the whole message, not just .data - callers need info.width,
-        # info.resolution and info.origin to interpret it. Not yet consumed by
-        # planning; kept correct for the follow-up work on far goals.
+        # info.resolution and info.origin to interpret it. Read by
+        # far_goal_cost_ok for far-goal filtering.
         self.global_costmap_data = msg
    	
     
