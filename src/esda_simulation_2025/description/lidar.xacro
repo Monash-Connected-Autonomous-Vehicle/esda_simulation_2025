@@ -92,7 +92,37 @@
     </link>
 
         
-    <gazebo reference="laser_frame"> 
+    <!-- ================================================================
+         Velodyne VLP-16 model (Gazebo).
+
+         Real sensor (datasheet / velodyne ROS 2 driver at rpm 600):
+           16 channels, vertical FOV -15..+15 deg in 2 deg steps,
+           0.2 deg horizontal resolution at 10 Hz (1800 points per ring),
+           100 m range, +-3 cm typical accuracy.
+
+         Two gz sensors share laser_frame:
+           1. laser_frame  -> /scan            2D slice, flat (0 deg).
+              Matches what velodyne_laserscan publishes on the real robot
+              (resolution 0.007 rad -> 898 beams over 360 deg, inf for no
+              return). The real robot slices ring 8, which points +1 deg up;
+              the sim keeps 0 deg because on the pole the sensor sits only
+              ~2.5 mm below the top of the 1.55 m orange_igvc barrels, so a
+              +1 deg ring would miss them.
+           2. velodyne     -> /velodyne_points  full 16-ring cloud, for
+              anything that wants the 3D data like the real /velodyne_points.
+              Disable with velodyne_cloud:=false if the GPU struggles.
+
+         Not modelled: the velodyne transform node's default min_range
+         (0.9 m) - the real cloud and /scan drop returns closer than that.
+         Set <range><min> to 0.9 on both sensors to reproduce it.
+         ================================================================ -->
+    <xacro:arg name="velodyne_cloud" default="true" />
+
+    <xacro:property name="vlp16_max_range"  value="100.0"/>
+    <!-- +-3 cm typical accuracy, taken as ~2 sigma -->
+    <xacro:property name="vlp16_noise_std"  value="0.015"/>
+
+    <gazebo reference="laser_frame">
         <material>Gazebo/Red</material>
         <sensor name='laser_frame' type='gpu_lidar'>
             <pose relative_to='laser_frame'>0 0 0 0 0 0</pose>
@@ -102,10 +132,12 @@
             <ray>
                 <scan>
                     <horizontal>
-                        <samples>360</samples>
+                        <!-- velodyne_laserscan resolution 0.007 rad:
+                             max = -pi + 897 * 0.007 -->
+                        <samples>898</samples>
                         <resolution>1</resolution>
-                        <min_angle>-3.14159</min_angle> 
-                        <max_angle>3.14159</max_angle>
+                        <min_angle>-3.14159</min_angle>
+                        <max_angle>3.13741</max_angle>
                     </horizontal>
                     <vertical>
                         <samples>1</samples>
@@ -116,15 +148,58 @@
                 </scan>
                 <range>
                     <min>0.1</min>
-                    <max>12.0</max>
+                    <max>${vlp16_max_range}</max>
                     <resolution>0.01</resolution>
                 </range>
+                <noise>
+                    <type>gaussian</type>
+                    <mean>0.0</mean>
+                    <stddev>${vlp16_noise_std}</stddev>
+                </noise>
             </ray>
             <always_on>1</always_on>
             <visualize>true</visualize>
         </sensor>
-        
-    </gazebo >
+
+        <xacro:if value="$(arg velodyne_cloud)">
+            <!-- gz publishes the cloud on <topic>/points -->
+            <sensor name='velodyne' type='gpu_lidar'>
+                <pose relative_to='laser_frame'>0 0 0 0 0 0</pose>
+                <topic>velodyne_points</topic>
+                <update_rate>10</update_rate>
+                <gz_frame_id>laser_frame</gz_frame_id>
+                <ray>
+                    <scan>
+                        <horizontal>
+                            <!-- 0.2 deg: max = pi - 0.2 deg -->
+                            <samples>1800</samples>
+                            <resolution>1</resolution>
+                            <min_angle>-3.14159</min_angle>
+                            <max_angle>3.13810</max_angle>
+                        </horizontal>
+                        <vertical>
+                            <samples>16</samples>
+                            <resolution>1</resolution>
+                            <min_angle>-0.261799</min_angle>
+                            <max_angle>0.261799</max_angle>
+                        </vertical>
+                    </scan>
+                    <range>
+                        <min>0.1</min>
+                        <max>${vlp16_max_range}</max>
+                        <resolution>0.01</resolution>
+                    </range>
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>${vlp16_noise_std}</stddev>
+                    </noise>
+                </ray>
+                <always_on>1</always_on>
+                <visualize>false</visualize>
+            </sensor>
+        </xacro:if>
+    </gazebo>
 
 
 </robot>

@@ -361,8 +361,17 @@ class WaypointNavigator(Node):
 
         # ---- Replanning while a normal goal is active ----
         self.declare_parameter('replan_while_moving', True)
-        # A new goal only preempts the active one if it has moved this far...
+        # A new goal only preempts the active one if it points this far
+        # SIDEWAYS of the line robot -> active goal. Forward progress alone
+        # never triggers a replan (the new goal is always further ahead).
         self.declare_parameter('replan_min_goal_change', 0.4)
+        # ...and only if that holds for this many consecutive checks, so a
+        # single noisy scan cannot swap the goal.
+        self.declare_parameter('replan_confirm_cycles', 2)
+        # Within this distance of the active goal, a goal further along the
+        # same line replaces it, so the robot keeps rolling instead of
+        # braking to a stop at every waypoint.
+        self.declare_parameter('replan_extend_distance', 0.6)
         # ...or if the active goal's clearance has fallen below this
         # (min_forward_clearance, the loosest acceptance threshold).
         self.declare_parameter('replan_blocked_clearance', 0.7)
@@ -402,6 +411,12 @@ class WaypointNavigator(Node):
             'replan_min_goal_change').get_parameter_value().double_value
         self.replan_blocked_clearance = self.get_parameter(
             'replan_blocked_clearance').get_parameter_value().double_value
+        self.replan_confirm_cycles = self.get_parameter(
+            'replan_confirm_cycles').get_parameter_value().integer_value
+        self.replan_extend_distance = self.get_parameter(
+            'replan_extend_distance').get_parameter_value().double_value
+        self._replan_streak = 0
+        self._replan_last_seen_goal = None
         self.replan_min_interval = self.get_parameter(
             'replan_min_interval').get_parameter_value().double_value
         self.goal_send_period = self.get_parameter(
@@ -687,6 +702,9 @@ class WaypointNavigator(Node):
             f"y={goal_pose.pose.position.y:.2f}"
         )
 
+        # Any dispatch starts a fresh debounce for the new active goal.
+        self._replan_streak = 0
+
         if preempt:
             # On rejection BasicNavigator keeps the old result future, so the
             # old goal is still the one being tracked: leave state untouched.
@@ -797,6 +815,9 @@ class WaypointNavigator(Node):
             return
 
         if self.latest_forward_goal is None:
+            # A cycle with no plan breaks a run of confirming plans.
+            self._replan_streak = 0
+
             elapsed_since_dispatch = (
                 self.get_clock().now() - self.last_goal_dispatch_time
             ).nanoseconds / 1e9
@@ -858,9 +879,15 @@ class WaypointNavigator(Node):
 
     def replan_active_goal(self, goal_x: float, goal_y: float):
         """
-        Replace the active normal goal with the latest forward goal when
-        either it has moved meaningfully (new obstacles seen since dispatch)
-        or the active goal itself is no longer clear.
+        Replace the active normal goal with the latest forward goal when:
+          - the new goal points sideways of the active one by at least
+            replan_min_goal_change, for replan_confirm_cycles checks in a
+            row (a real change of direction, not scan noise);
+          - the robot is nearly at the active goal and the new one carries
+            on further along the same line (keep rolling); or
+          - the active goal itself is no longer clear (immediate).
+        Plain forward progress does not count: the new goal is always
+        further ahead, which used to trigger a replan every second.
         """
         if not self.can_replan_active_goal():
             return
@@ -872,28 +899,73 @@ class WaypointNavigator(Node):
             self.get_clock().now() - self.last_goal_dispatch_time
         ).nanoseconds / 1e9
 
-        if elapsed_since_dispatch < self.replan_min_interval:
-            return
-
         active_x = self.last_sent_goal.pose.position.x
         active_y = self.last_sent_goal.pose.position.y
 
         target_change = math.hypot(goal_x - active_x, goal_y - active_y)
+
+        # Express the new goal relative to the line robot -> active goal.
+        to_active_x = active_x - self.robot_x
+        to_active_y = active_y - self.robot_y
+        distance_to_active = math.hypot(to_active_x, to_active_y)
+
+        if distance_to_active > 1e-3:
+            unit_x = to_active_x / distance_to_active
+            unit_y = to_active_y / distance_to_active
+            to_new_x = goal_x - self.robot_x
+            to_new_y = goal_y - self.robot_y
+            sideways_change = abs(to_new_x * unit_y - to_new_y * unit_x)
+            new_goal_along = to_new_x * unit_x + to_new_y * unit_y
+        else:
+            sideways_change = target_change
+            new_goal_along = 0.0
+
+        # Debounce over consecutive planning RESULTS: the send and planning
+        # timers are not synchronised, so the same plan can be seen twice.
+        # Counted even during the interval below.
+        if self.latest_forward_goal is not self._replan_last_seen_goal:
+            self._replan_last_seen_goal = self.latest_forward_goal
+
+            if sideways_change >= self.replan_min_goal_change:
+                self._replan_streak += 1
+            else:
+                self._replan_streak = 0
+
+        if elapsed_since_dispatch < self.replan_min_interval:
+            return
 
         active_goal_clearance = self.get_map_clearance(active_x, active_y)
         active_goal_blocked = (
             active_goal_clearance < self.replan_blocked_clearance
         )
 
-        if target_change < self.replan_min_goal_change and not (
-            active_goal_blocked and target_change >= 0.1
+        direction_changed = (
+            self._replan_streak >= self.replan_confirm_cycles
+        )
+
+        extend_goal = (
+            distance_to_active < self.replan_extend_distance
+            and new_goal_along > distance_to_active + 0.3
+        )
+
+        if not (
+            direction_changed
+            or extend_goal
+            or (active_goal_blocked and target_change >= 0.1)
         ):
             return
 
+        if active_goal_blocked:
+            reason = 'blocked'
+        elif direction_changed:
+            reason = 'direction'
+        else:
+            reason = 'extend'
+
         self.get_logger().warn(
-            f"REPLAN | change={target_change:.2f} m, "
+            f"REPLAN ({reason}) | sideways={sideways_change:.2f} m, "
+            f"change={target_change:.2f} m, "
             f"active goal clearance={active_goal_clearance:.2f} m"
-            f"{' (blocked)' if active_goal_blocked else ''}"
         )
 
         self.send_goal(

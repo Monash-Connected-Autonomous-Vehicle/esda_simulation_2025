@@ -143,6 +143,7 @@ def generate_launch_description():
         name='parameter_bridge',
         arguments=[
             '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            '/velodyne_points/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/cmd_vel@geometry_msgs/msg/Twist[gz.msgs.Twist',
@@ -166,6 +167,7 @@ def generate_launch_description():
             ('/camera/right_camera', '/camera/right_camera/image_raw'),
             ('/camera/left_camera/depth', '/camera/left_camera/depth/image_raw'),
             ('/camera/right_camera/depth', '/camera/right_camera/depth/image_raw'),
+            ('/velodyne_points/points', '/velodyne_points'),
         ],
         output='screen'
     )

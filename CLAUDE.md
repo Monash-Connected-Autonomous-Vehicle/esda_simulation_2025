@@ -101,6 +101,7 @@ That fusion is load-bearing: `nav2_params.yaml` costmaps and AMCL subscribe to *
 |---|---|---|
 | `/scan` | gz bridge (sim) / `velodyne_laserscan` (real) | lane detection, FTG, track follower |
 | `/scan_fused` | lane detection base class | Nav2 costmaps, AMCL, SLAM |
+| `/velodyne_points` | gz bridge (sim, 16-ring VLP-16 model; `velodyne_cloud:=false` disables) / velodyne driver (real) | nothing yet |
 | `/lane_obstacles`, `/lane_markers` | lane detection | costmap voxel layer, RViz, waypoint navigator |
 | `/travel_history` | `waypoint_navigator_recommendation.py` | RViz only (visualisation) |
 | `/keepout_filter_mask`, `/keepout_costmap_filter_info` | `waypoint_navigator_recommendation.py` (latched) | global costmap `KeepoutFilter` |
