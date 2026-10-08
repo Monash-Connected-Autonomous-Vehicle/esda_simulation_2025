@@ -229,6 +229,67 @@ def scan_sector_clearance(scan, angle_min_deg: float, angle_max_deg: float) -> f
     return float(ranges[selected].min())
 
 
+def scan_obstacle_extent(scan, angle_min_deg: float, angle_max_deg: float,
+                         max_range: float, max_point_gap: float = 0.30) -> float:
+    """
+    Length in metres of the longest continuous obstacle within max_range in
+    an angular sector.
+
+    Used to tell a wall from a cone: consecutive rays whose hit points are
+    within max_point_gap of each other belong to the same object, and the
+    object's length is the straight-line distance between its first and last
+    hit point. A wall alongside the robot gives several metres; a cone gives
+    roughly its diameter.
+
+    Unlike scan_sector_clearance, 0.0 no-returns are dropped here: they would
+    project to the sensor origin and bridge unrelated objects together.
+    """
+    ranges = np.asarray(scan.ranges, dtype=np.float64)
+
+    if ranges.size == 0:
+        return 0.0
+
+    angles = scan.angle_min + np.arange(ranges.size) * scan.angle_increment
+
+    in_sector = np.nonzero(
+        (angles >= math.radians(angle_min_deg))
+        & (angles <= math.radians(angle_max_deg))
+    )[0]
+
+    longest = 0.0
+    run_start = None
+    previous = None
+
+    for index in in_sector:
+        value = ranges[index]
+
+        if not (np.isfinite(value) and 0.05 < value <= max_range):
+            run_start = None
+            previous = None
+            continue
+
+        point = (
+            value * math.cos(angles[index]),
+            value * math.sin(angles[index])
+        )
+
+        if (
+            previous is None
+            or math.hypot(point[0] - previous[0],
+                          point[1] - previous[1]) > max_point_gap
+        ):
+            run_start = point
+
+        previous = point
+
+        longest = max(
+            longest,
+            math.hypot(point[0] - run_start[0], point[1] - run_start[1])
+        )
+
+    return longest
+
+
 def disc_offsets(radius_metres: float, resolution: float):
     """
     Integer cell offsets covering a disc, as (row_offsets, col_offsets).
@@ -288,6 +349,28 @@ class WaypointNavigator(Node):
         self.declare_parameter('max_travel_marks', 200)
         self.declare_parameter('enable_travel_keepout', True)
 
+        # ---- Side-obstacle reaction (see get_side_clearances) ----
+        # Sector used for cones. A cone the robot has already passed sits at
+        # roughly 90 deg; it must not keep pushing the goal away from it,
+        # because in a slalom that steers straight into the next cone.
+        self.declare_parameter('side_sector_min_deg', 20.0)
+        self.declare_parameter('side_sector_max_deg', 60.0)
+        # An obstacle at least this long counts as a wall, which keeps the
+        # original wide-sector (20-100 deg) reaction and hard wall penalties.
+        self.declare_parameter('wall_min_length', 1.0)
+
+        # ---- Replanning while a normal goal is active ----
+        self.declare_parameter('replan_while_moving', True)
+        # A new goal only preempts the active one if it has moved this far...
+        self.declare_parameter('replan_min_goal_change', 0.4)
+        # ...or if the active goal's clearance has fallen below this
+        # (min_forward_clearance, the loosest acceptance threshold).
+        self.declare_parameter('replan_blocked_clearance', 0.7)
+        # Minimum time between preemptions, so Nav2 is not restarted on
+        # every planning tick.
+        self.declare_parameter('replan_min_interval', 1.0)
+        self.declare_parameter('goal_send_period', 0.5)
+
         # self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
         # Getting the parameter values
@@ -305,6 +388,24 @@ class WaypointNavigator(Node):
             'pose_refresh_period').get_parameter_value().double_value
         self.max_recovery_path_checks = self.get_parameter(
             'max_recovery_path_checks').get_parameter_value().integer_value
+
+        self.side_sector_min_deg = self.get_parameter(
+            'side_sector_min_deg').get_parameter_value().double_value
+        self.side_sector_max_deg = self.get_parameter(
+            'side_sector_max_deg').get_parameter_value().double_value
+        self.wall_min_length = self.get_parameter(
+            'wall_min_length').get_parameter_value().double_value
+
+        self.replan_while_moving = self.get_parameter(
+            'replan_while_moving').get_parameter_value().bool_value
+        self.replan_min_goal_change = self.get_parameter(
+            'replan_min_goal_change').get_parameter_value().double_value
+        self.replan_blocked_clearance = self.get_parameter(
+            'replan_blocked_clearance').get_parameter_value().double_value
+        self.replan_min_interval = self.get_parameter(
+            'replan_min_interval').get_parameter_value().double_value
+        self.goal_send_period = self.get_parameter(
+            'goal_send_period').get_parameter_value().double_value
 
         # Transforms
         self.tf_buffer = Buffer()
@@ -382,7 +483,7 @@ class WaypointNavigator(Node):
 
         # Recalculate from map callbacks, but only send at a controlled rate
         self.goal_timer = self.create_timer(
-            2.0,
+            self.goal_send_period,
             self.send_latest_forward_goal
         )
 
@@ -558,16 +659,20 @@ class WaypointNavigator(Node):
 
         self.publish_keepout_filter_info()
 
-    def send_goal(self, goal_pose: PoseStamped, mode="normal"):
+    def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False):
         """
         Send a Nav2 goal using BasicNavigator.
 
         mode:
             "normal"   -> normal lane/forward waypoint
             "recovery" -> recovery waypoint
+
+        preempt=True replaces an active goal. bt_navigator aborts the old
+        goal, but BasicNavigator only tracks the newest result future, so
+        check_navigation_complete never sees that abort as a failure.
         """
 
-        if self.goal_in_progress:
+        if self.goal_in_progress and not preempt:
             self.get_logger().warn(
                 "Cannot send goal: another Nav2 goal is already active."
             )
@@ -577,10 +682,24 @@ class WaypointNavigator(Node):
         goal_pose.header.stamp = self.get_clock().now().to_msg()
 
         self.get_logger().warn(
-            f"Sending {mode} goal: "
+            f"Sending {mode} goal{' (replan)' if preempt else ''}: "
             f"x={goal_pose.pose.position.x:.2f}, "
             f"y={goal_pose.pose.position.y:.2f}"
         )
+
+        if preempt:
+            # On rejection BasicNavigator keeps the old result future, so the
+            # old goal is still the one being tracked: leave state untouched.
+            if not self.navigator.goToPose(goal_pose):
+                self.get_logger().warn(
+                    "Replan goal rejected; keeping the active goal."
+                )
+                return
+
+            self.navigation_mode = mode
+            self.last_sent_goal = goal_pose
+            self.last_goal_dispatch_time = self.get_clock().now()
+            return
 
         self.goal_in_progress = True
         self.navigation_mode = mode
@@ -698,6 +817,10 @@ class WaypointNavigator(Node):
         goal_x = self.latest_forward_goal.pose.position.x
         goal_y = self.latest_forward_goal.pose.position.y
 
+        if self.goal_in_progress:
+            self.replan_active_goal(goal_x, goal_y)
+            return
+
         # Do not keep resending almost exactly the same waypoint
         if self.last_sent_goal is not None:
             last_x = self.last_sent_goal.pose.position.x
@@ -713,9 +836,6 @@ class WaypointNavigator(Node):
             if target_change < minimum_goal_change:
                 return
 
-        if self.goal_in_progress:
-            return
-
         self.get_logger().info(
             f"Sending forward waypoint: x={goal_x:.2f}, y={goal_y:.2f}"
         )
@@ -723,6 +843,63 @@ class WaypointNavigator(Node):
         self.send_goal(
             self.latest_forward_goal,
             mode="normal"
+        )
+
+    def can_replan_active_goal(self) -> bool:
+        """
+        Whether update_forward_goal may keep planning while a goal is active.
+        Only normal goals are replaced; recovery goals run to completion.
+        """
+        return (
+            self.replan_while_moving
+            and self.goal_in_progress
+            and self.navigation_mode == "normal"
+        )
+
+    def replan_active_goal(self, goal_x: float, goal_y: float):
+        """
+        Replace the active normal goal with the latest forward goal when
+        either it has moved meaningfully (new obstacles seen since dispatch)
+        or the active goal itself is no longer clear.
+        """
+        if not self.can_replan_active_goal():
+            return
+
+        if self.last_sent_goal is None:
+            return
+
+        elapsed_since_dispatch = (
+            self.get_clock().now() - self.last_goal_dispatch_time
+        ).nanoseconds / 1e9
+
+        if elapsed_since_dispatch < self.replan_min_interval:
+            return
+
+        active_x = self.last_sent_goal.pose.position.x
+        active_y = self.last_sent_goal.pose.position.y
+
+        target_change = math.hypot(goal_x - active_x, goal_y - active_y)
+
+        active_goal_clearance = self.get_map_clearance(active_x, active_y)
+        active_goal_blocked = (
+            active_goal_clearance < self.replan_blocked_clearance
+        )
+
+        if target_change < self.replan_min_goal_change and not (
+            active_goal_blocked and target_change >= 0.1
+        ):
+            return
+
+        self.get_logger().warn(
+            f"REPLAN | change={target_change:.2f} m, "
+            f"active goal clearance={active_goal_clearance:.2f} m"
+            f"{' (blocked)' if active_goal_blocked else ''}"
+        )
+
+        self.send_goal(
+            self.latest_forward_goal,
+            mode="normal",
+            preempt=True
         )
 
     def find_stuck_nudge_goal(self):
@@ -901,8 +1078,11 @@ class WaypointNavigator(Node):
 
             return
 
-        # If the robot is still navigating to a previous waypoint, do not generate a new one.
-        if self.goal_in_progress:
+        # If the robot is still navigating to a previous waypoint, do not
+        # generate a new one - unless it is a normal goal and replanning is
+        # enabled, in which case send_latest_forward_goal decides whether
+        # the new goal is different enough to preempt the active one.
+        if self.goal_in_progress and not self.can_replan_active_goal():
             if self.last_sent_goal is not None:
                 goal_x = self.last_sent_goal.pose.position.x
                 goal_y = self.last_sent_goal.pose.position.y
@@ -957,11 +1137,17 @@ class WaypointNavigator(Node):
             self.latest_forward_goal = lane_goal
             return
 
-        right_clearance = self.get_scan_clearance(-100, -20)
         front_clearance = self.get_scan_clearance(-20, 20)
-        left_clearance = self.get_scan_clearance(20, 100)
+        (
+            left_clearance,
+            right_clearance,
+            left_is_wall,
+            right_is_wall
+        ) = self.get_side_clearances()
 
-        if right_clearance < 1.5:
+        # Only a wall justifies the left-recovery detour. A single cone on
+        # the right is handled by the forward ray march's clearance check.
+        if right_is_wall and right_clearance < 1.5:
             self.get_logger().warn(
                 f"Lane goal unavailable and right wall is only "
                 f"{right_clearance:.2f} m away. Refusing forward fallback."
@@ -1409,16 +1595,21 @@ class WaypointNavigator(Node):
         left_x = -math.sin(self.robot_yaw)
         left_y = math.cos(self.robot_yaw)
 
-        # Current laser clearances.
-        right_clearance = self.get_scan_clearance(-100, -20)
+        # Current laser clearances. Side values are wall-aware; see
+        # get_side_clearances.
         front_clearance = self.get_scan_clearance(-20, 20)
-        left_clearance = self.get_scan_clearance(20, 100)
+        (
+            left_clearance,
+            right_clearance,
+            left_is_wall,
+            right_is_wall
+        ) = self.get_side_clearances()
 
         self.get_logger().info(
             f"SCAN CLEARANCE | "
-            f"left={left_clearance:.2f}, "
+            f"left={left_clearance:.2f}{' (wall)' if left_is_wall else ''}, "
             f"front={front_clearance:.2f}, "
-            f"right={right_clearance:.2f}"
+            f"right={right_clearance:.2f}{' (wall)' if right_is_wall else ''}"
         )
 
         # ----------------------------------------------------------
@@ -1483,8 +1674,17 @@ class WaypointNavigator(Node):
         # 3. Choose permitted lateral offsets
         # ----------------------------------------------------------
 
-        # Wall is close on the right: do not allow right-side goals.
-        if right_clearance < 0.7:
+        # React to whichever side is CLOSER. The right side used to be
+        # checked first and always won, so with cones on both sides the
+        # robot was pushed left even when the left cone was nearer.
+        react_right = (
+            right_clearance < 1.7
+            and right_clearance <= left_clearance
+        )
+        react_left = left_clearance < 1.7 and not react_right
+
+        # Obstacle is close on the right: do not allow right-side goals.
+        if react_right and right_clearance < 0.7:
             lateral_offsets = [
                 0.70,
                 0.90,
@@ -1492,7 +1692,7 @@ class WaypointNavigator(Node):
                 1.30
             ]
 
-        elif right_clearance < 1.2:
+        elif react_right and right_clearance < 1.2:
             lateral_offsets = [
                 0.45,
                 0.65,
@@ -1500,7 +1700,7 @@ class WaypointNavigator(Node):
                 1.05
             ]
 
-        elif right_clearance < 1.7:
+        elif react_right:
             lateral_offsets = [
                 0.20,
                 0.40,
@@ -1508,8 +1708,8 @@ class WaypointNavigator(Node):
                 0.80
             ]
 
-        # Wall is close on the left: move toward the right.
-        elif left_clearance < 0.7:
+        # Obstacle is close on the left: move toward the right.
+        elif react_left and left_clearance < 0.7:
             lateral_offsets = [
                 -1.30,
                 -1.10,
@@ -1517,7 +1717,7 @@ class WaypointNavigator(Node):
                 -0.70
             ]
 
-        elif left_clearance < 1.2:
+        elif react_left and left_clearance < 1.2:
             lateral_offsets = [
                 -1.05,
                 -0.85,
@@ -1525,7 +1725,7 @@ class WaypointNavigator(Node):
                 -0.45
             ]
 
-        elif left_clearance < 1.7:
+        elif react_left:
             lateral_offsets = [
                 -0.80,
                 -0.60,
@@ -1648,8 +1848,11 @@ class WaypointNavigator(Node):
                         * max(0.0, candidate_lateral)
                     )
 
-                    # Strong rejection if candidate remains on robot's right.
-                    if candidate_lateral < 0.0:
+                    # Strong rejection if candidate remains on robot's
+                    # right - walls only. Next to a cone the graded reward
+                    # above is enough, and a hard penalty would forbid the
+                    # swing back that a slalom needs.
+                    if right_is_wall and candidate_lateral < 0.0:
                         wall_bias -= 20.0
 
                 # Explicitly reward moving right when left wall is close.
@@ -1665,7 +1868,7 @@ class WaypointNavigator(Node):
                         * max(0.0, -candidate_lateral)
                     )
 
-                    if candidate_lateral > 0.0:
+                    if left_is_wall and candidate_lateral > 0.0:
                         wall_bias -= 20.0
 
                 score = (
@@ -1734,8 +1937,12 @@ class WaypointNavigator(Node):
         # ----------------------------------------------------------
 
         # Ensure the selected point is definitely to the left when
-        # the right wall is extremely close.
-        if right_clearance < 0.8 and chosen_lateral < 0.70:
+        # the right wall is extremely close. Not applied for cones.
+        if (
+            right_is_wall
+            and right_clearance < 0.8
+            and chosen_lateral < 0.70
+        ):
             required_shift = 0.70 - chosen_lateral
 
             goal_x += required_shift * left_x
@@ -1854,6 +2061,58 @@ class WaypointNavigator(Node):
         self._scan_sector_cache[key] = clearance
 
         return clearance
+
+    def get_side_obstacle_extent(self, angle_min_deg: float,
+                                 angle_max_deg: float,
+                                 max_range: float) -> float:
+        """Memoised per scan message, like get_scan_clearance."""
+        if self.latest_scan is None:
+            return 0.0
+
+        key = ('extent', float(angle_min_deg), float(angle_max_deg),
+               float(max_range))
+
+        if key not in self._scan_sector_cache:
+            self._scan_sector_cache[key] = scan_obstacle_extent(
+                self.latest_scan,
+                angle_min_deg,
+                angle_max_deg,
+                max_range
+            )
+
+        return self._scan_sector_cache[key]
+
+    def get_side_clearances(self, reaction_distance: float = 1.7):
+        """
+        Left/right clearance used to steer away from side obstacles.
+
+        A wall (an obstacle at least wall_min_length long within
+        reaction_distance) is measured over the wide 20-100 deg sector, as
+        before, so the robot still keeps off a wall it is driving alongside.
+        Anything shorter is treated as a cone and measured only over the
+        forward-looking side sector, so a cone that is already beside or
+        behind the robot no longer pushes the goal toward the next one.
+
+        Returns (left_clearance, right_clearance, left_is_wall, right_is_wall).
+        """
+        right_is_wall = self.get_side_obstacle_extent(
+            -100, -20, reaction_distance) >= self.wall_min_length
+        left_is_wall = self.get_side_obstacle_extent(
+            20, 100, reaction_distance) >= self.wall_min_length
+
+        if right_is_wall:
+            right_clearance = self.get_scan_clearance(-100, -20)
+        else:
+            right_clearance = self.get_scan_clearance(
+                -self.side_sector_max_deg, -self.side_sector_min_deg)
+
+        if left_is_wall:
+            left_clearance = self.get_scan_clearance(20, 100)
+        else:
+            left_clearance = self.get_scan_clearance(
+                self.side_sector_min_deg, self.side_sector_max_deg)
+
+        return left_clearance, right_clearance, left_is_wall, right_is_wall
 
 
     def get_map_clearance(self, world_x: float, world_y: float,

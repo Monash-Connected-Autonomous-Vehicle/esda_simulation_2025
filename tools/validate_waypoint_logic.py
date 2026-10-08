@@ -367,6 +367,49 @@ def v8_scan_sectors():
           math.isinf(TARGET.scan_sector_clearance(empty, -100, -90)))
 
 
+def v12_wall_vs_cone():
+    print('\nV-12 side obstacle extent (wall vs cone)')
+
+    angles = [-math.pi + i * 2 * math.pi / 360 for i in range(360)]
+
+    def scan_of(hit):
+        """hit(x, y) -> True if the ray's point at that range is an obstacle."""
+        ranges = []
+        for angle in angles:
+            value = float('inf')
+            for step in range(1, 400):
+                r = step * 0.01
+                if hit(r * math.cos(angle), r * math.sin(angle)):
+                    value = r
+                    break
+            ranges.append(value)
+        return FakeScan(ranges)
+
+    # Wall 0.7 m to the right, running alongside the robot.
+    wall = scan_of(lambda x, y: y <= -0.7)
+    wall_extent = TARGET.scan_obstacle_extent(wall, -100, -20, 1.7)
+    check('wall alongside is longer than 1 m', wall_extent >= 1.0,
+          f'{wall_extent:.2f} m')
+
+    # Cone (r = 0.2 m) beside the robot on the right, already passed.
+    cone = scan_of(lambda x, y: math.hypot(x - 0.0, y + 0.8) <= 0.2)
+    cone_extent = TARGET.scan_obstacle_extent(cone, -100, -20, 1.7)
+    check('single cone is shorter than 1 m', 0.0 < cone_extent < 1.0,
+          f'{cone_extent:.2f} m')
+
+    # Two cones on the same side 2 m apart must not merge into a wall.
+    two = scan_of(lambda x, y: math.hypot(x - 0.3, y + 0.8) <= 0.2
+                  or math.hypot(x - 2.3, y + 0.8) <= 0.2)
+    two_extent = TARGET.scan_obstacle_extent(two, -100, -20, 3.0)
+    check('two separate cones do not merge', two_extent < 1.0,
+          f'{two_extent:.2f} m')
+
+    # 0.0 no-returns must not bridge objects or count as a hit.
+    zeros = FakeScan([0.0] * 360)
+    check('0.0 no-returns give zero extent',
+          TARGET.scan_obstacle_extent(zeros, -100, -20, 1.7) == 0.0)
+
+
 def v9_travel_geometry():
     print('\nV-9  travel-mark geometry')
 
@@ -495,6 +538,7 @@ def main():
     v4_path_samples()
     v7_deadlock_table()
     v8_scan_sectors()
+    v12_wall_vs_cone()
     v9_travel_geometry()
     v10_yaml_lint()
     v11_timing(snap)
