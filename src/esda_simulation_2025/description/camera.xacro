@@ -169,6 +169,10 @@
             <always_on>true</always_on>
             <update_rate>100</update_rate>
             <topic>imu/data</topic>
+            <!-- Without this gz stamps messages "my_robot_1/base_link/zed_imu",
+                 a frame that does not exist in TF, so the EKF dropped every
+                 IMU message. imu_link comes from robot_state_publisher. -->
+            <gz_frame_id>imu_link</gz_frame_id>
         </sensor>
     </gazebo>
 

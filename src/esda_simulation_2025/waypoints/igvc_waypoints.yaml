@@ -1,21 +1,255 @@
+# IGVC waypoints: no-man's-land start/end and ramp start/end.
+# All poses are in the map frame, whose origin is the robot's starting pose
+# (as with a fresh SLAM map).
+#
+# waypoints - SIM (igvc.sdf, and igvc_campus.sdf which places the same track
+#   at the same pose). Measured from the orange_igvc ground texture
+#   (1400 x 1200 px over 43 x 37 m; mapping checked against the barrel poses
+#   in model.sdf), relative to the spawn at world (11, 0), yaw 0. The robot
+#   drives east, up the right side, then WEST along the top straight, which
+#   has the same layout as the competition's east side: lanes end, barricade,
+#   bracket-shaped lane segments where the ramp would be (there is no ramp
+#   model in the sim), barricade, lanes resume.
+#   no_mans_land_* = midpoint between the two lane-line ends,
+#   ramp_* = centre of each bracket opening. Accuracy ~0.2 m.
+#   The previous goal_1 (4.168, 29.937) lands within 0.15 m of
+#   no_mans_land_start, an independent check.
+#
+# competition_northbound / competition_southbound - the REAL course, from the
+#   competition photo. Scale from parking stalls (40 px = 9 ft = 2.743 m),
+#   origin at the Start mark, robot starting facing north / south.
+#   APPROXIMATE (1-2 m); verify on site or with GPS. Not valid in the sim.
+
 waypoints:
-  - name: goal_1
+  - name: no_mans_land_start
     frame_id: map
     position:
-      x: 4.168
-      y: 29.937
+      x: 4.23
+      y: 30.04
       z: 0.0
     quaternion:
       x: 0.0
       y: 0.0
-      z: 0.974
-      w: 0.224
+      z: 0.999
+      w: 0.036
     rotation_rads:
       roll: 0.0
       pitch: 0.0
-      yaw: 2.689
+      yaw: 3.070
     rotation_degrees:
       roll: 0.0
       pitch: 0.0
-      yaw: 154.0
-    
+      yaw: 175.9
+  - name: ramp_start
+    frame_id: map
+    position:
+      x: -5.00
+      y: 30.70
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: 0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.141
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+  - name: ramp_end
+    frame_id: map
+    position:
+      x: -16.51
+      y: 30.71
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: -1.000
+      w: 0.022
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: -3.097
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: -177.4
+  - name: no_mans_land_end
+    frame_id: map
+    position:
+      x: -26.37
+      y: 30.27
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: -1.000
+      w: 0.022
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: -3.097
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: -177.4
+
+competition_northbound:
+  - name: no_mans_land_start
+    frame_id: map
+    position:
+      x: 18.38
+      y: -37.20
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+  - name: ramp_start
+    frame_id: map
+    position:
+      x: 6.10
+      y: -37.00
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+  - name: ramp_end
+    frame_id: map
+    position:
+      x: -5.83
+      y: -37.00
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+  - name: no_mans_land_end
+    frame_id: map
+    position:
+      x: -18.72
+      y: -37.89
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+
+competition_southbound:
+  - name: no_mans_land_end
+    frame_id: map
+    position:
+      x: 18.72
+      y: 37.89
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+  - name: ramp_end
+    frame_id: map
+    position:
+      x: 5.83
+      y: 37.00
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+  - name: ramp_start
+    frame_id: map
+    position:
+      x: -6.10
+      y: 37.00
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0
+  - name: no_mans_land_start
+    frame_id: map
+    position:
+      x: -18.38
+      y: 37.20
+      z: 0.0
+    quaternion:
+      x: 0.0
+      y: 0.0
+      z: 1.000
+      w: -0.000
+    rotation_rads:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 3.142
+    rotation_degrees:
+      roll: 0.0
+      pitch: 0.0
+      yaw: 180.0

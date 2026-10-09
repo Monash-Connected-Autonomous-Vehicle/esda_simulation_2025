@@ -24,6 +24,7 @@ import sensor_msgs_py.point_cloud2 as pc2
 from tf2_geometry_msgs import do_transform_point
 from nav_msgs.msg import Odometry
 
+import read_gps_waypoints
 
 # ==========================================================================
 # Map clearance helpers
@@ -803,7 +804,7 @@ class WaypointNavigator(Node):
             self.check_navigation_complete
         )
 
-        self.gps_waypoints = []
+        self.gps_waypoints = [(4.198, 29.937)]  # Example GPS waypoints
 
         # Travel history. The PointCloud2 is now purely for RViz; the costmap
         # effect comes from the keepout mask below.
@@ -854,6 +855,14 @@ class WaypointNavigator(Node):
         )
 
         self.publish_keepout_filter_info()
+
+        self.gps_waypoints = read_gps_waypoints.read_gps_waypoints_func("src/esda_simulation_2025/waypoints/igvc_waypoints.yaml")
+        self.gps_waypoints = read_gps_waypoints.save_gps_waypoints_to_list(self.gps_waypoints)
+
+        print(self.gps_waypoints)
+
+        self.current_gps_waypoint_index = 0  # Index of the current GPS waypoint. Should be 4
+        self.gps_waypoint_radius_threshold = 0.5  # Distance threshold to consider a GPS waypoint reached
 
     def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False,
                   is_far=False):
@@ -978,6 +987,15 @@ class WaypointNavigator(Node):
         )
 
     def pull_towards_gps_waypoints(self):
+        """
+        Docstring for pull_towards_gps_waypoints function
+        
+        :param self: Description
+        """
+
+        next_gps_waypoint = self.gps_waypoints[self.current_gps_waypoint_index]  # Get the next GPS waypoint
+
+
         pass
 
     def send_latest_forward_goal(self):
@@ -3876,6 +3894,8 @@ class WaypointNavigator(Node):
 if __name__ == '__main__':
     # import rclpy
     # from rclpy.node import Node
+    gps_waypoints = read_gps_waypoints.read_gps_waypoints_func("src/esda_simulation_2025/waypoints/igvc_waypoints.yaml")
+    read_gps_waypoints.print_gps_waypoints(gps_waypoints)
 
     rclpy.init()
     navigator = WaypointNavigator()

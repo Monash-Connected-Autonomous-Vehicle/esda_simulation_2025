@@ -15,7 +15,9 @@ ekf_filter_node:
     world_frame: odom                 # Set to odom for local fusion; set to map for global fusion
 
     # 3. Odometry Input Configuration (odom0)
-    odom0: /odom                      # Topic name of your wheel odometry source
+    # Wheel odometry from ros2_control. /odom (gz bridge) never carries data,
+    # so with it here the EKF received nothing and published nothing.
+    odom0: /diff_drive_base_controller/odom
     odom0_config: [true,  true,  false, # x,   y,   z
                    false, false, true,  # roll, pitch, yaw
                    true,  true,  false, # vx,  vy,  vz

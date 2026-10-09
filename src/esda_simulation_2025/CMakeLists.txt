@@ -64,6 +64,7 @@ install(PROGRAMS
   scripts/curve_detection.py
   scripts/throttle_publisher.py
   scripts/cmd_vel_odometry.py
+  scripts/read_gps_waypoints.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

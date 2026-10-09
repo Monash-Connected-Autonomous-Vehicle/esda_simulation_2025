@@ -183,9 +183,8 @@ def generate_launch_description():
     
     # --- 7) Static TF publishers are handled by robot_state_publisher ---
     # The laser_frame → my_robot_1/base_link/laser_frame transform comes from URDF
-    # EKF is launched separately via robot_localization_ekf.launch.py (the UI's
-    # "Launch Robot Localization" button) - starting it here too would spawn a
-    # second node with the same name, and both would fight over odom->base_link TF.
+    # EKF is included above (ekf_launch) and is the sole odom->base_link
+    # publisher; diff_drive_base_controller has enable_odom_tf: false.
 
     return LaunchDescription([
       DeclareLaunchArgument('use_sim_time',    default_value='true'),

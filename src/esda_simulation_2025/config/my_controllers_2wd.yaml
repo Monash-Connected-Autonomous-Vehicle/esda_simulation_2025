@@ -31,7 +31,8 @@ diff_drive_base_controller:
     # EKF (ekf.yaml, launched with the sim) is the sole publisher of
     # odom->base_link TF, fused from this controller's raw /odom + IMU.
     # Leaving this true would have two nodes broadcasting the same transform.
-    enable_odom_tf: true
+    # launch_robot.launch.py (legacy, no EKF) relies on this being true.
+    enable_odom_tf: false
 
     cmd_vel_timeout: 0.5
     #publish_limited_velocity: true
