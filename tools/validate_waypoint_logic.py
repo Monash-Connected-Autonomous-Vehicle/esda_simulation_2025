@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Offline validation for the waypoint navigator's clearance logic.
+Offline validation for waypoint clearance and GPS navigation transitions.
 
 Runs WITHOUT rclpy, Gazebo or Nav2 - it imports the module-level pure
 functions from waypoint_navigator_recommendation.py and exercises them against
-synthetic grids and the real saved map. Needs only numpy, cv2 and pyyaml.
+synthetic grids and the real saved map. GPS checks use a fake Nav2 client and
+clock. Needs only numpy, cv2 and pyyaml.
 
     python3 tools/validate_waypoint_logic.py
 
@@ -450,6 +451,226 @@ def v15_lane_points_on_obstacles():
           TARGET.points_away_from(paint, np.zeros((0, 2)), 0.35) == paint)
 
 
+def v16_gps_waypoints():
+    print('\nV-16 GPS priority and normal-mode fallback')
+
+    class FakePose:
+        def __init__(self):
+            self.header = types.SimpleNamespace(frame_id='', stamp=None)
+            self.pose = types.SimpleNamespace(
+                position=types.SimpleNamespace(x=0.0, y=0.0, z=0.0),
+                orientation=types.SimpleNamespace(x=0.0, y=0.0, z=0.0, w=1.0))
+
+    class FakeTime:
+        def __init__(self, seconds):
+            self.nanoseconds = int(seconds * 1e9)
+
+        def __sub__(self, other):
+            return FakeTime((self.nanoseconds - other.nanoseconds) / 1e9)
+
+        def to_msg(self):
+            return self.nanoseconds
+
+    class FakeNavigator:
+        def __init__(self):
+            self.goals = []
+            self.accept = True
+            self.cancellations = 0
+            self.complete = False
+            self.result = 'succeeded'
+
+        def goToPose(self, goal):
+            self.goals.append(goal)
+            return self.accept
+
+        def cancelTask(self):
+            self.cancellations += 1
+
+        def getFeedback(self):
+            return None
+
+        def isTaskComplete(self):
+            return self.complete
+
+        def getResult(self):
+            return self.result
+
+    logger = types.SimpleNamespace(**{
+        method: lambda *args, **kwargs: None
+        for method in ('info', 'warn', 'debug', 'error')})
+
+    def make_node(waypoints, pose=(0.0, 0.0, 0.0)):
+        # Bypass ROS setup; exercise the real planner/sender/completion methods.
+        node = TARGET.WaypointNavigator.__new__(TARGET.WaypointNavigator)
+        node.get_logger = lambda: logger
+        node.test_seconds = 100.0
+        node.get_clock = lambda: types.SimpleNamespace(
+            now=lambda: FakeTime(node.test_seconds))
+        node.current_pose = pose
+        node.robot_x, node.robot_y, node.robot_yaw = pose or (0.0, 0.0, 0.0)
+        node.refresh_robot_pose = lambda: node.current_pose is not None
+        node.frame_id = 'map'
+        node.gps_waypoints = waypoints
+        node.current_gps_waypoint_index = 0
+        node.gps_distance_threshold = 10.0
+        node.gps_waypoint_radius_threshold = 0.5
+        node.gps_retry_delay = 5.0
+        node.gps_suppressed_until = None
+        node.navigation_mode = 'normal'
+        node.navigator = FakeNavigator()
+        node.goal_in_progress = False
+        node.enter_recovery_mode = False
+        node.initial_forward_goal_sent = False
+        node.initial_goal_timer = types.SimpleNamespace(cancel=lambda: None)
+        node.latest_forward_goal = None
+        node.latest_forward_goal_is_far = False
+        node.last_sent_goal = None
+        node.active_goal_is_far = False
+        node.force_replan = False
+        node.last_goal_dispatch_time = node.get_clock().now()
+        node.stuck_nudge_timeout = 5.0
+        node.replan_while_moving = True
+        node._replan_streak = 0
+        node.map_snapshot = None
+        return node
+
+    original_pose, original_result = TARGET.PoseStamped, TARGET.TaskResult
+    TARGET.PoseStamped = FakePose
+    TARGET.TaskResult = types.SimpleNamespace(SUCCEEDED='succeeded', FAILED='failed')
+    try:
+        yaml_path = os.path.join(SCRIPTS_DIR, '..', 'waypoints', 'igvc_waypoints.yaml')
+        waypoints = TARGET.read_gps_waypoints.save_gps_waypoints_to_list(
+            TARGET.read_gps_waypoints.read_gps_waypoints_func(yaml_path))
+
+        node = make_node(waypoints, pose=None)
+        node.send_initial_forward_goal()
+        check('startup waits for pose before choosing GPS or normal',
+              not node.try_gps_waypoint() and not node.navigator.goals)
+
+        node = make_node(waypoints)
+        node.update_forward_goal()
+        node.send_initial_forward_goal()
+        check('distant YAML waypoint falls back to normal startup goal',
+              node.navigation_mode == 'normal'
+              and node.current_gps_waypoint_index == 0
+              and len(node.navigator.goals) == 1
+              and node.last_sent_goal.pose.position.x == 1.0)
+
+        first = waypoints[0]
+        node = make_node(waypoints, (first[0], first[1] - 5.0, 0.0))
+        node.send_initial_forward_goal()
+        goal = node.last_sent_goal
+        check('nearby YAML waypoint is the first dispatched goal',
+              node.navigation_mode == 'gps' and node.initial_forward_goal_sent
+              and goal.header.frame_id == 'map'
+              and (goal.pose.position.x, goal.pose.position.y, goal.pose.position.z)
+              == tuple(first)
+              and abs(goal.pose.orientation.z - math.sin(math.pi / 4)) < 1e-9)
+        node.update_forward_goal()
+        node.send_latest_forward_goal()
+        node.send_initial_forward_goal()
+        check('active GPS goal is not repeatedly sent or replaced by normal',
+              len(node.navigator.goals) == 1 and node.navigation_mode == 'gps')
+
+        node.current_pose = (first[0], first[1] - 0.25, 0.0)
+        node.update_forward_goal()
+        node.check_navigation_complete()
+        check('active GPS goal waits for Nav2 success before advancing',
+              node.current_gps_waypoint_index == 0 and node.goal_in_progress)
+        node.navigator.complete = True
+        node.check_navigation_complete()
+        node.update_forward_goal()
+        check('success advances to the next YAML waypoint',
+              node.current_gps_waypoint_index == 1 and node.navigation_mode == 'gps'
+              and node.last_sent_goal.pose.position.x == waypoints[1][0])
+        node.current_pose = tuple(waypoints[1][:2]) + (0.0,)
+        node.check_navigation_complete()
+        node.update_forward_goal()
+        check('distant next waypoint resumes normal navigation without skipping it',
+              node.current_gps_waypoint_index == 2 and node.navigation_mode == 'normal'
+              and not node.goal_in_progress and len(node.navigator.goals) == 2)
+
+        node = make_node([[6.0, 8.0, 0.0]])
+        node.update_forward_goal()
+        check('GPS priority applies at exactly the 10 m boundary',
+              node.navigation_mode == 'gps' and node.goal_in_progress)
+        node.current_pose = (-0.01, 0.0, 0.0)
+        node.update_forward_goal()
+        check('active GPS goal outside the radius is canceled and normal resumes',
+              node.navigator.cancellations == 1 and not node.goal_in_progress
+              and node.navigation_mode == 'normal' and node.last_sent_goal is None)
+        node.latest_forward_goal = FakePose()
+        node.latest_forward_goal.pose.position.x = 1.0
+        node.send_latest_forward_goal()
+        check('normal sender remains usable after GPS distance fallback',
+              node.navigation_mode == 'normal' and node.goal_in_progress
+              and len(node.navigator.goals) == 2)
+
+        node = make_node([[3.0, 0.0, 0.0]])
+        node.send_goal(FakePose(), mode='normal')
+        node.replan_while_moving = False
+        node.update_forward_goal()
+        check('in-range GPS takes priority over an active normal goal',
+              node.navigation_mode == 'gps' and len(node.navigator.goals) == 2)
+
+        node = make_node([[3.0, 0.0, 0.0]])
+        node.navigator.accept = False
+        node.update_forward_goal()
+        node.update_forward_goal()
+        check('rejected GPS goal leaves normal unlocked and delays retry',
+              not node.goal_in_progress and node.navigation_mode == 'normal'
+              and len(node.navigator.goals) == 1 and node.gps_suppressed_until == 105.0)
+        node.navigator.accept = True
+        node.send_initial_forward_goal()
+        check('normal goal can run during GPS rejection cooldown',
+              node.navigation_mode == 'normal' and node.goal_in_progress)
+        node.test_seconds = 105.0
+        node.update_forward_goal()
+        check('GPS retries when its cooldown expires',
+              node.navigation_mode == 'gps' and len(node.navigator.goals) == 3)
+
+        node.navigator.complete = True
+        node.navigator.result = 'failed'
+        node.check_navigation_complete()
+        node.update_forward_goal()
+        check('GPS failure resumes normal without skipping the failed waypoint',
+              not node.goal_in_progress and not node.enter_recovery_mode
+              and node.navigation_mode == 'normal'
+              and node.current_gps_waypoint_index == 0
+              and len(node.navigator.goals) == 3)
+
+        node = make_node([[3.0, 0.0, 0.0]])
+        node.send_goal(FakePose(), mode='normal')
+        previous_goal = node.last_sent_goal
+        node.navigator.accept = False
+        node.try_gps_waypoint()
+        check('rejected GPS preemption preserves the active normal goal',
+              node.navigation_mode == 'normal' and node.goal_in_progress
+              and node.last_sent_goal is previous_goal)
+
+        node = make_node([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [3.0, 0.0, 0.0]])
+        node.update_forward_goal()
+        check('already reached waypoints are skipped through the 0.5 m boundary',
+              node.current_gps_waypoint_index == 2 and node.navigation_mode == 'gps')
+        node.navigator.complete = True
+        node.check_navigation_complete()
+        node.update_forward_goal()
+        node.send_latest_forward_goal()
+        empty = make_node([])
+        check('empty or completed waypoint lists safely use normal navigation',
+              node.current_gps_waypoint_index == 3 and node.navigation_mode == 'normal'
+              and not empty.try_gps_waypoint() and not empty.navigator.goals)
+
+        node = make_node([[3.0, 0.0, 0.0]])
+        node.enter_recovery_mode = True
+        node.update_forward_goal()
+        node.send_initial_forward_goal()
+        node.send_latest_forward_goal()
+        check('GPS preference respects the recovery lock', not node.navigator.goals)
+    finally:
+        TARGET.PoseStamped, TARGET.TaskResult = original_pose, original_result
+
+
 def v12_wall_vs_cone():
     print('\nV-12 side obstacle extent (wall vs cone)')
 
@@ -624,6 +845,7 @@ def main():
     v12_wall_vs_cone()
     v14_far_goals()
     v15_lane_points_on_obstacles()
+    v16_gps_waypoints()
     v9_travel_geometry()
     v10_yaml_lint()
     v11_timing(snap)

@@ -403,6 +403,17 @@ def polyline_length(points) -> float:
     ))
 
 
+def angle_difference(a: float, b: float) -> float:
+    """Signed a - b, wrapped to [-pi, pi]."""
+    return math.atan2(math.sin(a - b), math.cos(a - b))
+
+
+def turn_toward(yaw: float, target_yaw: float, max_turn: float) -> float:
+    """yaw rotated toward target_yaw by at most max_turn radians."""
+    error = angle_difference(target_yaw, yaw)
+    return yaw + max(-max_turn, min(max_turn, error))
+
+
 def disc_offsets(radius_metres: float, resolution: float):
     """
     Integer cell offsets covering a disc, as (row_offsets, col_offsets).
@@ -433,6 +444,20 @@ class WaypointNavigator(Node):
         self.declare_parameter('lane_topic', '/lane_markers') # Subscribes to the lane topic to get the lane markers
         
         self.declare_parameter('safety_bubble_radius', 0.5) # Safety bubble radius around the robot to avoid collisions
+
+        # Try the next GPS waypoint before generating a lane/forward goal.
+        # Outside this radius, use normal navigation until it is in range.
+        self.declare_parameter('gps_distance_threshold', 10.0)
+        self.declare_parameter('gps_waypoint_radius_threshold', 0.5)
+        self.declare_parameter('gps_retry_delay', 5.0)
+        # Out of GPS range, once the lanes have ended (seen at least once,
+        # then neither line seen for gps_heading_no_lane_timeout), the
+        # forward goal is aimed at the next GPS waypoint, turning at most
+        # gps_heading_max_turn_deg from the current heading per goal. While
+        # any lane line is visible the lanes alone decide.
+        self.declare_parameter('enable_gps_heading_pull', True)
+        self.declare_parameter('gps_heading_max_turn_deg', 60.0)
+        self.declare_parameter('gps_heading_no_lane_timeout', 3.0)
 
         # How far into unobserved space a waypoint may sit before it stops
         # counting as clear. Deliberately defaulted to the same value as
@@ -711,6 +736,9 @@ class WaypointNavigator(Node):
 
         # Prevent old lane detections being used indefinitely
         self.last_lane_update_time = None
+        # Last time either lane line was seen (one side is enough). None
+        # until the first sighting; see gps_target_bearing.
+        self.last_any_lane_time = None
 
         # Parameters for the laser scan
         self.latest_scan = None
@@ -804,8 +832,6 @@ class WaypointNavigator(Node):
             self.check_navigation_complete
         )
 
-        self.gps_waypoints = [(4.198, 29.937)]  # Example GPS waypoints
-
         # Travel history. The PointCloud2 is now purely for RViz; the costmap
         # effect comes from the keepout mask below.
         self.travel_history_publisher = self.create_publisher(
@@ -861,11 +887,20 @@ class WaypointNavigator(Node):
         waypoints = read_gps_waypoints.read_gps_waypoints_func("src/esda_simulation_2025/waypoints/igvc_waypoints.yaml")
         self.gps_waypoints = read_gps_waypoints.save_gps_waypoints_to_list(waypoints)
 
-        print(self.gps_waypoints)
-
-        self.current_gps_waypoint_index = 0  # Index of the current GPS waypoint. Should be 4
-        self.gps_waypoint_radius_threshold = 0.5  # Distance threshold to consider a GPS waypoint reached
-        self.gps_distance_threshold = 10.0  # Distance threshold to switch to GPS navigation mode. Initially try GPS navigation, but switch to normal mode when the robot is not within this distance of the next GPS waypoint.
+        self.current_gps_waypoint_index = 0
+        self.gps_waypoint_radius_threshold = self.get_parameter(
+            'gps_waypoint_radius_threshold').get_parameter_value().double_value
+        self.gps_distance_threshold = self.get_parameter(
+            'gps_distance_threshold').get_parameter_value().double_value
+        self.gps_retry_delay = self.get_parameter(
+            'gps_retry_delay').get_parameter_value().double_value
+        self.gps_suppressed_until = None
+        self.enable_gps_heading_pull = self.get_parameter(
+            'enable_gps_heading_pull').get_parameter_value().bool_value
+        self.gps_heading_max_turn = math.radians(self.get_parameter(
+            'gps_heading_max_turn_deg').get_parameter_value().double_value)
+        self.gps_heading_no_lane_timeout = self.get_parameter(
+            'gps_heading_no_lane_timeout').get_parameter_value().double_value
 
 
     def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False,
@@ -876,6 +911,9 @@ class WaypointNavigator(Node):
         mode:
             "normal"   -> normal lane/forward waypoint
             "recovery" -> recovery waypoint
+            "gps"      -> next configured GPS waypoint
+
+        Returns True only when Nav2 accepts the goal.
 
         preempt=True replaces an active goal. bt_navigator aborts the old
         goal, but BasicNavigator only tracks the newest result future, so
@@ -886,7 +924,7 @@ class WaypointNavigator(Node):
             self.get_logger().warn(
                 "Cannot send goal: another Nav2 goal is already active."
             )
-            return
+            return False
 
         goal_pose.header.frame_id = self.frame_id
         goal_pose.header.stamp = self.get_clock().now().to_msg()
@@ -900,21 +938,14 @@ class WaypointNavigator(Node):
         # Any dispatch starts a fresh debounce for the new active goal.
         self._replan_streak = 0
 
-        if preempt:
-            # On rejection BasicNavigator keeps the old result future, so the
-            # old goal is still the one being tracked: leave state untouched.
-            if not self.navigator.goToPose(goal_pose):
-                self.get_logger().warn(
-                    "Replan goal rejected; keeping the active goal."
-                )
-                return
-
-            self.navigation_mode = mode
-            self.active_goal_is_far = is_far
-            self.force_replan = False
-            self.last_sent_goal = goal_pose
-            self.last_goal_dispatch_time = self.get_clock().now()
-            return
+        # On rejection BasicNavigator keeps the old result future. Update
+        # tracking only after acceptance, including when there is no old goal.
+        if not self.navigator.goToPose(goal_pose):
+            self.get_logger().warn(
+                "Replan goal rejected; keeping the active goal."
+                if preempt else f"{mode.capitalize()} goal rejected by Nav2."
+            )
+            return False
 
         self.goal_in_progress = True
         self.navigation_mode = mode
@@ -923,38 +954,22 @@ class WaypointNavigator(Node):
         self.last_sent_goal = goal_pose
         self.last_goal_dispatch_time = self.get_clock().now()
 
-        self.navigator.goToPose(goal_pose)
+        return True
 
     def send_initial_forward_goal(self):
         if self.initial_forward_goal_sent:
             return
 
-        try:
-            transform = self.tf_buffer.lookup_transform(
-                self.frame_id,       # target: map
-                self.robot_frame,    # source: base_link
-                rclpy.time.Time()
-            )
-
-        except TransformException as ex:
-            self.get_logger().info(
-                f"Waiting for map -> base_link TF: {ex}"
-            )
+        if self.enter_recovery_mode or self.goal_in_progress:
             return
 
-        # Current robot pose in map frame
-        robot_x = transform.transform.translation.x
-        robot_y = transform.transform.translation.y
+        if not self.refresh_robot_pose():
+            return
 
-        qx = transform.transform.rotation.x
-        qy = transform.transform.rotation.y
-        qz = transform.transform.rotation.z
-        qw = transform.transform.rotation.w
+        if self.try_gps_waypoint():
+            return
 
-        robot_yaw = math.atan2(
-            2.0 * (qw * qz + qx * qy),
-            1.0 - 2.0 * (qy * qy + qz * qz)
-        )
+        robot_x, robot_y, robot_yaw = self.current_pose
 
         initial_distance = 1.0  # metres forward
 
@@ -982,64 +997,122 @@ class WaypointNavigator(Node):
             f"y={goal.pose.position.y:.2f}"
         )
 
+        if self.send_goal(goal, mode="normal"):
+            self.initial_forward_goal_sent = True
+            self.initial_goal_timer.cancel()
+    
+    def try_gps_waypoint(self) -> bool:
+        """Return True while an in-range GPS goal is active or accepted.
+
+        The YAML coordinates and current_pose are both in self.frame_id.
+        Returning False lets the caller continue normal lane/forward planning.
+        """
+        if self.current_pose is None or self.enter_recovery_mode:
+            return False
+
+        gps_active = self.goal_in_progress and self.navigation_mode == "gps"
+        if self.goal_in_progress and self.navigation_mode == "recovery":
+            return False
+
+        robot_x, robot_y, _ = self.current_pose
+
+        # Advance past landmarks already reached during normal navigation.
+        # An active GPS goal advances only when Nav2 reports success.
+        while self.current_gps_waypoint_index < len(self.gps_waypoints):
+            next_gps_waypoint = self.gps_waypoints[self.current_gps_waypoint_index]
+            distance_to_waypoint = math.hypot(
+                next_gps_waypoint[0] - robot_x,
+                next_gps_waypoint[1] - robot_y
+            )
+            if gps_active or distance_to_waypoint > self.gps_waypoint_radius_threshold:
+                break
+
+            self.get_logger().info(
+                f"GPS waypoint {self.current_gps_waypoint_index} already reached."
+            )
+            self.current_gps_waypoint_index += 1
+
+        waypoints_complete = self.current_gps_waypoint_index >= len(self.gps_waypoints)
+        if waypoints_complete or distance_to_waypoint > self.gps_distance_threshold:
+            if not waypoints_complete:
+                self.get_logger().info(
+                    f"GPS waypoint {self.current_gps_waypoint_index} is too far: "
+                    f"{distance_to_waypoint:.2f} m > {self.gps_distance_threshold:.2f} m. "
+                    "Using normal navigation.",
+                    throttle_duration_sec=5.0
+                )
+
+            if gps_active:
+                self.navigator.cancelTask()
+                self.goal_in_progress = False
+                self.active_goal_is_far = False
+                self.force_replan = False
+                self.last_sent_goal = None
+                self.latest_forward_goal = None
+                self.latest_forward_goal_is_far = False
+
+            if not self.goal_in_progress:
+                self.navigation_mode = "normal"
+            return False
+
+        if gps_active:
+            return True
+
+        if (
+            self.gps_suppressed_until is not None
+            and self.get_clock().now().nanoseconds / 1e9 < self.gps_suppressed_until
+        ):
+            return False
+
+        goal_pose = PoseStamped()
+        goal_pose.pose.position.x = next_gps_waypoint[0]
+        goal_pose.pose.position.y = next_gps_waypoint[1]
+        goal_pose.pose.position.z = next_gps_waypoint[2]
+
+        yaw = math.atan2(next_gps_waypoint[1] - robot_y,
+                         next_gps_waypoint[0] - robot_x)
+        goal_pose.pose.orientation.z = math.sin(yaw / 2.0)
+        goal_pose.pose.orientation.w = math.cos(yaw / 2.0)
+
+        if not self.send_goal(goal_pose, mode="gps", preempt=self.goal_in_progress):
+            self.gps_suppressed_until = (
+                self.get_clock().now().nanoseconds / 1e9 + self.gps_retry_delay
+            )
+            return False
+
+        self.latest_forward_goal = None
+        self.latest_forward_goal_is_far = False
         self.initial_forward_goal_sent = True
         self.initial_goal_timer.cancel()
+        return True
 
-        self.send_goal(
-            goal,
-            mode="normal"
-        )
-    
-    def try_gps_waypoint(self):
-        # Trying GPS waypoint navigation. This function is called when the robot is in GPS mode and needs to navigate towards the next GPS waypoint.
-        # self.navigation_mode = "gps"
-        next_gps_waypoint = self.gps_waypoints[self.current_gps_waypoint_index]  # Get the next GPS waypoint
+    def gps_target_bearing(self):
+        """
+        Bearing (map frame) from the robot to the next GPS waypoint, or None
+        when the pull is disabled, every waypoint has been reached, or the
+        robot is still on the lanes. Lanes count as ended only after they
+        have been seen once, so the start never steers off the track toward
+        a waypoint the course reaches the long way round.
+        """
+        if (
+            not self.enable_gps_heading_pull
+            or self.current_pose is None
+            or self.current_gps_waypoint_index >= len(self.gps_waypoints)
+            or self.last_any_lane_time is None
+        ):
+            return None
 
-        current_pose = self.current_pose
+        lanes_unseen_for = (
+            self.get_clock().now() - self.last_any_lane_time
+        ).nanoseconds / 1e9
 
-        # Check if the current pose is available
-        if current_pose is None:
-            self.get_logger().warn("Current pose is not available. Cannot navigate to GPS waypoint.")
-            return
-        
-        if current_pose.header.frame_id != self.frame_id:
-            self.get_logger().warn(
-                f"Current pose frame_id ({current_pose.header.frame_id}) does not match expected frame_id ({self.frame_id})."
-            )
-            return
+        if lanes_unseen_for < self.gps_heading_no_lane_timeout:
+            return None
 
-        # Calculate the distance to the next GPS waypoint
-        distance_to_waypoint = math.hypot(
-            next_gps_waypoint[0] - current_pose.pose.position.x,
-            next_gps_waypoint[1] - current_pose.pose.position.y
-        )
+        waypoint = self.gps_waypoints[self.current_gps_waypoint_index]
 
-        # Try sending the goal to the next GPS waypoint if the robot is within the distance threshold
-        if distance_to_waypoint <= self.gps_distance_threshold:
-            goal_pose = PoseStamped()
-            goal_pose.header.frame_id = self.frame_id
-            goal_pose.header.stamp = self.get_clock().now().to_msg()
-            goal_pose.pose.position.x = next_gps_waypoint[0]
-            goal_pose.pose.position.y = next_gps_waypoint[1]
-            goal_pose.pose.position.z = 0.0
-            goal_pose.pose.orientation.w = 1.0  # Facing forward
-
-            # self.send_goal(goal_pose, mode="gps")
-            self.get_logger().info(
-                f"Navigating to GPS waypoint {self.current_gps_waypoint_index}: "
-                f"x={goal_pose.pose.position.x:.2f}, "
-                f"y={goal_pose.pose.position.y:.2f}"
-            )
-        else:
-            self.get_logger().info(
-                f"Current pose is too far from GPS waypoint {self.current_gps_waypoint_index}: "
-                f"distance={distance_to_waypoint:.2f} m. "
-                f"Switching to normal navigation mode."
-            )
-            self.navigation_mode = "normal"
-        
-
-        return goal_pose
+        return math.atan2(waypoint[1] - self.robot_y,
+                          waypoint[0] - self.robot_x)
 
     def send_latest_forward_goal(self):
         """
@@ -1059,6 +1132,9 @@ class WaypointNavigator(Node):
 
         if not self.initial_forward_goal_sent:
             self.get_logger().debug("Initial forward goal not sent yet.")
+            return
+
+        if self.try_gps_waypoint():
             return
 
         if self.latest_forward_goal is None:
@@ -1415,11 +1491,8 @@ class WaypointNavigator(Node):
 
             return
         
-        if self.navigation_mode == "gps":
-            self.try_gps_waypoint()
+        if self.try_gps_waypoint():
             return
-        
-        gps_goal = self.try_gps_waypoint
 
         # If the robot is still navigating to a previous waypoint, do not
         # generate a new one - unless it is a normal goal and replanning is
@@ -1535,10 +1608,6 @@ class WaypointNavigator(Node):
             )
             return
 
-        # Direction directly in front of the robot.
-        forward_vx = math.cos(self.robot_yaw)
-        forward_vy = math.sin(self.robot_yaw)
-
         # Search farther ahead, but only send a nearby goal.
         search_distance = 2.5
         max_goal_distance = 1.5
@@ -1549,83 +1618,68 @@ class WaypointNavigator(Node):
         # This allows the robot to continue exploring without selecting a goal
         # several metres into completely unobserved space.
         max_unknown_distance = 0.8
-        unknown_distance = 0.0
 
-        step_size = resolution
-        number_of_steps = int(search_distance / step_size)
+        def march_forward(direction_yaw):
+            forward_vx = math.cos(direction_yaw)
+            forward_vy = math.sin(direction_yaw)
 
-        best_grid_x = robot_grid_x
-        best_grid_y = robot_grid_y
+            unknown_distance = 0.0
 
-        found_target = False
+            step_size = resolution
+            number_of_steps = int(search_distance / step_size)
 
-        # Minimum standoff a forward target must have from the nearest
-        # obstacle. Without this, the ray march below walks all the way to
-        # the last free cell that borders an obstacle and uses that as the
-        # goal -- putting the waypoint right against the obstacle instead of
-        # adjacent to it with a safety margin. robot_radius (0.45) +
-        # inflation_radius (0.1) + a small buffer.
-        min_forward_clearance = 0.70
+            best_grid_x = robot_grid_x
+            best_grid_y = robot_grid_y
 
-        for i in range(1, number_of_steps + 1):
-            current_distance = i * step_size
+            found_target = False
 
-            check_world_x = (
-                self.robot_x
-                + forward_vx * current_distance
-            )
-            check_world_y = (
-                self.robot_y
-                + forward_vy * current_distance
-            )
+            # Minimum standoff a forward target must have from the nearest
+            # obstacle. Without this, the ray march below walks all the way to
+            # the last free cell that borders an obstacle and uses that as the
+            # goal -- putting the waypoint right against the obstacle instead of
+            # adjacent to it with a safety margin. robot_radius (0.45) +
+            # inflation_radius (0.1) + a small buffer.
+            min_forward_clearance = 0.70
 
-            check_grid_x = int(
-                (check_world_x - origin_x) / resolution
-            )
-            check_grid_y = int(
-                (check_world_y - origin_y) / resolution
-            )
+            for i in range(1, number_of_steps + 1):
+                current_distance = i * step_size
 
-            # Stop if the ray leaves the occupancy grid.
-            if not (
-                0 <= check_grid_x < width
-                and 0 <= check_grid_y < height
-            ):
-                break
-
-            cell_value = snapshot.grid[
-                check_grid_y,
-                check_grid_x
-            ]
-
-            if cell_value == 0:
-                # Confirmed free space, but only accept it as the goal if it
-                # actually stands off from the nearest obstacle by
-                # min_forward_clearance. Otherwise leave best_grid_x/y at
-                # whatever it was last set to -- the last cell that *did*
-                # have clearance (adjacent to the obstacle, not touching it),
-                # or the robot's own cell if nothing along the ray ever had
-                # enough clearance (effectively "stay behind it").
-                cell_clearance = map_clearance(
-                    snapshot,
-                    check_world_x,
-                    check_world_y,
-                    self.unknown_clearance_allowance
+                check_world_x = (
+                    self.robot_x
+                    + forward_vx * current_distance
+                )
+                check_world_y = (
+                    self.robot_y
+                    + forward_vy * current_distance
                 )
 
-                if cell_clearance >= min_forward_clearance:
-                    best_grid_x = check_grid_x
-                    best_grid_y = check_grid_y
-                    found_target = True
+                check_grid_x = int(
+                    (check_world_x - origin_x) / resolution
+                )
+                check_grid_y = int(
+                    (check_world_y - origin_y) / resolution
+                )
 
-                # Reset because we have returned to known free space.
-                unknown_distance = 0.0
+                # Stop if the ray leaves the occupancy grid.
+                if not (
+                    0 <= check_grid_x < width
+                    and 0 <= check_grid_y < height
+                ):
+                    break
 
-            elif cell_value == -1:
-                # Unknown space.
-                unknown_distance += step_size
+                cell_value = snapshot.grid[
+                    check_grid_y,
+                    check_grid_x
+                ]
 
-                if unknown_distance <= max_unknown_distance:
+                if cell_value == 0:
+                    # Confirmed free space, but only accept it as the goal if it
+                    # actually stands off from the nearest obstacle by
+                    # min_forward_clearance. Otherwise leave best_grid_x/y at
+                    # whatever it was last set to -- the last cell that *did*
+                    # have clearance (adjacent to the obstacle, not touching it),
+                    # or the robot's own cell if nothing along the ray ever had
+                    # enough clearance (effectively "stay behind it").
                     cell_clearance = map_clearance(
                         snapshot,
                         check_world_x,
@@ -1637,11 +1691,57 @@ class WaypointNavigator(Node):
                         best_grid_x = check_grid_x
                         best_grid_y = check_grid_y
                         found_target = True
+
+                    # Reset because we have returned to known free space.
+                    unknown_distance = 0.0
+
+                elif cell_value == -1:
+                    # Unknown space.
+                    unknown_distance += step_size
+
+                    if unknown_distance <= max_unknown_distance:
+                        cell_clearance = map_clearance(
+                            snapshot,
+                            check_world_x,
+                            check_world_y,
+                            self.unknown_clearance_allowance
+                        )
+
+                        if cell_clearance >= min_forward_clearance:
+                            best_grid_x = check_grid_x
+                            best_grid_y = check_grid_y
+                            found_target = True
+                    else:
+                        break
+
                 else:
+                    # Positive values represent occupied/probably occupied cells.
                     break
 
-            else:
-                # Positive values represent occupied/probably occupied cells.
+            return found_target, best_grid_x, best_grid_y
+
+        # Aim along the bearing to the next GPS waypoint, turning at most
+        # gps_heading_max_turn from the current heading, and fan out
+        # around it until a direction has room for a goal. Straight ahead
+        # is the last resort, and the only direction without a waypoint.
+        gps_bearing = self.gps_target_bearing()
+        directions = [self.robot_yaw]
+
+        if gps_bearing is not None:
+            aim_yaw = turn_toward(
+                self.robot_yaw, gps_bearing, self.gps_heading_max_turn)
+            directions = [
+                aim_yaw + math.radians(offset_deg)
+                for offset_deg in (0, -15, 15, -30, 30)
+            ] + directions
+
+        for direction_yaw in directions:
+            found_target, best_grid_x, best_grid_y = march_forward(
+                direction_yaw)
+
+            if found_target and math.hypot(
+                best_grid_x - robot_grid_x, best_grid_y - robot_grid_y
+            ) * resolution >= minimum_goal_distance:
                 break
 
         if not found_target:
@@ -1811,6 +1911,9 @@ class WaypointNavigator(Node):
 
         left_points, right_points = self.drop_lane_points_on_obstacles(
             left_points, right_points)
+
+        if len(left_points) >= 2 or len(right_points) >= 2:
+            self.last_any_lane_time = self.get_clock().now()
 
         self.get_logger().info(
             f"Left points: {len(left_points)}, "
@@ -3499,7 +3602,7 @@ class WaypointNavigator(Node):
         completed_was_far = self.active_goal_is_far
 
         self.goal_in_progress = False
-        self.navigation_mode = None
+        self.navigation_mode = "normal"
         self.active_goal_is_far = False
 
         self.latest_forward_goal = None
@@ -3526,13 +3629,28 @@ class WaypointNavigator(Node):
                 self.no_candidate_since = None
                 self.relaxed_recovery_attempted = False
 
+            elif completed_mode == "gps":
+                self.get_logger().info(
+                    f"GPS waypoint {self.current_gps_waypoint_index} reached."
+                )
+                self.current_gps_waypoint_index += 1
+
             return
 
         # ------------------------------------------------------
         # Navigation failed
         # ------------------------------------------------------
 
-        if completed_mode == "normal" and completed_was_far:
+        if completed_mode == "gps":
+            self.get_logger().warn(
+                f"GPS navigation failed. Result: {result}. Using normal "
+                f"navigation for {self.gps_retry_delay:.1f} s before retrying."
+            )
+            self.gps_suppressed_until = (
+                self.get_clock().now().nanoseconds / 1e9 + self.gps_retry_delay
+            )
+
+        elif completed_mode == "normal" and completed_was_far:
             # Usually the planner could not reach it (it was sent without a
             # getPath check while another goal was active). Not a reason to
             # recover: drop to short goals for a while instead.
