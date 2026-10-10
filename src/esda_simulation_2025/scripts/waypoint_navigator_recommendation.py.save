@@ -854,8 +854,6 @@ class WaypointNavigator(Node):
             latched_qos
         )
 
-        self.navigation_mode = "normal"  # Current navigation mode: "normal", "recovery", or "gps"
-
         self.publish_keepout_filter_info()
 
         waypoints = read_gps_waypoints.read_gps_waypoints_func("src/esda_simulation_2025/waypoints/igvc_waypoints.yaml")
@@ -865,8 +863,6 @@ class WaypointNavigator(Node):
 
         self.current_gps_waypoint_index = 0  # Index of the current GPS waypoint. Should be 4
         self.gps_waypoint_radius_threshold = 0.5  # Distance threshold to consider a GPS waypoint reached
-        self.gps_distance_threshold = 10.0  # Distance threshold to switch to GPS navigation mode. Initially try GPS navigation, but switch to normal mode when the robot is not within this distance of the next GPS waypoint.
-
 
     def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False,
                   is_far=False):
@@ -989,57 +985,18 @@ class WaypointNavigator(Node):
             goal,
             mode="normal"
         )
-    
-    def try_gps_waypoint(self):
-        # Trying GPS waypoint navigation. This function is called when the robot is in GPS mode and needs to navigate towards the next GPS waypoint.
-        # self.navigation_mode = "gps"
+
+    def pull_towards_gps_waypoints(self):
+        """
+        Docstring for pull_towards_gps_waypoints function
+        
+        :param self: Description
+        """
+
         next_gps_waypoint = self.gps_waypoints[self.current_gps_waypoint_index]  # Get the next GPS waypoint
 
-        current_pose = self.current_pose
 
-        # Check if the current pose is available
-        if current_pose is None:
-            self.get_logger().warn("Current pose is not available. Cannot navigate to GPS waypoint.")
-            return
-        
-        if current_pose.header.frame_id != self.frame_id:
-            self.get_logger().warn(
-                f"Current pose frame_id ({current_pose.header.frame_id}) does not match expected frame_id ({self.frame_id})."
-            )
-            return
-
-        # Calculate the distance to the next GPS waypoint
-        distance_to_waypoint = math.hypot(
-            next_gps_waypoint[0] - current_pose.pose.position.x,
-            next_gps_waypoint[1] - current_pose.pose.position.y
-        )
-
-        # Try sending the goal to the next GPS waypoint if the robot is within the distance threshold
-        if distance_to_waypoint <= self.gps_distance_threshold:
-            goal_pose = PoseStamped()
-            goal_pose.header.frame_id = self.frame_id
-            goal_pose.header.stamp = self.get_clock().now().to_msg()
-            goal_pose.pose.position.x = next_gps_waypoint[0]
-            goal_pose.pose.position.y = next_gps_waypoint[1]
-            goal_pose.pose.position.z = 0.0
-            goal_pose.pose.orientation.w = 1.0  # Facing forward
-
-            # self.send_goal(goal_pose, mode="gps")
-            self.get_logger().info(
-                f"Navigating to GPS waypoint {self.current_gps_waypoint_index}: "
-                f"x={goal_pose.pose.position.x:.2f}, "
-                f"y={goal_pose.pose.position.y:.2f}"
-            )
-        else:
-            self.get_logger().info(
-                f"Current pose is too far from GPS waypoint {self.current_gps_waypoint_index}: "
-                f"distance={distance_to_waypoint:.2f} m. "
-                f"Switching to normal navigation mode."
-            )
-            self.navigation_mode = "normal"
-        
-
-        return goal_pose
+        pass
 
     def send_latest_forward_goal(self):
         """
@@ -1414,12 +1371,6 @@ class WaypointNavigator(Node):
             )
 
             return
-        
-        if self.navigation_mode == "gps":
-            self.try_gps_waypoint()
-            return
-        
-        gps_goal = self.try_gps_waypoint
 
         # If the robot is still navigating to a previous waypoint, do not
         # generate a new one - unless it is a normal goal and replanning is
@@ -3643,7 +3594,7 @@ class WaypointNavigator(Node):
         if (
             len(self.lane_centreline) < 2
             or self.last_lane_update_time is None
-            or (
+gps            or (
                 self.get_clock().now() - self.last_lane_update_time
             ).nanoseconds / 1e9 > self.lane_centreline_timeout
         ):
