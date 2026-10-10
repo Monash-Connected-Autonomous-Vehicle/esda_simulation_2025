@@ -805,6 +805,12 @@ class WaypointNavigator(Node):
         self.stuck_nudge_timeout = 5.0  # seconds
         self.stuck_nudge_distance = 0.80  # metres
 
+        # When the nudge finds no clear heading the robot is in a dead end
+        # (both the nudge and the recovery search only look forward), so it
+        # reverses with Nav2's BackUp behaviour, then enters recovery.
+        self.dead_end_backup_distance = 0.6  # metres
+        self.dead_end_backup_speed = 0.15  # m/s
+
         # Subscribe to the global costmap.
         # Nav2 publishes nav_msgs/OccupancyGrid here (nav2_msgs/Costmap goes to
         # .../costmap_raw), and the publisher is transient-local. always_send_
@@ -1011,7 +1017,7 @@ class WaypointNavigator(Node):
             return False
 
         gps_active = self.goal_in_progress and self.navigation_mode == "gps"
-        if self.goal_in_progress and self.navigation_mode == "recovery":
+        if self.goal_in_progress and self.navigation_mode in ("recovery", "backup"):
             return False
 
         robot_x, robot_y, _ = self.current_pose
@@ -1154,6 +1160,9 @@ class WaypointNavigator(Node):
                 if nudge_goal is not None:
                     self.send_goal(nudge_goal, mode="normal")
                     return
+
+                self.back_out_of_dead_end()
+                return
 
             self.get_logger().debug("Nothing sent to Nav2: latest_forward_goal is None.")
             return
@@ -1381,7 +1390,7 @@ class WaypointNavigator(Node):
         if best_x is None:
             self.get_logger().warn(
                 f"Stuck nudge: no nearby direction cleared "
-                f"{min_nudge_clearance:.2f} m; staying put."
+                f"{min_nudge_clearance:.2f} m."
             )
             return None
 
@@ -1407,6 +1416,33 @@ class WaypointNavigator(Node):
         )
 
         return goal
+
+    def back_out_of_dead_end(self):
+        """
+        Reverse out of a dead end with Nav2's BackUp behaviour. BackUp
+        checks the local costmap behind the robot and stops short of a
+        collision. check_navigation_complete then starts recovery, which
+        looks for a different opening from the new pose; without that the
+        straight-ahead forward goal would lead straight back in.
+        """
+        self.get_logger().warn(
+            f"Dead end: backing up "
+            f"{self.dead_end_backup_distance:.2f} m."
+        )
+
+        if not self.navigator.backup(
+            backup_dist=self.dead_end_backup_distance,
+            backup_speed=self.dead_end_backup_speed,
+            time_allowance=10
+        ):
+            self.get_logger().error("BackUp rejected by Nav2.")
+            return
+
+        self.goal_in_progress = True
+        self.navigation_mode = "backup"
+        self.active_goal_is_far = False
+        self.last_sent_goal = None
+        self.last_goal_dispatch_time = self.get_clock().now()
 
     def odometry_callback(self, msg: Odometry):
         self.current_velocity = msg.twist.twist.linear
@@ -3582,7 +3618,8 @@ class WaypointNavigator(Node):
         # Get feedback while the task is active
         feedback = self.navigator.getFeedback()
 
-        if feedback is not None:
+        # BackUp feedback carries distance_traveled, not distance_remaining.
+        if feedback is not None and self.navigation_mode != "backup":
             self.get_logger().info(
                 f"NAV2 FEEDBACK | "
                 f"mode={self.navigation_mode}, "
@@ -3607,6 +3644,18 @@ class WaypointNavigator(Node):
 
         self.latest_forward_goal = None
         self.last_sent_goal = None
+
+        if completed_mode == "backup":
+            # Succeeded or stopped short by an obstacle behind: either way
+            # look for a new opening from wherever the robot ended up.
+            self.get_logger().warn(
+                f"Dead-end backup finished. Result: {result}. "
+                f"Entering recovery mode."
+            )
+
+            self.enter_recovery_mode = True
+            self.robot_recovery()
+            return
 
         if result == TaskResult.SUCCEEDED:
 
