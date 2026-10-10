@@ -811,6 +811,19 @@ class WaypointNavigator(Node):
         self.dead_end_backup_distance = 0.6  # metres
         self.dead_end_backup_speed = 0.15  # m/s
 
+        # Direction of recent forward progress (see update_progress_heading).
+        # The nudge, recovery and forward searches all fan out from the
+        # CURRENT heading, so a few sideways steps around an obstacle used to
+        # add up to a U-turn back down the course. Their goals must now stay
+        # within max_detour_angle of this heading.
+        self.progress_heading = None
+        self.progress_anchor = None
+        self.progress_anchor_distance = 2.0  # metres
+        self.max_detour_angle = math.radians(100.0)
+        # True while a nudge, recovery or backup is running. Those moves
+        # neither update the heading nor count towards the next update.
+        self.detouring = False
+
         # Subscribe to the global costmap.
         # Nav2 publishes nav_msgs/OccupancyGrid here (nav2_msgs/Costmap goes to
         # .../costmap_raw), and the publisher is transient-local. always_send_
@@ -910,7 +923,7 @@ class WaypointNavigator(Node):
 
 
     def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False,
-                  is_far=False):
+                  is_far=False, detour=False):
         """
         Send a Nav2 goal using BasicNavigator.
 
@@ -955,6 +968,7 @@ class WaypointNavigator(Node):
 
         self.goal_in_progress = True
         self.navigation_mode = mode
+        self.detouring = detour or mode == "recovery"
         self.active_goal_is_far = is_far
         self.force_replan = False
         self.last_sent_goal = goal_pose
@@ -1158,7 +1172,7 @@ class WaypointNavigator(Node):
                 nudge_goal = self.find_stuck_nudge_goal()
 
                 if nudge_goal is not None:
-                    self.send_goal(nudge_goal, mode="normal")
+                    self.send_goal(nudge_goal, mode="normal", detour=True)
                     return
 
                 self.back_out_of_dead_end()
@@ -1363,6 +1377,9 @@ class WaypointNavigator(Node):
         for offset_deg in heading_offsets_deg:
             candidate_yaw = self.robot_yaw + math.radians(offset_deg)
 
+            if not self.heading_allowed(candidate_yaw):
+                continue
+
             candidate_x = (
                 self.robot_x
                 + self.stuck_nudge_distance * math.cos(candidate_yaw)
@@ -1440,6 +1457,7 @@ class WaypointNavigator(Node):
 
         self.goal_in_progress = True
         self.navigation_mode = "backup"
+        self.detouring = True
         self.active_goal_is_far = False
         self.last_sent_goal = None
         self.last_goal_dispatch_time = self.get_clock().now()
@@ -1515,8 +1533,38 @@ class WaypointNavigator(Node):
         # while a goal is active - breadcrumbs would only ever be dropped
         # between goals, making a fixed spacing impossible to honour.
         self.update_travel_history()
+        self.update_progress_heading()
 
         return True
+
+    def update_progress_heading(self):
+        """
+        Re-measure progress_heading every progress_anchor_distance metres
+        of travel, as the straight line from the previous anchor. Detours
+        restart the measurement so they never become the new direction.
+        """
+        if self.detouring or self.enter_recovery_mode:
+            self.progress_anchor = None
+            return
+
+        if self.progress_anchor is None:
+            self.progress_anchor = (self.robot_x, self.robot_y)
+            return
+
+        dx = self.robot_x - self.progress_anchor[0]
+        dy = self.robot_y - self.progress_anchor[1]
+
+        if math.hypot(dx, dy) >= self.progress_anchor_distance:
+            self.progress_heading = math.atan2(dy, dx)
+            self.progress_anchor = (self.robot_x, self.robot_y)
+
+    def heading_allowed(self, yaw: float) -> bool:
+        """Whether yaw stays within max_detour_angle of progress_heading."""
+        return (
+            self.progress_heading is None
+            or abs(angle_difference(yaw, self.progress_heading))
+            <= self.max_detour_angle
+        )
 
     def update_forward_goal(self):
         if self.enter_recovery_mode:
@@ -1770,6 +1818,9 @@ class WaypointNavigator(Node):
                 aim_yaw + math.radians(offset_deg)
                 for offset_deg in (0, -15, 15, -30, 30)
             ] + directions
+
+        directions = [d for d in directions if self.heading_allowed(d)]
+        found_target = False
 
         for direction_yaw in directions:
             found_target, best_grid_x, best_grid_y = march_forward(
@@ -3167,6 +3218,10 @@ class WaypointNavigator(Node):
                     + angle_offset
                 )
 
+                # No goals back the way the robot came.
+                if not self.heading_allowed(candidate_yaw):
+                    continue
+
                 candidate_x = (
                     self.robot_x
                     + distance * math.cos(candidate_yaw)
@@ -3619,7 +3674,10 @@ class WaypointNavigator(Node):
         feedback = self.navigator.getFeedback()
 
         # BackUp feedback carries distance_traveled, not distance_remaining.
-        if feedback is not None and self.navigation_mode != "backup":
+        # Check the message rather than navigation_mode: BasicNavigator
+        # keeps the last feedback until the next goal sends its own, so a
+        # goal sent right after a backup can still see BackUp feedback.
+        if hasattr(feedback, "distance_remaining"):
             self.get_logger().info(
                 f"NAV2 FEEDBACK | "
                 f"mode={self.navigation_mode}, "
@@ -4072,6 +4130,10 @@ class WaypointNavigator(Node):
             f"Recovery has produced nothing for {elapsed_time:.0f} s. "
             f"Releasing recovery lock and resuming normal waypoint generation."
         )
+
+        # Truly boxed in: allow every direction, including back the way it
+        # came, until the robot has made fresh progress.
+        self.progress_heading = None
 
         self.enter_recovery_mode = False
         self.no_candidate_since = None
