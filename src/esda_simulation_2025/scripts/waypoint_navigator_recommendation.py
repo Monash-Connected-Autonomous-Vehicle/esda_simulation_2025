@@ -820,6 +820,14 @@ class WaypointNavigator(Node):
         self.progress_anchor = None
         self.progress_anchor_distance = 2.0  # metres
         self.max_detour_angle = math.radians(100.0)
+        # find_far_recovery_goal: where to look past a blockage, how many
+        # candidates to check with getPath, and the path / straight-line
+        # limit (looser than far_goal_max_detour, as routing round is the aim).
+        self.far_recovery_distances = [3.0, 4.0, 5.0, 6.0, 8.0]
+        self.far_recovery_lateral_offsets = [
+            -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]
+        self.far_recovery_path_checks = 6
+        self.far_recovery_max_detour = 2.5
         # True while a nudge, recovery or backup is running. Those moves
         # neither update the heading nor count towards the next update.
         self.detouring = False
@@ -3078,6 +3086,11 @@ class WaypointNavigator(Node):
 
         recovery_goal = self.find_front_recovery_goal()
 
+        # Nothing clear within 1.5 m: ask the planner to route past the
+        # obstacles instead.
+        if recovery_goal is None:
+            recovery_goal = self.find_far_recovery_goal()
+
         if recovery_goal is None:
             self.get_logger().error(
                 "No reachable recovery goal found."
@@ -3112,6 +3125,95 @@ class WaypointNavigator(Node):
             recovery_goal,
             mode="recovery"
         )
+
+    def find_far_recovery_goal(self):
+        """
+        A goal several metres past whatever blocks the robot, for when the
+        1.5 m recovery search finds nothing (e.g. boxed in between a barrel
+        cluster and a lane line). Laid out along progress_heading, so it
+        continues the course, and confirmed with Nav2 getPath - recovery
+        runs with no goal active, so the planner is free. The detour limit
+        is looser than for far goals: going around a cluster is the point.
+        """
+        snapshot = self.map_snapshot
+
+        if snapshot is None or self.current_pose is None:
+            return None
+
+        heading = (
+            self.progress_heading
+            if self.progress_heading is not None
+            else self.robot_yaw
+        )
+
+        candidates = far_goal_candidates(
+            snapshot,
+            self.robot_x,
+            self.robot_y,
+            heading,
+            self.far_recovery_distances,
+            self.far_recovery_lateral_offsets,
+            self.far_goal_min_clearance,
+            self.unknown_clearance_allowance,
+            self.published_travel_marks if self.enable_travel_keepout else (),
+            self.travel_mark_radius
+        )
+
+        candidates = [
+            candidate for candidate in candidates
+            if self.far_goal_cost_ok(candidate[1], candidate[2])
+        ]
+
+        if not candidates:
+            self.get_logger().warn("FAR RECOVERY | no map candidates.")
+            return None
+
+        def make_goal(x, y, yaw):
+            goal = PoseStamped()
+            goal.header.frame_id = self.frame_id
+            goal.header.stamp = self.get_clock().now().to_msg()
+            goal.pose.position.x = x
+            goal.pose.position.y = y
+            goal.pose.orientation.z = math.sin(yaw / 2.0)
+            goal.pose.orientation.w = math.cos(yaw / 2.0)
+            return goal
+
+        start_pose = make_goal(self.robot_x, self.robot_y, self.robot_yaw)
+
+        for score, x, y, distance, lateral, clearance in (
+            candidates[:self.far_recovery_path_checks]
+        ):
+            goal = make_goal(x, y, heading)
+
+            try:
+                path = self.navigator.getPath(start_pose, goal)
+            except Exception as ex:
+                self.get_logger().warn(f"FAR RECOVERY | getPath failed: {ex}")
+                continue
+
+            if path is None or len(path.poses) == 0:
+                continue
+
+            path_length = polyline_length([
+                (p.pose.position.x, p.pose.position.y) for p in path.poses
+            ])
+            straight = math.hypot(x - self.robot_x, y - self.robot_y)
+
+            if path_length > self.far_recovery_max_detour * max(straight, 1e-3):
+                continue
+
+            self.get_logger().warn(
+                f"FAR RECOVERY | distance={distance:.1f}, "
+                f"lateral={lateral:+.1f}, clearance={clearance:.2f}, "
+                f"path={path_length:.1f} m"
+            )
+            return goal
+
+        self.get_logger().warn(
+            f"FAR RECOVERY | none of {min(len(candidates), self.far_recovery_path_checks)} "
+            f"candidates has a path within {self.far_recovery_max_detour}x."
+        )
+        return None
 
     def retry_recovery_goal(self):
         self.recovery_retry_timer.cancel()
