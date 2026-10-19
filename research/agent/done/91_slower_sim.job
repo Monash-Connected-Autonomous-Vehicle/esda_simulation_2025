@@ -1,0 +1,22 @@
+# RTF 0.25 did what the arithmetic said it would. Paint carrots went 14 -> 35,
+# the stall fraction 90% -> 72%, and speed in SIM terms 0.047 -> 0.134 m/s.
+# Frames per simulated second scaled by 4.4x against a predicted 4x, which is
+# the clearest sign yet that render throughput, not the model, is the limit.
+#
+# So take it further: RTF 0.1 should buy another ~2.5x. 2400 s of wall clock
+# yields ~240 s of sim, which at the improving speed is comfortably past the
+# ~85 m a lap of this oval needs.
+#
+# This is a measurement harness, not the competition setup. Nothing here
+# makes the real vehicle faster -- it makes the laptop stop lying about what
+# the robot can see.
+set -uo pipefail
+cd "$ESDA_HOME"
+W=esda_simulation_2025/worlds
+sed 's|<real_time_factor>1.0</real_time_factor>|<real_time_factor>0.1</real_time_factor>|' \
+    "$W/igvc_oval_test.sdf" > "$W/igvc_oval_crawl_test.sdf"
+grep -c 'real_time_factor>0.1' "$W/igvc_oval_crawl_test.sdf"
+bash setup_wsl.sh --sync > /tmp/sync_crawl.log 2>&1 || { tail -20 /tmp/sync_crawl.log; exit 1; }
+./demo.sh lap igvc_oval_crawl_test --seconds 2400 \
+  --note "real_time_factor 0.1 -- 10x render budget per simulated second" \
+  -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8

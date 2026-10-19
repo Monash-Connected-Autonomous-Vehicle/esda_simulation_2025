@@ -1,0 +1,45 @@
+# LANE ONLY, and FIVE repeats because three is not enough any more.
+#
+# WHY FIVE. Tonight's results are bimodal, not noisy-around-a-mean: the robot
+# either holds the course and runs to 80 m, or loses it inside 15 m.
+#
+#   106  (camera geometry)   26.2 / 36.8 / 27.8   median 27.8
+#   106b (lane-side check)   15.2 / 81.4 / 14.6   median 15.2
+#
+# 106b produced the best run this project has recorded AND two of the worst
+# since morning. With n=3 and a 14.6-81.4 spread there is no way to tell
+# "helps sometimes" from "hurts and got lucky once". Five repeats at least
+# counts how often each mode happens, which is the quantity that actually
+# matters: this is a question about a FRACTION, not an average.
+#
+# WHAT CHANGED: the vision node publishes lane only. No cone class, no
+# drivable. The lidar owns obstacles, which it already did -- /scan feeds the
+# VoxelLayer locally and the ObstacleLayer globally, and cone_gate already
+# discarded any vision cone that no lidar return confirmed. The system has
+# treated vision cones as a guess and lidar as the measurement from the
+# start; this deletes the guess rather than gating it. Deleting the source
+# of the 545-points-from-one-barrel smear beats working around it.
+#
+# Safe on these courses: construction_barrel.dae stands about 0.9 m against
+# a lidar ring at 0.5475 m. Anything SHORTER than the ring is now invisible,
+# with no vision backstop -- check the real IGVC obstacle spec before this
+# goes on hardware, and if there is anything low, put a few vertical rows
+# back in lidar.xacro (3 rows keeps most of this morning's render saving).
+#
+# The lane-side check stays on, since that is the configuration we are now
+# choosing to run rather than a variable under test.
+#
+# READ: the median AND how many of the five held the course. Report both.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync108.log 2>&1 || { tail -20 /tmp/sync108.log; exit 1; }
+for i in 1 2 3 4 5; do
+  echo "========= igvc_oval_slow_test, LANE ONLY, repeat $i of 5 ========="
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 --lane-only \
+    --note "lane only + lane-side check $i/5" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8 --fov-deg 90
+done
+echo "=== confirm the vision node really ran lane-only ==="
+grep -h "active classes" logs/run_igvc_oval_slow_test_*/vision.log 2>/dev/null | tail -5
+echo "=== the five, plus tonight's for comparison ==="
+grep -H -E "path length|stalls " logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -30

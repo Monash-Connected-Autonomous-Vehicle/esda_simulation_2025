@@ -9,3 +9,14 @@ image.png
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# research artifacts
+research/build/
+research/install/
+research/log/
+research/logs/
+research/models/
+research/recordings/
+research/runs/
+*.pt
+*.mp4

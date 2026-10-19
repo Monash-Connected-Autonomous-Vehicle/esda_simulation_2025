@@ -1,0 +1,26 @@
+# STOP TRUSTING SINGLE RUNS.
+#
+# Two runs of the IDENTICAL configuration -- same world, same spawn, same
+# RTF 0.25, same driver flags -- gave 33.2 m at 72% stalled and 14.2 m at
+# 95% stalled. The run-to-run spread is as large as every effect measured
+# tonight, which means the comparisons that read as 2x improvements are
+# inside the noise. The exceptions are the categorical ones: zero paint
+# carrots to 13 of 16 after the spawn fix, and the structural bugs, which
+# were diagnosed from logs rather than from distances.
+#
+# The machine's render throughput is what varies -- Gazebo holds its target
+# RTF by dropping sensor frames, so whatever else the laptop is doing (or
+# how hot it is after six hours flat out) changes how much the robot sees.
+#
+# So: three runs of the same thing, and from now on quote the median and the
+# spread, never a single number.
+set -uo pipefail
+cd "$ESDA_HOME"
+for i in 1 2 3; do
+  echo "================= repeat $i of 3 ================="
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 \
+    --note "repeat $i/3, RTF 0.25, identical settings -- measuring spread" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done
+echo "=== all three ==="
+grep -H -E 'path length|stalls' logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -12

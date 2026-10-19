@@ -1,0 +1,84 @@
+# WHY THE RECALL NUMBER IS NOT YET TRUSTWORTHY, AND WHAT WOULD FIX IT.
+#
+# Job 110 produced the project's first recall figure -- 0.174 overall, 0.243 in
+# the 1-2 m band where the carrots land. Then the overlays were looked at, and
+# they say the number is a floor, not a measurement:
+#
+#   frame 0    the magenta ground truth sits ON the painted line. Odom is zero
+#              there, so the pose is exactly the spawn: the spawn fix and the
+#              texture fix both landed.
+#   frame 330  the magenta runs parallel to the paint but roughly half a metre
+#              off, converging at the horizon and separating toward the camera
+#              -- the signature of a lateral pose error, not a bad projection.
+#   frames 480, 540, 600, 660 are BYTE-IDENTICAL. The robot wedged for the last
+#              third of the capture, so 216 of the 672 frames are one frozen
+#              pose repeated, and they all score against whatever that one view
+#              contained.
+#
+# Aligned at the start, drifted by the middle: that is accumulating wheel
+# odometry, and this run stalled repeatedly. Ignition's DiffDrive integrates
+# joint motion, so a robot whose wheels turn while it does not move banks
+# phantom distance. Misaligned labels can only push recall DOWN -- a prediction
+# that lands on real paint scores as a false positive when the label is 0.5 m
+# away -- so the true recall is higher than 0.174 by an unknown margin. The
+# honest statement today is that we do not have a trustworthy recall number
+# yet; we have a floor, and a named reason.
+#
+# THIS JOB DOES TWO SMALL THINGS, NO LAP RUNS, A FEW MINUTES.
+#
+# 1. Rescores the existing dataset with --dedup, and reports a statistic that
+#    needs no ground truth at all: in how many frames the model predicted ANY
+#    lane pixels. That separates "the model is blind at this camera" from "the
+#    labels are in the wrong place" -- and it is the one number today's data
+#    can support honestly.
+#
+# 2. Finds out whether Gazebo already publishes a ground-truth pose we can
+#    bridge. If it does, capture_labelled.py should use it instead of /odom and
+#    the drift disappears at the source. This PROBES rather than patches: the
+#    bridge list is guesswork from here, and this project has already spent a
+#    night on a confidently wrong guess about /dev/shm.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync110b.log 2>&1 || { tail -20 /tmp/sync110b.log; exit 1; }
+
+echo "=== 1. rescore, de-duplicated, with the alignment-free statistic ==="
+DS="$(ls -1dt "$HOME"/esda_datasets/rescore_* 2>/dev/null | head -1)"
+[ -n "$DS" ] || { echo "no rescore dataset -- run 110 first"; exit 1; }
+echo "dataset: $DS"
+python3 vision/eval_recall.py --data "$DS" --split val --dedup \
+        --weights "$HOME/esda_models/lane_seg.pt" --conf 0.35 \
+        2>&1 | tee "$ESDA_HOME/logs/eval_recall_dedup.txt"
+
+echo
+echo "=== 2. is there a ground-truth pose to bridge? ==="
+bash demo.sh up --no-rviz --world igvc_oval_slow_test >/dev/null 2>&1 || true
+sleep 5
+
+echo "--- gz topics mentioning pose ---"
+( ign topic -l 2>/dev/null || gz topic -l 2>/dev/null ) | grep -iE "pose|odom" | sed 's/^/   /'
+
+echo "--- ROS topics mentioning pose or odom ---"
+ros2 topic list 2>/dev/null | grep -iE "pose|odom|tf" | sed 's/^/   /'
+
+echo "--- what publishes /tf, and does it carry a world->base_link ---"
+ros2 topic info /tf 2>/dev/null | sed 's/^/   /'
+timeout 5 ros2 topic echo /tf --once 2>/dev/null | head -25 | sed 's/^/   /'
+
+echo "--- one sample from each gz pose topic (names tell us which model) ---"
+for t in $( ( ign topic -l 2>/dev/null || gz topic -l 2>/dev/null ) | grep -iE "pose" | head -4 ); do
+  echo "   >> $t"
+  ( timeout 4 ign topic -e -t "$t" 2>/dev/null || timeout 4 gz topic -e -t "$t" 2>/dev/null ) \
+    | head -20 | sed 's/^/      /'
+done
+
+echo "--- /odom one sample, for comparison ---"
+timeout 5 ros2 topic echo /odom --once 2>/dev/null | head -18 | sed 's/^/   /'
+
+stop_all >/dev/null 2>&1 || true
+echo
+echo "READ: if a gz topic carries the robot model's world pose, bridge it and"
+echo "point capture_labelled.py at it with a --pose-topic flag. Ground truth in"
+echo "a simulator should never be integrated from wheels; it is sitting right"
+echo "there in the physics engine. Then recapture (short, and check it did not"
+echo "wedge) and the recall number becomes one we can quote."

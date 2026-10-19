@@ -1,0 +1,18 @@
+state:    running
+job:      112_igvc_demo_recorded
+updated:  2026-10-14 18:00:47
+pid:      491
+queued:   0
+done:     44
+--- queue ---
+--- last 10 finished ---
+  110d_shadow_stress  ->  exit=0 after 78s
+  110bb_classic_vs_yolo  ->  exit=0 after 18s
+  110b_pose_bench  ->  exit=0 after 708s
+  111a_lane_only_x3  ->  exit=0 after 4058s
+  110_recall_rescore  ->  exit=0 after 18s
+  109_accuracy_baseline  ->  exit=0 after 692s
+  108_lane_only_x5  ->  exit=143 after 5400s
+  106b_lane_side_x3  ->  exit=0 after 4052s
+  106_camera_geometry_x3  ->  exit=0 after 4054s
+  103_lane_watch  ->  exit=141 after 450s

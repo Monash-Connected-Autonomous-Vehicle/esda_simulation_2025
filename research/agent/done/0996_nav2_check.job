@@ -1,0 +1,43 @@
+# Three minutes to prove Nav2 configures, before three hours are spent on it.
+#
+# The last four bring-ups all died in the same place, and the reason was in
+# nav2.log all along:
+#
+#   [controller_server] ERROR Original error: Controller period more then
+#                             model dt, set it equal to model dt
+#   [lifecycle_manager] ERROR Failed to bring up all requested nodes.
+#
+# controller_frequency 10 Hz is a 0.1 s period; model_dt was 0.08 s. MPPI
+# refuses that combination on configure, the lifecycle manager aborts the
+# whole bringup, and bt_navigator never activates -- so the robot cannot
+# move and every number is a property of the rig. model_dt is now 0.1,
+# exactly the controller period, with time_steps 20 to keep the 2.0 s
+# horizon.
+#
+# This job asserts on the flag, not on a feeling.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync0996.log 2>&1 || { tail -30 /tmp/sync0996.log; exit 1; }
+echo "sync OK"
+grep -E "time_steps|model_dt|controller_frequency: 10" \
+  "$HOME/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025/config/nav2_params_vision.yaml" \
+  | sed 's/^/installed: /'
+
+./demo.sh up --vision --no-rviz --world igvc_oval_slow_test || true
+echo
+echo "=== VERDICT ==="
+FLAG="$(cat "$LOGS/nav2_active.flag" 2>/dev/null || echo MISSING)"
+echo "nav2_active.flag: $FLAG"
+if [ "$FLAG" = "yes" ]; then
+  echo "PASS - Nav2 activated. The scoring jobs behind this one will measure something."
+  ps -eo pid,pgid,ni,comm | awk -v p="$(cat "$LOGS/nav2.pid")" 'NR==1 || $2==p' | head -6
+else
+  echo "FAIL - still not activating. The reason is in the lines below."
+  grep -iE "ERROR|FATAL|Original error|Aborting" "$LOGS/nav2.log" | head -20
+fi
+mkdir -p "$ESDA_HOME/logs/nav2_check"
+cp "$LOGS"/nav2.log "$ESDA_HOME/logs/nav2_check/nav2.log" 2>/dev/null
+cp "$LOGS"/vision.log "$ESDA_HOME/logs/nav2_check/vision.log" 2>/dev/null
+echo "(logs copied to logs/nav2_check/ so they can be read from outside WSL)"
+./demo.sh down >/dev/null 2>&1

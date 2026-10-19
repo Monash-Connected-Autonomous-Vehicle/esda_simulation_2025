@@ -1,0 +1,8 @@
+# 04 ran before the lap_test odom fix landed, so it was scored against
+# nothing. Re-run so the oval pair (07 baseline / 09 fallbacks) is complete
+# and the comparison is like for like.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_oval_test --seconds 420 \
+  --note "lane-memory 3.0 + lidar-corridor, re-run after the odom fix" \
+  -- --lane-memory 3.0 --lidar-corridor

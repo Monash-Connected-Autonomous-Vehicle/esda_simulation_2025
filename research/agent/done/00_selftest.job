@@ -1,0 +1,28 @@
+# Cheap end-to-end check that the runner, the repo and ROS are all sane.
+# Runs in seconds, so a mistake here is found before a 10-minute sim run.
+set -uo pipefail
+cd "$ESDA_HOME"
+echo "repo:     $PWD"
+echo "ROS:      ${ROS_DISTRO:-<not sourced yet, which is fine>}"
+echo
+echo "--- demo.sh parses -------------------------------------------"
+bash -n demo.sh && echo "ok"
+echo
+echo "--- lap scorer unit tests ------------------------------------"
+python3 vision/test_lap_test.py
+echo
+echo "--- steering geometry unit tests -----------------------------"
+python3 vision/test_auto_drive.py
+echo
+echo "--- held-out worlds present ----------------------------------"
+ls -1 esda_simulation_2025/worlds/*_test.sdf
+for w in oval wavy figure8 spline; do
+  for f in esda_simulation_2025/models/orange_igvc/meshes/ground_${w}_test.dae \
+           esda_simulation_2025/models/orange_igvc/materials/textures/ground_${w}_test.png; do
+    [ -f "$f" ] && echo "ok   $f" || { echo "MISSING $f"; exit 1; }
+  done
+done
+echo
+echo "--- workspace built? -----------------------------------------"
+ls -d "$HOME/esda_ws/install/esda_simulation_2025" 2>/dev/null \
+  && echo "ok" || echo "NOT BUILT -- run: bash setup_wsl.sh"

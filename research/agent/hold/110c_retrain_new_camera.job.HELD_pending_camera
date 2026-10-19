@@ -1,0 +1,137 @@
+# RETRAIN AT THE CAMERA THE ROBOT ACTUALLY HAS.
+#
+# Today's recall is 0.174 overall, 0.243 in the 1-2 m band. The weights were
+# trained for a 62.4 deg lens at 0.478 m, level. The robot now carries a 90 deg
+# lens at 1.1 m, pitched 20 deg down. That is not a tweak; it moves everything
+# the network learned:
+#
+#                        trained on      scored on
+#     horizon            row 240         row 124
+#     ground 1 m ahead   row 493         row 378
+#     ground 2 m ahead   row 366         row 279
+#     ground 3 m ahead   row 324         row 235
+#     10 cm line at 2 m  26 px wide      16 px wide
+#
+# The model learned "paint is a 26-pixel band around row 366" and is being
+# shown a 16-pixel band at row 279 under a horizon that moved a quarter of the
+# frame. A CNN has no reason to generalise across that. 17% is about what a
+# detector pointed at the right world through the wrong lens should score.
+#
+# ONE VARIABLE. The old model is YOLOv8n-seg with a 3-class head, so this
+# trains YOLOv8n-seg with a 3-class head. Not 's', which train.py defaults to
+# and which would also be a heavier Jetson model; not a 1-class head, tempting
+# though it is now that the runtime is lane-only. Change the camera and
+# nothing else, so that if recall moves we know what moved it. A 1-class run
+# is the obvious follow-up and it is a separate experiment -- and note the
+# measurement already showed muting classes saves no inference time, so the
+# case for 1-class is capacity, not speed.
+#
+# THE OLD WEIGHTS ARE NOT TOUCHED. Export goes to lane_seg_v2.pt and BOTH are
+# scored on the SAME frames. An unreplaced baseline is the only way to tell an
+# improvement from a different random seed.
+#
+# SCORED ON THE REAL SIM CAPTURE, NOT ON SYNTHETIC VAL. Synthetic-to-synthetic
+# would look wonderful and mean nothing: it is the same generator on both
+# sides. The honest comparison is against the frames the robot's own camera
+# produced, which is what today's 0.174 was measured on. Synthetic val is
+# reported too, because it is free and the gap between the two IS the sim2sim
+# domain gap.
+#
+# SCORED ON THE TELEPORT BENCHMARK that 110b builds: 400 frames at poses we
+# commanded, so there is no odometry in the measurement, nothing can freeze,
+# and every model from here on is scored on identical data. That removes the
+# caveat the driven capture carried -- drifted labels and a third of the set
+# from one frozen pose -- so these numbers are quotable, not just comparable.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync110c.log 2>&1 || { tail -20 /tmp/sync110c.log; exit 1; }
+
+echo "=== 0. refuse to train for a camera that does not exist ==="
+# This is exactly how the current weights came to be useless: synth_gen
+# hard-coded the old camera, so the training images AND the labels were both
+# wrong in the same direction and nothing looked broken.
+python3 vision/test_camera_consistency.py || { echo "GEOMETRY DRIFTED - not training"; exit 1; }
+python3 vision/test_spawn_table.py        || { echo "SPAWN TABLE DRIFTED"; exit 1; }
+
+echo
+echo "=== 1. generate synthetic frames AT THE CURRENT CAMERA ==="
+DS="$HOME/esda_datasets/lane_newcam_$(date +%Y%m%d_%H%M%S)"
+python3 vision/synth_gen.py --out "$DS" --n-train 1600 --n-val 300 \
+        --seed 7 --preview 6 || exit 1
+echo "train: $(ls -1 "$DS"/images/train 2>/dev/null | wc -l)  "\
+     "val: $(ls -1 "$DS"/images/val 2>/dev/null | wc -l)"
+# Previews go where they can be looked at: if the synthetic frames do not look
+# like what the camera sees, nothing downstream is worth running.
+mkdir -p "$ESDA_HOME/logs/synth_preview"
+cp "$DS"/preview/*.jpg "$ESDA_HOME/logs/synth_preview/" 2>/dev/null || \
+  cp "$DS"/*.jpg "$ESDA_HOME/logs/synth_preview/" 2>/dev/null || true
+echo "previews -> logs/synth_preview/ ($(ls -1 "$ESDA_HOME/logs/synth_preview" 2>/dev/null | wc -l) files)"
+
+echo
+echo "=== 2. train -- same architecture as the model being replaced ==="
+python3 vision/train.py --data "$DS/data.yaml" \
+        --model yolov8n-seg.pt --epochs 120 --imgsz 640 --batch 16 \
+        --device 0 --name lane_newcam \
+        --export "$HOME/esda_models/lane_seg_v2.pt" || exit 1
+ls -la "$HOME/esda_models/" | sed 's/^/   /'
+
+echo
+echo "=== 3. BEFORE and AFTER, same frames, de-duplicated ==="
+# The fixed teleport benchmark from 110b, not the driven capture. Same 400
+# frames for every model from here on, poses commanded rather than integrated,
+# so a difference between two models is a difference between two models.
+VAL="$(ls -1dt "$HOME"/esda_datasets/bench_* 2>/dev/null | head -1)"
+if [ -z "$VAL" ]; then
+  echo "no bench dataset -- 110b must run first; falling back to the driven"
+  echo "capture, whose labels drift. Treat any comparison as indicative only."
+  VAL="$(ls -1dt "$HOME"/esda_datasets/rescore_* 2>/dev/null | head -1)"
+fi
+[ -n "$VAL" ] || { echo "nothing to score against"; exit 1; }
+echo "scoring both models on $VAL (val split, deduped)"
+for w in lane_seg lane_seg_v2; do
+  echo
+  echo "---------- $w ----------"
+  python3 vision/eval_recall.py --data "$VAL" --split val --dedup \
+          --weights "$HOME/esda_models/$w.pt" --conf 0.35 \
+          2>&1 | tee "$ESDA_HOME/logs/eval_${w}.txt" | grep -vE "^  [0-9]+/"
+done
+
+echo
+echo "=== 4. synthetic val, for the record and for the domain gap ==="
+python3 vision/eval_recall.py --data "$DS" --split val \
+        --weights "$HOME/esda_models/lane_seg_v2.pt" --conf 0.35 \
+        2>&1 | grep -vE "^  [0-9]+/" | tee "$ESDA_HOME/logs/eval_synth_v2.txt"
+
+echo
+echo "=== 5. the comparison, in one place ==="
+for f in eval_lane_seg eval_lane_seg_v2 eval_synth_v2; do
+  echo "-- $f"
+  grep -E "OVERALL|MODEL |1-2 m|dedup" "$ESDA_HOME/logs/$f.txt" 2>/dev/null | sed 's/^/   /'
+done
+echo
+echo "READ: the 1-2 m row is the one that decides whether the robot can drive."
+echo "If v2 beats the old weights on the SIM capture, swap vision_config.yaml's"
+echo "model.weights to lane_seg_v2.pt and re-run the lane-only repeats. If it"
+echo "only wins on synthetic val, the camera was not the problem and the"
+echo "sim2sim gap is -- which is a different fix (textures, lighting, contrast:"
+echo "the rendered lines are pale green on green, nothing like IGVC's white)."
+
+# ============================================================================
+# HELD 2026-10-14, before running. ACHILLES_HARDWARE_PROGRESS.md says the real
+# robot is a Raspberry Pi 4 with a ZED 2i used as a PLAIN USB CAMERA -- no
+# CUDA, so no ZED SDK and no depth. Two consequences:
+#
+#   1. This job trains for a 90 deg / 640x480 camera. The ZED 2i is 110 deg
+#      (2.1mm) or 80 deg (4mm), and its modes are 672x376, 1280x720, 1920x1080
+#      or 2208x1242 per eye. 90 deg at 640x480 is NOT a ZED 2i configuration.
+#      Training now would produce weights for a THIRD camera that does not
+#      exist -- which is exactly how the current weights became useless.
+#   2. YOLOv8n-seg is 11.9 GFLOPs. On four Cortex-A72 cores with no GPU that
+#      is low single-digit FPS at 640, while Nav2, SLAM, the costmaps and the
+#      lidar also want that CPU. The trained model could not run on the robot
+#      it is for.
+#
+# Release this only after the real lens, resolution and mount height are
+# settled and camera.xacro + vision_config.yaml match them.
+# ============================================================================

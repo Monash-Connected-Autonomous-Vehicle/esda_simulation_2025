@@ -1,0 +1,115 @@
+# DOES A THRESHOLD BEAT THE NETWORK? ASK BEFORE SPENDING AN HOUR ON GPU.
+#
+# The IGVC AutoNav 2025 first-place run's own debug pane is a binary image:
+# white lines on black inside a trapezoid. No segmentation network. Painted
+# lines are the easiest thing in the scene -- bright, thin, high contrast --
+# and a threshold finds them in well under a millisecond against roughly 8 ms
+# for YOLOv8n-seg on the 5060 Ti, and considerably more on a Jetson.
+#
+# Our weights score 0.174 recall at the camera the robot actually carries.
+# This job scores a threshold on the SAME 400 bench frames, through the SAME
+# scoring code, before 110c spends an hour retraining. If a threshold wins
+# outright then the perception problem was never a model problem, and the
+# retrain is answering a question nobody needs answered.
+#
+# ON FEEDING THE NETWORK GREYSCALE, which is the other half of the idea: it
+# saves 59 MFLOPs of 11,900 -- 0.50% -- because only the first convolution
+# sees the channel count. Greyscale is worth doing for a different reason
+# (the sim renders pale green lines on green turf while the real course is
+# white on asphalt, and brightness normalisation makes those two worlds look
+# alike) but it is not a compute saving. The compute saving is deleting the
+# network from the lane path, which is what this measures.
+#
+# FOUR METHODS, because which wins is empirical. A quick look at three real
+# Gazebo frames already says otsu is unreliable -- it found the line cleanly
+# in one frame and returned 0 pixels in another, which is what a single global
+# level does when a bright barrel is in shot. tophat and adaptive both found
+# the line in all three. The numbers below settle it properly.
+#
+# CAUTION ON READING THE RESULT. Our sim renders the lines at LOW contrast,
+# pale green on green. Real IGVC paint is white on asphalt or grass. So a
+# brightness method scored here is being scored on a harder image than the one
+# it would meet on course: a good number is a floor, and a bad one may be the
+# sim's fault rather than the method's. That cuts the other way for the
+# network, which was trained on the sim's own appearance.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync110bb.log 2>&1 || { tail -20 /tmp/sync110bb.log; exit 1; }
+
+echo "=== 0. self-tests ==="
+python3 vision/lane_classic.py --selftest || exit 1
+python3 vision/eval_recall.py  --selftest || exit 1
+
+DS="$(ls -1dt "$HOME"/esda_datasets/bench_* 2>/dev/null | head -1)"
+[ -n "$DS" ] || { echo "no bench dataset -- 110b must run first"; exit 1; }
+echo "scoring everything on $DS"
+
+echo
+echo "=== 1. the network ==="
+python3 vision/eval_recall.py --data "$DS" --split val \
+        --weights "$HOME/esda_models/lane_seg.pt" --conf 0.35 \
+        2>&1 | grep -vE "^  [0-9]+/" | tee "$ESDA_HOME/logs/bench_yolo.txt"
+
+echo
+echo "=== 2. a threshold, four ways, no weights and no GPU ==="
+for m in otsu value adaptive tophat; do
+  echo
+  echo "---------- $m ----------"
+  python3 vision/eval_recall.py --data "$DS" --split val \
+          --detector classic --method "$m" \
+          2>&1 | grep -vE "^  [0-9]+/" | tee "$ESDA_HOME/logs/bench_$m.txt"
+done
+
+echo
+echo "=== 2b. the winner, scored AS DEPLOYED ==="
+# The scoring bins reach 6 m but the node cuts at projection.max_range = 4.0,
+# so everything above is measured on a looser ROI than the robot would run.
+# Looser means more room for a false positive, so the 6 m figures are the
+# pessimistic ones -- but the 4 m figure is the one that would ship.
+python3 vision/eval_recall.py --data "$DS" --split val \
+        --detector classic --method tophat --classic-max-range 4.0 \
+        2>&1 | grep -vE "^  [0-9]+/" | tee "$ESDA_HOME/logs/bench_tophat4m.txt"
+
+echo
+echo "=== 3. side by side ==="
+printf "%-12s %-9s %-9s %-9s %-9s %s\n" detector recall prec IoU "1-2m rec" "ms/frame"
+for f in yolo otsu value adaptive tophat tophat4m; do
+  t="$ESDA_HOME/logs/bench_$f.txt"
+  [ -f "$t" ] || continue
+  printf "%-12s %-9s %-9s %-9s %-9s %s\n" "$f" \
+    "$(grep -oP 'recall \K[0-9.]+' "$t" | head -1)" \
+    "$(grep -oP 'precision \K[0-9.]+' "$t" | head -1)" \
+    "$(grep -oP 'IoU \K[0-9.]+' "$t" | head -1)" \
+    "$(awk '/^  1-2 m/{print $3}' "$t")" \
+    "$(grep -oP 'inference \K[0-9.]+' "$t")"
+done
+
+echo
+echo "=== 4. masks to look at, same frames, every detector ==="
+python3 - <<'PY'
+import glob, os, sys, numpy as np, cv2
+sys.path.insert(0, "vision")
+import lane_classic as lc
+ds = sorted(glob.glob(os.path.expanduser("~/esda_datasets/bench_*")))[-1]
+imgs = sorted(glob.glob(os.path.join(ds, "images", "val", "*.jpg")))
+pick = imgs[::max(1, len(imgs)//4)][:4]
+out = os.path.join(os.environ["ESDA_HOME"], "logs", "classic_masks")
+os.system(f"rm -rf {out}"); os.makedirs(out, exist_ok=True)
+for p in pick:
+    img = cv2.imread(p)
+    row = [cv2.resize(img, (320, 240))]
+    for m in ("otsu", "adaptive", "tophat"):
+        v = np.zeros_like(img); v[lc.lane_mask(img, m)] = (255, 255, 255)
+        cv2.putText(v, m, (6, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 2)
+        row.append(cv2.resize(v, (320, 240)))
+    cv2.imwrite(os.path.join(out, os.path.basename(p)), np.hstack(row))
+print(f"wrote {len(pick)} comparison strips to logs/classic_masks/")
+PY
+
+echo
+echo "READ: the 1-2 m recall column decides this, because that is where the"
+echo "carrots land. If a threshold wins there, the lane path does not need a"
+echo "network and the Jetson budget stops being a problem -- and 110c's retrain"
+echo "should be reconsidered before it runs. If the network wins, the retrain"
+echo "is the right next hour. Either way the cones stay with the lidar."

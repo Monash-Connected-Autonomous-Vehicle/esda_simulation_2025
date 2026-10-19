@@ -1,0 +1,32 @@
+# BASELINE, re-measured. Same world, same wall-clock budget and same driver
+# flags as job 93, so the numbers line up against job 93's:
+#
+#     33.2 m / 14.2 m / 13.8 m / 12.9 m   (and one run where Nav2 never came
+#                                          up, written up as 0.0 m)
+#     median 14.0 m, 0.045-0.056 carrots per simulated second
+#
+# What changed since: MPPI 800,000 -> 100,000 rollouts/s and 20 -> 10 Hz,
+# camera 640x480 -> 320x240 (upscaled on ingest, so the model and the
+# projection are untouched), lidar 3600 -> 360 rays at 5 Hz instead of 10,
+# both costmaps no longer publishing to nobody, and Nav2 reniced to 10 once
+# it is active. Every one of those frees the same thing: CPU for the
+# software renderer that draws the camera.
+#
+# Why that is the only thing worth freeing: across three runs the number of
+# carrots published, the number of goals Nav2 accepted and the number of
+# times the vision node published /lane/points were the SAME number --
+# 42/42, 20/20, 22/22. Distance travelled is frames delivered. Nothing else.
+#
+# Three repeats, because two identical runs differed by 2.3x. Median and
+# spread, never a single number.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync100.log 2>&1 || { tail -20 /tmp/sync100.log; exit 1; }
+for i in 1 2 3; do
+  echo "============ igvc_oval_slow_test, ogre2, repeat $i of 3 ============"
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 \
+    --note "ogre2 baseline re-measure $i/3: lighter MPPI + 320x240 camera + 360-ray lidar" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done
+echo "=== distance and stalls, all repeats on this world ==="
+grep -H -E "path length|stalls|lane publishes|goals published" logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -20

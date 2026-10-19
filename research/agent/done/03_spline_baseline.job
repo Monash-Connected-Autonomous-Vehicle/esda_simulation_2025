@@ -1,0 +1,8 @@
+# Third held-out world. Widest corridor of the four (3.7 m) with the least
+# regular shape. If the robot fails here too, the problem is perception, not
+# clearance -- which is the single most useful thing these three runs can
+# establish before any parameter is touched.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_spline_test --seconds 420 \
+  --note "baseline, parameters as committed 2026-10-12"

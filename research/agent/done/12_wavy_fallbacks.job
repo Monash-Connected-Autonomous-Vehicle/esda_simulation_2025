@@ -1,0 +1,13 @@
+# Wavy with the REWRITTEN fallbacks. 05 ran the first versions, which fired
+# zero times in a whole run: the lane memory held a single point that was
+# passed within seconds, and the lidar corridor demanded two returns inside
+# each 0.5 m band when the whole scan only put 28-47 returns in view.
+#
+# Now: the memory is a trail and recall returns the furthest point still
+# ahead; the corridor pools evidence over the whole lookahead window and
+# reuses band_gap. And when they decline they now say why, in the log.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_wavy_test --seconds 420 \
+  --note "trail memory + pooled lidar corridor" \
+  -- --lane-memory 3.0 --lidar-corridor

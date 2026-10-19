@@ -1,0 +1,60 @@
+# A four-minute check that today's edits actually reached the running stack,
+# BEFORE three hours of scoring runs are spent on them.
+#
+# Four of the changes live in the ROS package, not in vision/, so they only
+# take effect through `setup_wsl.sh --sync`: the camera resolution and the
+# lidar fan (description/), the costmap publish rates and MPPI's load
+# (config/), and the new render_args argument (launch/). A sync that silently
+# fails would leave every number below unchanged and unexplained -- which has
+# already happened once in this project, when a commit reported success and
+# did not land, and a whole run was scored against the old file.
+#
+# So: assert on the INSTALLED copies and on the LIVE topics, not on the
+# sources. Nothing here is scored; it either passes or says what is wrong.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+
+bash setup_wsl.sh --sync > /tmp/sync099.log 2>&1 || { tail -30 /tmp/sync099.log; exit 1; }
+echo "sync OK"
+
+INST="$HOME/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025"
+echo "=== installed copies ==="
+grep -c "<width>320</width>"        "$INST/description/camera.xacro" | sed 's/^/camera 320 wide: /'
+grep -A1 "<vertical>" "$INST/description/lidar.xacro" | grep samples | sed 's/^/lidar vertical: /'
+grep "update_rate" "$INST/description/lidar.xacro" | sed 's/^/lidar rate: /'
+grep -E "time_steps|batch_size|model_dt" "$INST/config/nav2_params_vision.yaml" | sed 's/^/mppi: /'
+grep -c "render_args" "$INST/launch/launch_sim_headless.launch.py" | sed 's/^/render_args in launch: /'
+
+echo
+echo "=== bring the stack up on the stock course ==="
+./demo.sh up --vision --no-rviz --world igvc || true
+src
+
+echo
+echo "=== live topics ==="
+echo "-- camera_info (expect width 320, height 240) --"
+timeout 20 ros2 topic echo /head_camera/camera_info --once --no-arr 2>&1 | grep -E "^ *(width|height):" || echo "NO camera_info"
+echo "-- scan (expect ranges length 360, one level row) --"
+timeout 20 ros2 topic echo /scan --once --no-arr 2>&1 | grep -E "ranges|angle_min|angle_max|angle_increment" || echo "NO scan"
+echo "-- nav2 active flag --"
+cat "$LOGS/nav2_active.flag" 2>/dev/null || echo "FLAG MISSING"
+echo "-- nav2 niceness (expect 10 on the whole group) --"
+NAV2PG="$(cat "$LOGS/nav2.pid" 2>/dev/null || echo 0)"
+ps -eo pid,pgid,ni,comm 2>/dev/null | awk -v p="$NAV2PG" 'NR==1 || $2==p' | head -12
+
+echo
+echo "=== vision node said what about the frames? ==="
+grep -E "camera delivers|upscaling|loaded .*lane_seg|perception:" "$LOGS/vision.log" | tail -12 \
+  || echo "no resize/throughput lines yet"
+
+echo
+echo "=== 60 s with the driver running, to get throughput lines ==="
+./demo.sh drive --lane-memory 6.0 --lidar-corridor --blind-timeout 8 || true
+sleep 60
+grep -E "perception:|NO camera frames" "$LOGS/vision.log" | tail -8 || echo "no perception lines"
+echo "-- carrots in that minute --"
+grep -c "carrot (" "$LOGS/drive.log" 2>/dev/null || echo 0
+
+./demo.sh down >/dev/null 2>&1
+echo "SMOKE DONE"

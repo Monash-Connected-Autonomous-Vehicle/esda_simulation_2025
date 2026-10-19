@@ -1,0 +1,29 @@
+# Does the GROUND PLATE render at all in a generated world?
+#
+# One genuine frame from the spawn of igvc_oval_test shows GREEN ground and a
+# barrel -- no grey asphalt, no painted lines -- while the texture file is
+# plainly grey (mean BGR 124,130,130) and the barrels render fine. If the
+# plate is not being drawn there is nothing for the lane model to see, and
+# every "the detector goes blind" conclusion about these worlds is wrong.
+#
+# Save one frame from the STOCK world and one from a generated world, same
+# camera, and compare them side by side.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+out="$SCRIPT_DIR/logs/ground_check"
+mkdir -p "$out"
+for w in igvc igvc_oval_test igvc_oval; do
+  stop_all >/dev/null 2>&1; sleep 2
+  case "$w" in igvc) SX=0.45; SY=0.03 ;; *) SX=0; SY=0 ;; esac
+  start_sim "$w" "$SX" "$SY" 0.0 false
+  wait_for "/clock ($w)" 90 has_data /clock || { echo "$w failed to start"; continue; }
+  sleep 12
+  src
+  timeout 60 python3 "$ESDA_SRC/vision/capture_labelled.py" --world "$w" \
+      --interval 1.0 --seconds 8 --out "$HOME/esda_capture/gc_$w" || true
+  f=$(ls -1 "$HOME/esda_capture/gc_$w"/*.jpg 2>/dev/null | head -1)
+  [ -n "$f" ] && cp "$f" "$out/$w.jpg" && echo "saved $out/$w.jpg"
+done
+stop_all >/dev/null 2>&1
+ls -la "$out"

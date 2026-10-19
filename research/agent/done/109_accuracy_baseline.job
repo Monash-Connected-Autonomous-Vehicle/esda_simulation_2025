@@ -1,0 +1,89 @@
+# THE NUMBER WE HAVE NEVER HAD: lane recall, by range, at the real camera.
+#
+# Everything tuned so far has been tuned on indirect evidence -- carrot
+# counts, distances, three screenshots. Those were enough to find real bugs,
+# but there is still no measurement of how much of the paint the model
+# actually finds. This produces one, and it costs no hand-labelling:
+# autolabel.py computes ground truth from the world's own geometry.
+#
+# EXPECT A BAD NUMBER, AND THAT IS THE POINT.
+#
+# The weights were trained on synthetic frames for a camera that no longer
+# exists: 62.4 deg, 0.478 m, level. The camera is now 90 deg, 1.1 m, 20 deg
+# down. Recall at the new viewpoint is the BEFORE for the retrain. Without
+# it there is no way to tell afterwards whether retraining helped, and this
+# project has already spent a day unable to answer that kind of question.
+#
+# WHY THIS IS TRUSTWORTHY NOW AND WOULD NOT HAVE BEEN YESTERDAY
+#
+# synth_gen.py -- which generates the training images AND the ground truth
+# -- hard-coded the OLD camera until an hour ago. Scoring against it would
+# have compared a model for a nonexistent camera to labels for a nonexistent
+# camera: both wrong the same way, so nothing would have looked broken. It
+# now derives the geometry from vision_config.yaml, and
+# test_camera_consistency.py asserts the xacro, the config and synth_gen all
+# agree. That test runs first here; if it fails, nothing else is worth doing.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync109.log 2>&1 || { tail -20 /tmp/sync109.log; exit 1; }
+
+echo "=== 0. the three files that hold the camera geometry must agree ==="
+python3 vision/test_camera_consistency.py || { echo "GEOMETRY DRIFTED - stopping"; exit 1; }
+python3 vision/eval_recall.py --selftest || exit 1
+
+echo
+echo "=== 1. capture frames WITH poses, at the camera we actually have ==="
+CAP="$HOME/esda_capture/eval_$(date +%Y%m%d_%H%M%S)"
+bash demo.sh up --vision --no-rviz --world igvc_oval_slow_test
+if [ "$(cat "$LOGS/nav2_active.flag" 2>/dev/null)" != "yes" ]; then
+  echo "Nav2 did not activate -- retrying once"; stop_all >/dev/null 2>&1; sleep 5
+  bash demo.sh up --vision --no-rviz --world igvc_oval_slow_test
+fi
+[ "$(cat "$LOGS/nav2_active.flag" 2>/dev/null)" = "yes" ] || { echo "no Nav2, no capture"; exit 1; }
+bash demo.sh drive --lane-memory 6.0 --lidar-corridor --blind-timeout 8 --fov-deg 90
+src
+python3 vision/capture_labelled.py --world igvc_oval_slow_test \
+        --interval 0.5 --seconds 600 --out "$CAP"
+stop_all >/dev/null 2>&1
+
+n=$(ls -1 "$CAP"/*.jpg 2>/dev/null | wc -l)
+u=$(md5sum "$CAP"/*.jpg 2>/dev/null | awk '{print $1}' | sort -u | wc -l)
+echo "captured $n frames, $u distinct"
+# The first two capture attempts in this project produced 645 BYTE-IDENTICAL
+# frames because the robot never moved. Refuse to score that.
+[ "$u" -gt 50 ] || { echo "camera frozen or robot never moved -- not scoring this"; exit 1; }
+
+echo
+echo "=== 2. ground truth from world geometry (no hand labelling) ==="
+DS="$HOME/esda_datasets/eval_$(date +%Y%m%d_%H%M%S)"
+python3 vision/autolabel.py --capture "$CAP" --repo "$ESDA_HOME" \
+        --out "$DS" --val-frac 0.5 --overlay --overlay-every 25
+rm -rf "$ESDA_HOME/logs/eval_overlay" 2>/dev/null || true
+mkdir -p "$ESDA_HOME/logs/eval_overlay"
+cp "$DS"/overlay/*.jpg "$ESDA_HOME/logs/eval_overlay/" 2>/dev/null || true
+echo "overlays -> logs/eval_overlay/  (LOOK AT THESE: if the green does not"
+echo "sit on the paint, the pose drifted and every number below is wrong)"
+
+echo
+echo "=== 3. recall by range ==="
+python3 vision/eval_recall.py --data "$DS" --split val \
+        --weights "$HOME/esda_models/lane_seg.pt" --conf 0.35 \
+        2>&1 | tee "$ESDA_HOME/logs/eval_recall.txt"
+
+echo
+echo "=== 4. standard detector metrics, for the record ==="
+yolo val model="$HOME/esda_models/lane_seg.pt" data="$DS/data.yaml" \
+     imgsz=640 conf=0.35 2>&1 | tail -20 || echo "(yolo val unavailable, skipping)"
+
+echo
+echo "=== 5. what lane-only actually costs ==="
+echo "inference is the SAME either way -- the model computes all three heads"
+echo "regardless; mode only mutes the output. The saving is downstream, in"
+echo "callback time, which the perception meter already reports:"
+for j in 106b 108; do
+  echo "-- $j"
+  grep -h "perception:" logs/run_igvc_oval_slow_test_*/vision.log 2>/dev/null \
+    | tail -3 | sed 's/.*| /   /' || true
+done
+echo "(compare 106b = all three classes, 108 = lane only)"

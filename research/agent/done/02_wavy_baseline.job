@@ -1,0 +1,8 @@
+# Second held-out world. Tighter corridor (2.9 m vs the oval's 3.4 m) and
+# continuous curvature, so it stresses the lane follower rather than the
+# gap-finder. Run before changing anything: two worlds tell you whether a
+# failure is the course or the robot.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_wavy_test --seconds 420 \
+  --note "baseline, parameters as committed 2026-10-12"

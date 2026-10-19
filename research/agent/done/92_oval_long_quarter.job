@@ -1,0 +1,16 @@
+# RTF 0.1 is past the floor. Nav2 never navigated at all: its log stops at
+#   failed to send response to /controller_server/change_state (timeout)
+# and contains not one "Begin navigating". The lifecycle and bond timeouts
+# are wall-clock bound, so starving the machine that hard breaks bringup
+# before the robot can be commanded. Perception was the best yet -- 284
+# paint carrots and 98 from lane memory -- with nothing listening.
+#
+# So 0.25 is the usable setting, and the only thing the earlier run lacked
+# was time: 900 s of wall bought 247 s of sim, and a lap of this oval needs
+# roughly 85 m. At the measured 0.134 m/s that is ~630 s of sim, so give it
+# 2400 s of wall and let it try to actually get round.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_oval_slow_test --seconds 2400 \
+  --note "RTF 0.25, long run -- first genuine attempt at a full lap" \
+  -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
