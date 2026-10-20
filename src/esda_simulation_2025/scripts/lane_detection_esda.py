@@ -220,6 +220,46 @@ def clean_mask(mask, roi, min_area=120, close_px=3, max_area_frac=0.15):
 # Self-test
 # ==========================================================================
 
+def edge_profile_ok(gray, x1, y1, x2, y2, near_px=3, far_px=12,
+                    white_hi=120, dark_lo=110):
+    """Does this segment lie on a light-to-dark transition?
+
+    The base class samples grey at the segment MIDPOINT and wants it
+    bright. That works when the segment runs down the middle of the paint.
+    It does not work here: Hough runs on Canny of the MASK, so segments lie
+    on the mask boundary and the midpoint is the paint/ground edge --
+    measured median grey 115 against a threshold of 120, rejecting 54.7% of
+    all segments.
+
+    So look either side instead. A lane edge has paint close in on one side
+    and ground further out on the other:
+
+        gray(+near) > white_hi  and  gray(-far) < dark_lo
+     or gray(-near) > white_hi  and  gray(+far) < dark_lo
+
+    Out of frame counts as dark (0), matching is_pixel_dark's convention.
+
+    Pure: no ROS, no node state, so the self-test covers the real
+    arithmetic.
+    """
+    dx, dy = float(x2 - x1), float(y2 - y1)
+    mag = float(np.hypot(dx, dy))
+    if mag == 0.0:
+        return False
+    nx, ny = -dy / mag, dx / mag
+    mx, my = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+    h, w = gray.shape
+
+    def g(dist):
+        xx, yy = int(mx + nx * dist), int(my + ny * dist)
+        if 0 <= yy < h and 0 <= xx < w:
+            return int(gray[yy, xx])
+        return 0
+
+    return ((g(near_px) > white_hi and g(-far_px) < dark_lo)
+            or (g(-near_px) > white_hi and g(far_px) < dark_lo))
+
+
 def selftest():
     print("=" * 70)
     print("lane_detection_esda -- mask extraction, no ROS required")
@@ -309,6 +349,31 @@ def selftest():
     ck("no param, no env -> the shipped weight or nothing, never a guess",
        _resolve_yolo_weights(None) in ("", SHIPPED_YOLO_WEIGHTS))
 
+    # --- the edge-aware profile, on the real function -----------------
+    strip = np.full((200, 200), 40, np.uint8)
+    strip[:, 95:105] = 220                       # a 10 px bright stripe
+    # Segments are VERTICAL here, so the normal is horizontal and the
+    # sampling runs across the stripe -- the same geometry Canny gives.
+    ck("a segment on the stripe's left edge passes",
+       edge_profile_ok(strip, 95, 60, 95, 140))
+    ck("a segment on the stripe's right edge passes",
+       edge_profile_ok(strip, 104, 60, 104, 140))
+    ck("a segment down the middle of the stripe still passes",
+       edge_profile_ok(strip, 100, 60, 100, 140))
+    ck("uniform white is REJECTED (no transition)",
+       not edge_profile_ok(np.full((200, 200), 220, np.uint8),
+                           100, 60, 100, 140))
+    ck("uniform dark is REJECTED",
+       not edge_profile_ok(np.full((200, 200), 40, np.uint8),
+                           100, 60, 100, 140))
+    ck("a zero-length segment is REJECTED",
+       not edge_profile_ok(strip, 95, 60, 95, 60))
+    wide = np.full((200, 200), 40, np.uint8)
+    wide[:, 60:140] = 220                        # a blob 80 px across
+    ck("deep inside a wide white blob is REJECTED, which the base "
+       "class's midpoint test would have passed",
+       not edge_profile_ok(wide, 100, 60, 100, 140))
+
     print()
     if fails:
         print(f"{len(fails)} FAILED: " + ", ".join(fails))
@@ -342,6 +407,11 @@ def _build_node_class():
             # log_stage_counts true` works on a stack that is already up.
             self.declare_parameter('log_stage_counts', False)
             self.declare_parameter('log_filter_reasons', False)
+            # How far either side of a segment the profile is sampled.
+            # near: just inside the paint; far: out on the ground, 12 px as
+            # the base class used. Raise near_px if the lines are wide.
+            self.declare_parameter('profile_near_px', 3)
+            self.declare_parameter('profile_far_px', 12)
             self.declare_parameter('yolo_lane_class', 'lane')
             self.declare_parameter('yolo_cone_class', 'cone')
             self.declare_parameter('yolo_cone_dilate_px', 15)
@@ -580,6 +650,25 @@ def _build_node_class():
                     % (int((white_mask > 0).sum()),
                        0 if lines is None else len(lines), len(valid)))
             return valid, white_mask, edges
+
+        def verify_line_profile(self, gray, x1, y1, x2, y2, hsv=None):
+            """Edge-aware replacement for the base class's profile check.
+
+            Only the geometry of the sampling changes. The orange cone
+            rejection below is the base class's, called unchanged.
+            """
+            if not edge_profile_ok(
+                    gray, x1, y1, x2, y2,
+                    near_px=int(self.get_parameter('profile_near_px').value),
+                    far_px=int(self.get_parameter('profile_far_px').value)):
+                return False
+            dx, dy = float(x2 - x1), float(y2 - y1)
+            mag = float(np.hypot(dx, dy)) or 1.0
+            nx, ny = -dy / mag, dx / mag
+            mx, my = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+            if hsv is not None and self.has_nearby_orange(hsv, mx, my, nx, ny):
+                return False
+            return True
 
         def _count_reject_reasons(self, lines, gray, hsv):
             """Re-run filter_valid_lanes' gates, counting only.
