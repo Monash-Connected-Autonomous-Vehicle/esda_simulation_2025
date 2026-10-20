@@ -11,6 +11,8 @@ A complete ROS2 Humble autonomous navigation system with advanced lane detection
 - **👁️ Multi-Camera System** - Stereo cameras + depth sensing for 3D lane detection
 - **🎯 Purple Lane Visualization** - Custom colored obstacles in RViz for easy identification
 - **⚡ Optimized Performance** - Tuned for stable 8Hz control with tight space navigation
+- **🏁 Autonomous IGVC Runs** - `waypoint_navigator_recommendation.py` follows lanes, routes around barrels and heads for GPS waypoints
+- **🌳 Three IGVC Worlds** - Bare track, campus, and a competition-style car park
 
 ---
 
@@ -18,11 +20,12 @@ A complete ROS2 Humble autonomous navigation system with advanced lane detection
 
 1. [Setup & Installation](#1-setup--installation)
 2. [Launching the Simulation](#2-launching-the-simulation)
-3. [System Architecture](#3-system-architecture)
-4. [Lane Detection System](#4-lane-detection-system)
-5. [Navigation & Control](#5-navigation--control)
-6. [Configuration Files](#6-configuration-files)
-7. [Troubleshooting](#7-troubleshooting)
+3. [Autonomous IGVC Run (waypoint_navigator_recommendation.py)](#3-autonomous-igvc-run-waypoint_navigator_recommendationpy)
+4. [System Architecture](#4-system-architecture)
+5. [Lane Detection System](#5-lane-detection-system)
+6. [Navigation & Control](#6-navigation--control)
+7. [Configuration Files](#7-configuration-files)
+8. [Troubleshooting](#8-troubleshooting)
 
 ---
 
@@ -60,40 +63,34 @@ pip install customtkinter
 
 ### 1.3. Building the Project
 
-**Clone the repository into your workspace:**
-```bash
-mkdir -p ~/esda_sim_ws/src
-cd ~/esda_sim_ws/src
-git clone <repository-url> esda_simulation_2025
-```
+The repo root **is** the colcon workspace (`build/`, `install/` and `log/` are generated next to `src/`):
 
-**Your folder structure should look like:**
 ```
-esda_sim_ws/
+esda_simulation_2025/          <- workspace root, run everything from here
 ├── src/
-│   └── esda_simulation_2025/
-│       ├── config/          # Nav2, SLAM, RViz configs
-│       ├── description/     # Robot URDF/Xacro files
-│       ├── launch/          # Launch files
-│       ├── maps/            # Saved costmaps
-│       ├── scripts/         # Python scripts & UI
-│       ├── worlds/          # Gazebo world files
-│       └── CMakeLists.txt
-├── build/
-├── install/
-└── log/
+│   ├── esda_simulation_2025/  # this package: URDF, worlds, launch, configs, Python nodes
+│   └── esda_hardware_2025/    # ros2_control hardware plugin for the real robot
+├── tools/                     # offline tests and world generators (no ROS needed)
+├── build/  install/  log/
 ```
 
-**Build the project:**
 ```bash
-cd ~/esda_sim_ws
-colcon build --symlink-install
+git clone <repository-url> ~/esda_simulation_2025
+cd ~/esda_simulation_2025
+colcon build --packages-select esda_simulation_2025
 source install/setup.bash
 ```
 
+> **Build without `--symlink-install`.** This workspace is built in copy mode, so
+> Python nodes are *copied* into `install/`. After editing any script, rebuild
+> (or press **Colcon Build** in the GUI) and restart the node, or you will still
+> be running the old copy. Mixing the two modes fails with
+> `failed to create symbolic link ... Is a directory`; if that happens, rebuild with
+> `colcon build --packages-select esda_simulation_2025 --cmake-args -DAMENT_CMAKE_SYMLINK_INSTALL=0`.
+
 **Add to your `~/.bashrc` for convenience:**
 ```bash
-echo "source ~/esda_sim_ws/install/setup.bash" >> ~/.bashrc
+echo "source ~/esda_simulation_2025/install/setup.bash" >> ~/.bashrc
 ```
 
 ---
@@ -102,122 +99,234 @@ echo "source ~/esda_sim_ws/install/setup.bash" >> ~/.bashrc
 
 ### 2.1. 🎮 Using the Simulation Manager GUI (Recommended)
 
-The **ESDA Simulation Manager** provides a complete graphical interface. Run it from your workspace:
+Run it from the workspace root:
 
 ```bash
-# If running from source
+cd ~/esda_simulation_2025
 python3 src/esda_simulation_2025/scripts/ui_launch.py
-
-# Or if installed
-ros2 run esda_simulation_2025 ui_launch.py
 ```
+
+Each button opens its own `xterm` window, so `xterm` must be installed.
 
 ![Simulation Manager Interface](./assets/ui_screenshot.png)
 
-#### **GUI Components:**
+#### **Buttons**
 
-| Button | Function | When to Use |
-|--------|----------|-------------|
-| **Colcon Build** | Compiles code changes | After modifying code |
-| **Launch Simulation** | Starts Gazebo + Robot | Always first |
-| **Launch SLAM** | Starts mapping mode | Creating new maps |
-| **Launch AMCL** | Starts localization | Using existing maps |
-| **Launch Nav2** | Enables autonomous navigation | For autonomous driving |
-| **Launch RViz2** | Opens visualization | To see robot/map/sensors |
-| **Launch WASD Teleop** | Keyboard control | Manual driving |
-| **Kill All Processes** | Emergency stop | To reset everything |
+| Button | What it runs | When to use |
+|--------|--------------|-------------|
+| **1. Colcon Build** | `colcon build --packages-select esda_simulation_2025` | After changing any code or config |
+| **2. Launch Simulation** | `launch_sim.launch.py` (Gazebo, robot, bridges, controllers, EKF). It also rebuilds first | Always first |
+| **Launch SLAM** | `online_async_launch.py` | Building a new map. Also used for IGVC runs |
+| **Launch AMCL** | `localization_launch.py` | Driving on a saved map |
+| **Launch Nav2** | `navigation_launch.py` | Anything autonomous |
+| **Launch Lane Detection** | the detector picked in the dropdown | Lane-aware navigation |
+| **Launch RViz2** | `rviz2 -d config/view_bot.rviz` | Visualisation |
+| **WASD Teleop** | `teleop_wasd.py` | Manual driving |
+| **Waypoint Nav** | the *old* fixed-waypoint `waypoint_navigator.py` | Legacy only. For IGVC runs see [section 3](#3-autonomous-igvc-run-waypoint_navigator_recommendationpy) |
+| **Follow the Gap / Track Follower / Behaviour Tree** | the reactive stack (bypasses Nav2) | Don't run it alongside Nav2 goals |
+| **KILL ALL PROCESSES & RESET GAZEBO** | kills everything and clears stale Gazebo state | When anything gets stuck |
 
-#### **Dropdowns:**
+#### **Options**
 
-- **Select World:** Choose `.sdf` Gazebo world file
-- **Select Costmap:** 
-  - `[New Costmap]` → SLAM mapping mode
-  - Select existing map → AMCL localization mode
-- **☑️ Enable Lane Detection:** Toggles camera-based lane obstacle detection
+| Option | Values | Notes |
+|--------|--------|-------|
+| **World SDF** | `igvc.sdf`, `igvc_campus.sdf`, `igvc_carpark.sdf`, `sim_world_*.sdf` | Any world whose name starts with `igvc` spawns the robot at (11, 0), the track start. See [2.3](#23-worlds) |
+| **Costmap YAML** | `[New Costmap]` or a map in `maps/` | `[New Costmap]` means SLAM; a saved map means AMCL |
+| **Enable LIDAR** | on / off | |
+| **ZED Mount** | `front`, `pole_top` | Camera position |
+| **LiDAR Mount** | `pole_top`, `low` | `pole_top` puts the VLP-16 on the 1 m pole |
+| **Dual Side Cameras (Test)** | on / off | Adds left and right cameras, each with its own lane detector |
+| **Enable Lane Detection** | on / off | Switches Nav2, SLAM and AMCL between `/scan_fused` and `/scan`. Turn it on whenever a lane detector runs |
+| **Lane detector** | `Adaptive`, `YOLO`, `Regular`, `FCN`, `TwinLiteNet+` | See [5.2](#52-choosing-a-detector) |
+| **Visualization** | On / Off | The OpenCV debug window of the lane detector |
 
-#### **Workflow Examples:**
+#### **Workflows**
 
-**🗺️ Creating a New Map:**
-1. Select World: `competition_course.sdf`
-2. Select Costmap: `[New Costmap]`
-3. ☑️ Uncheck "Enable Lane Detection"
-4. Click: **Launch Simulation** → **Launch SLAM** → **Launch RViz2** → **Launch WASD Teleop**
-5. Drive around with WASD keys to map the environment
-6. Save map: `ros2 run nav2_map_server map_saver_cli -f ~/my_map`
+**🗺️ Creating a new map:**
+1. World: `igvc.sdf`. Costmap: `[New Costmap]`
+2. **Launch Simulation**, then **Launch SLAM**, then **Launch RViz2**, then **WASD Teleop**
+3. Drive around, then save the map:
+   ```bash
+   ros2 run nav2_map_server map_saver_cli -f src/esda_simulation_2025/maps/my_map
+   ```
 
-**🧭 Autonomous Navigation:**
-1. Select World: `competition_course.sdf`
-2. Select Costmap: `my_map.yaml` (your saved map)
-3. ☑️ Check "Enable Lane Detection" (for lane-aware navigation)
-4. Click: **Launch Simulation** → **Launch AMCL** → **Launch Nav2** → **Launch RViz2**
-5. Set initial pose (2D Pose Estimate in RViz)
-6. Set navigation goal (2D Goal Pose in RViz)
-7. Robot autonomously navigates while respecting lane boundaries
+**🧭 Point-and-click navigation on a saved map:**
+1. Costmap: your saved map. Tick **Enable Lane Detection**
+2. **Launch Simulation**, **Launch AMCL**, **Launch Lane Detection**, **Launch Nav2**, **Launch RViz2**
+3. In RViz, set **2D Pose Estimate**, then **2D Goal Pose**
 
-**🛣️ Lane Detection Testing:**
-1. Select World: `lanes_course.sdf` (world with white lane markings)
-2. ☑️ Check "Enable Lane Detection"
-3. Click: **Launch Simulation** → **Launch RViz2**
-4. In RViz, observe:
-   - **Purple/magenta obstacles** = Detected lane markings
-   - **Yellow cube markers** = Lane segment positions
-   - **LocalCostmap** = Integration with navigation
+**🏁 Autonomous IGVC run:** see [section 3](#3-autonomous-igvc-run-waypoint_navigator_recommendationpy).
 
-### 2.2. Manual Launch (Advanced)
+### 2.2. Manual Launch (Command Line)
 
-For users preferring command-line control:
+These are the same commands the GUI runs (`scripts/ui_launch.py` is the reference if they ever differ). Run each one in its own terminal from the workspace root, with `install/setup.bash` sourced.
 
-**Launch Simulation:**
+**Simulation:**
 ```bash
-ros2 launch esda_simulation_2025 launch_sim.launch.py world:=competition_course.sdf
+ros2 launch esda_simulation_2025 launch_sim.launch.py \
+  world_file:=$PWD/src/esda_simulation_2025/worlds/igvc.sdf \
+  spawn_x:=11.0 spawn_y:=0 \
+  use_lidar:=true camera_mount:=front lidar_mount:=pole_top
+```
+Use `robot_model:=robot_dual_camera.urdf.xacro` to get the side cameras.
+
+**SLAM (new map):**
+```bash
+ros2 launch esda_simulation_2025 online_async_launch.py \
+  use_sim_time:=true scan_topic:=/scan_fused
 ```
 
-**SLAM Mapping:**
-```bash
-ros2 launch esda_simulation_2025 online_async_launch.py use_sim_time:=true
-```
-
-**AMCL Localization:**
+**AMCL (saved map, instead of SLAM):**
 ```bash
 ros2 launch esda_simulation_2025 localization_launch.py \
   use_sim_time:=true \
-  map:=/path/to/map.yaml
-```
-
-**Nav2 Navigation:**
-```bash
-# Without lane detection:
-ros2 launch esda_simulation_2025 navigation_launch.py \
-  use_sim_time:=true \
-  map_subscribe_transient_local:=true \
-  map:=/path/to/map.yaml \
-  scan_topic:=/scan
-
-# With lane detection:
-ros2 launch esda_simulation_2025 navigation_launch.py \
-  use_sim_time:=true \
-  map_subscribe_transient_local:=true \
-  map:=/path/to/map.yaml \
+  map:=$PWD/src/esda_simulation_2025/maps/my_map.yaml \
+  amcl_base_frame_id:=base_link amcl_odom_frame_id:=odom \
   scan_topic:=/scan_fused
 ```
 
-**RViz2:**
+**Lane detection** (pick one; see [5.2](#52-choosing-a-detector)):
 ```bash
-rviz2 -d src/esda_simulation_2025/config/view_bot.rviz
+ros2 run esda_simulation_2025 lane_detection_esda.py --ros-args \
+  -p detector_method:=adaptive -p show_visualization:=true
 ```
 
-**Teleop (WASD Control):**
+**Nav2:**
+```bash
+# With SLAM:
+ros2 launch esda_simulation_2025 navigation_launch.py \
+  use_sim_time:=true map_subscribe_transient_local:=true scan_topic:=/scan_fused
+
+# With AMCL, add the map:
+ros2 launch esda_simulation_2025 navigation_launch.py \
+  use_sim_time:=true map_subscribe_transient_local:=true scan_topic:=/scan_fused \
+  map:=$PWD/src/esda_simulation_2025/maps/my_map.yaml
+```
+Use `scan_topic:=/scan` for SLAM, AMCL and Nav2 if no lane detector is running. Nothing publishes `/scan_fused` without one, and Nav2 would then see no obstacles at all.
+
+**RViz2:**
+```bash
+rviz2 -d src/esda_simulation_2025/config/view_bot.rviz --ros-args -p use_sim_time:=true
+```
+Set the **Fixed Frame** to `map`.
+
+**Teleop (WASD):**
 ```bash
 python3 src/esda_simulation_2025/scripts/teleop_wasd.py
 ```
 - **W**: Forward | **S**: Backward | **A**: Turn Left | **D**: Turn Right | **X**: Stop
 - **U/J**: Increase/Decrease Linear Speed | **I/K**: Increase/Decrease Angular Speed
 
+### 2.3. Worlds
+
+| World | What's around the track | What the lidar sees |
+|-------|-------------------------|---------------------|
+| `igvc.sdf` | Nothing (bare ground plane) | Most flat-scan rays return `inf`, so the map stays mostly unknown. This is the hardest test |
+| `igvc_campus.sdf` | Buildings and a 2 m perimeter wall | Every ray returns, so the map fills in fast |
+| `igvc_carpark.sdf` | A parking lot like the competition site: yellow stalls, light poles, parked cars, tents, a picket fence, trees | About 64% of rays return, with real gaps between them |
+| `sim_world_*.sdf` | Older test worlds | Spawn at (0, 0) |
+
+All three `igvc*` worlds place the same track at the same pose, so maps and waypoints carry over between them. `igvc_campus.sdf` and `igvc_carpark.sdf` are generated. To change them, edit the layout tables in `tools/generate_campus_world.py` or `tools/generate_carpark_world.py`, re-run the script, and rebuild.
+
 ---
 
-## 3. System Architecture
+## 3. Autonomous IGVC Run (`waypoint_navigator_recommendation.py`)
 
-### 3.1. Overall System Diagram
+This is the node that drives the course on its own. Each cycle it creates the next Nav2 goal from the lanes, the lidar and the costmaps. It heads for the GPS waypoints in `waypoints/igvc_waypoints.yaml` when they are in range. It does **not** have a GUI button.
+
+### 3.1. Launch order
+
+1. **GUI:** World `igvc.sdf` (or `igvc_carpark.sdf`). Costmap `[New Costmap]`. Tick **Enable Lane Detection**.
+2. **Launch Simulation**, wait for Gazebo, then **Launch SLAM**.
+3. **Launch Lane Detection** (`Adaptive` is a good default).
+4. **Launch Nav2**, then **Launch RViz2** (optional, but you will want to see it).
+5. In a new terminal, **from the workspace root**:
+   ```bash
+   cd ~/esda_simulation_2025
+   source install/setup.bash
+   ros2 run esda_simulation_2025 waypoint_navigator_recommendation.py
+   ```
+
+> **Run it from the workspace root.** It opens
+> `src/esda_simulation_2025/waypoints/igvc_waypoints.yaml` with a *relative*
+> path, so it crashes with `FileNotFoundError` from anywhere else.
+
+> **Don't run it alongside another goal source.** That means the **Waypoint Nav**
+> button (the old navigator), the behaviour tree, or RViz *2D Goal Pose*. They all
+> fight over Nav2.
+
+After editing the script, rebuild (`colcon build --packages-select esda_simulation_2025`) and restart it. The installed copy is what `ros2 run` executes.
+
+### 3.2. What it does
+
+Goals are tried in this order:
+
+| Situation | Goal it sends |
+|-----------|---------------|
+| Next GPS waypoint within `gps_distance_threshold` (10 m) | The waypoint itself. The waypoint advances when Nav2 reports success, or when the robot passes within 0.5 m of it |
+| Lanes visible | A **far goal** 3–6 m down the lane, checked with Nav2 `getPath`. Otherwise a short **lane goal** on the centreline |
+| No usable lane goal | A short **forward goal** straight ahead. Once the lanes have ended (seen at least once, then neither line seen for 3 s, like in no-man's-land), it aims at the next GPS waypoint instead, turning at most 60° per goal |
+| Nothing sendable for 5 s | **Stuck nudge**: 0.8 m in the clearest nearby direction |
+| Nudge finds nothing (dead end) | **Back up** 0.6 m (Nav2 BackUp), then recovery |
+| Nav2 goal fails | **Recovery**: a clear spot within 1.5 m ahead. If there isn't one, a **far recovery** goal 3–8 m past the blockage that Nav2 can plan to. If both fail for 20 s, it retries once ignoring unknown space, then releases the lock |
+
+Two guards apply throughout:
+- The node remembers the direction of real progress (re-measured every 2 m). Nudge, recovery and forward goals may not point more than 100° away from it, so sidestepping round obstacles can't add up to a U-turn back down the course.
+- Places it has already driven are marked in a keepout layer (`/travel_history`, `/keepout_filter_mask`), which discourages revisiting.
+
+### 3.3. GPS waypoints
+
+`src/esda_simulation_2025/waypoints/igvc_waypoints.yaml`. Only the `waypoints:` list is used, in order. Positions are in the **`map` frame, whose origin is the robot's start pose** (as with a fresh SLAM map), so they only line up if the robot starts at the spawn point. The `competition_northbound` / `competition_southbound` lists are approximate real-course positions, kept for reference.
+
+The waypoint file is read when the node starts, so restart the node after editing it. No rebuild is needed.
+
+### 3.4. Parameters
+
+Pass with `--ros-args -p name:=value`, e.g.:
+```bash
+ros2 run esda_simulation_2025 waypoint_navigator_recommendation.py --ros-args \
+  -p gps_distance_threshold:=15.0 -p enable_far_goals:=false
+```
+
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| `gps_distance_threshold` | 10.0 | Distance (m) within which the GPS waypoint itself becomes the goal |
+| `gps_waypoint_radius_threshold` | 0.5 | Counts a waypoint as reached when this close (m) |
+| `gps_retry_delay` | 5.0 | After a failed GPS goal, use normal goals for this long (s) |
+| `enable_gps_heading_pull` | true | Aim forward goals at the waypoint once the lanes end |
+| `gps_heading_no_lane_timeout` | 3.0 | Seconds without any lane line before the pull starts |
+| `gps_heading_max_turn_deg` | 60 | Largest turn toward the waypoint per goal |
+| `enable_far_goals` | true | Goals 3–6 m down the lane |
+| `far_goal_max_detour` | 1.6 | Reject a far goal whose path is longer than this × straight-line distance |
+| `unknown_clearance_allowance` | 0.8 | How far into unknown space a goal may sit (m). Interacts with the recovery timeout; change both together |
+| `enable_travel_keepout` | true | Discourage revisiting driven areas |
+| `replan_while_moving` | true | Let a better goal replace the active one |
+
+Some recovery settings are plain attributes in `__init__`, not ROS parameters: dead-end backup distance and speed, far-recovery distances and detour, and the progress-heading limits.
+
+### 3.5. Reading its log
+
+| Log line | Meaning |
+|----------|---------|
+| `GPS waypoint N is too far: … Using normal navigation.` | Waypoint out of range, so it is following the lanes |
+| `Not enough left/right lane points.` | Fewer than two points on one side. No centreline, so no lane or far goals |
+| `FAR GOAL \| …` | A far-goal decision (`none`, `rejected, no path`, `dropped, detour`, …) |
+| `Stuck nudge: …` / `Dead end: backing up` | The stuck ladder |
+| `FAR RECOVERY \| …` | Whether it found a route past a blockage |
+| `Recovery has produced nothing for 20 s` | Gave up on recovery and is resuming normal goals |
+
+### 3.6. Offline tests
+
+The waypoint logic has a test harness that needs no ROS, Gazebo or Nav2. Run it after changing the navigator or `nav2_params.yaml`:
+```bash
+python3 tools/validate_waypoint_logic.py
+```
+
+---
+
+## 4. System Architecture
+
+### 4.1. Overall System Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -264,7 +373,7 @@ python3 src/esda_simulation_2025/scripts/teleop_wasd.py
                                  └──────────────────────┘
 ```
 
-### 3.2. Key Topics & Data Flow
+### 4.2. Key Topics & Data Flow
 
 | Topic | Type | Publisher | Subscriber | Purpose |
 |-------|------|-----------|------------|---------|
@@ -277,7 +386,7 @@ python3 src/esda_simulation_2025/scripts/teleop_wasd.py
 | `/map` | OccupancyGrid | SLAM/Map Server | AMCL, Planner | Environment map |
 | `/camera/*/image_raw` | Image | Gazebo | lane_detection | Camera feeds |
 
-### 3.3. Transform (TF) Tree
+### 4.3. Transform (TF) Tree
 
 ```
 map
@@ -298,13 +407,36 @@ map
 
 ---
 
-## 4. Lane Detection System
+## 5. Lane Detection System
 
-### 4.1. Overview
+### 5.1. Overview
 
 The lane detection system uses computer vision to detect white lane markings and publishes them as obstacles for Nav2's costmap, enabling lane-aware autonomous navigation.
 
-### 4.2. Lane Detection Pipeline
+### 5.2. Choosing a Detector
+
+All five detectors share the base class in `lane_detection.py`. They publish the same `/lane_markers`, `/lane_obstacles` and `/scan_fused`, so Nav2 and the waypoint navigator don't care which one runs. They differ only in how the white-paint mask is found.
+
+| Dropdown | Script | Mask | Needs |
+|----------|--------|------|-------|
+| **Adaptive** | `lane_detection_esda.py`, `detector_method:=adaptive` | Local (neighbourhood) threshold. Throws away any mask covering more than 15% of the image region | Nothing extra |
+| **YOLO** | `lane_detection_esda.py`, `detector_method:=yolo` | YOLOv8-seg `lane` class, with the model's `cone` pixels (grown by 15 px) cut out, so barrel stripes aren't read as lane | `pip install ultralytics` (a CUDA torch for speed) and weights at `~/esda_models/lane_seg.pt`. Falls back to Adaptive if either is missing |
+| **Regular** | `lane_detection.py` | Fixed grayscale threshold of 130 | Nothing extra |
+| **FCN** | `lane_detection_FCN.py` | FCN segmentation | `lane-detection-on-rural-roads-master/.../FCN_model.h5` in the workspace root |
+| **TwinLiteNet+** | `lane_detection_twinlite.py` | TwinLiteNet+ (nano) | `TwinLiteNetPlus/` repo and weights in the workspace root (see `LANE_DETECTION.md`) |
+
+**Adaptive vs Regular:** the yolo-adaptive branch benchmarked them on 395 frames. Under a shadow band, the fixed threshold's recall fell from 0.800 to 0.678; under a lighting gradient, its precision fell from 0.452 to 0.178. Adaptive held 0.79 recall in every lighting condition.
+
+**YOLO weights** aren't in the repo (`*.pt` is gitignored). Get `lane_seg.pt` from whoever trained it, or train one with `research/vision/` on the `yolo-adaptive` branch (`synth_gen.py`, then `train.py`). The existing weights were trained for a different camera, and measured 0.492 recall against Adaptive's 0.795, so retrain before relying on it.
+
+`lane_detection_esda.py` has its own self-test, which needs no ROS:
+```bash
+python3 src/esda_simulation_2025/scripts/lane_detection_esda.py --selftest
+```
+
+Useful parameters (`--ros-args -p …`): `detector_method`, `max_area_frac` (0.15), `adaptive_block` (61), `adaptive_c` (-8), `yolo_weights`, `yolo_conf` (0.25), `yolo_cone_dilate_px` (15), `yolo_device` (e.g. `0`).
+
+### 5.3. Lane Detection Pipeline
 
 ```
 Camera Images → CV Processing → 3D Projection → Scan Fusion → Costmap
@@ -346,7 +478,7 @@ Camera Images → CV Processing → 3D Projection → Scan Fusion → Costmap
    - Lane points marked as obstacles
    - Inflation layer adds safety buffer
 
-### 4.3. Lane Detection Parameters
+### 5.4. Lane Detection Parameters
 
 Located in `scripts/lane_detection.py`:
 
@@ -368,7 +500,7 @@ fx = 640 / (2 * tan(1.089 / 2))  # Focal length (from FOV)
 camera_height = 0.315             # Height above ground (meters)
 ```
 
-### 4.4. Visualization
+### 5.5. Visualization
 
 **In RViz:**
 - **Purple/Magenta LaserScan points** (`/scan_fused`) - Fused LiDAR + lanes
@@ -381,7 +513,7 @@ camera_height = 0.315             # Height above ground (meters)
 - Bottom row: White mask & edge detection
 - Green lines overlaid on detected lanes
 
-### 4.5. Toggling Lane Detection
+### 5.6. Toggling Lane Detection
 
 **Via UI:**
 - Check/uncheck **"Enable Lane Detection"** checkbox
@@ -398,9 +530,9 @@ scan_topic:=/scan_fused
 
 ---
 
-## 5. Navigation & Control
+## 6. Navigation & Control
 
-### 5.1. Nav2 Stack Overview
+### 6.1. Nav2 Stack Overview
 
 The robot uses Nav2 (Navigation2) with the following configuration:
 
@@ -411,7 +543,7 @@ The robot uses Nav2 (Navigation2) with the following configuration:
 - **Recovery Behaviors**: Spin, backup, wait for obstacle avoidance
 - **Costmap layers**: Static map, obstacles (LiDAR/lanes), inflation
 
-### 5.2. Optimized Parameters
+### 6.2. Optimized Parameters
 
 The system is tuned for stable performance:
 
@@ -423,7 +555,7 @@ The system is tuned for stable performance:
 | **Planner** | A* algorithm, 0.5m tolerance | Fast, accurate paths |
 | **Costmaps** | 0.05m resolution, 3 Hz updates | Balance detail/speed |
 
-### 5.3. Navigation Capabilities
+### 6.3. Navigation Capabilities
 
 **Minimum Navigable Gap:**
 - Robot radius: 0.55m
@@ -436,7 +568,7 @@ The system is tuned for stable performance:
 - Maximum velocity: **0.5 m/s**
 - Obstacle detection range: **4.5m**
 
-### 5.4. Costmap Layers
+### 6.4. Costmap Layers
 
 **Local Costmap** (6m × 6m, rolling window):
 1. **VoxelLayer**: 3D obstacle representation from sensors
@@ -448,7 +580,7 @@ The system is tuned for stable performance:
 2. **ObstacleLayer**: Dynamic obstacles from sensors
 3. **InflationLayer**: 28cm safety buffer
 
-### 5.5. Setting Navigation Goals
+### 6.5. Setting Navigation Goals
 
 **In RViz:**
 1. Click **"2D Goal Pose"** tool
@@ -463,9 +595,9 @@ The system is tuned for stable performance:
 
 ---
 
-## 6. Configuration Files
+## 7. Configuration Files
 
-### 6.1. Key Files
+### 7.1. Key Files
 
 | File | Purpose | Key Parameters |
 |------|---------|----------------|
@@ -476,7 +608,7 @@ The system is tuned for stable performance:
 | `description/robot_core_ref.xacro` | Robot URDF | Geometry, sensors, physics |
 | `worlds/*.sdf` | Gazebo worlds | Environment definitions |
 
-### 6.2. Important Nav2 Settings
+### 7.2. Important Nav2 Settings
 
 **Controller (MPPI):**
 ```yaml
@@ -501,22 +633,23 @@ use_astar: true                     # A* algorithm (not Dijkstra)
 tolerance: 0.5                      # Goal tolerance (meters)
 ```
 
-### 6.3. Modifying Parameters
+### 7.3. Modifying Parameters
 
-**After changing configs:**
+**After changing configs or scripts:**
 ```bash
-cd ~/esda_sim_ws
-colcon build --symlink-install
+cd ~/esda_simulation_2025
+colcon build --packages-select esda_simulation_2025
 source install/setup.bash
 ```
+Then restart the affected nodes.
 
 Or use **"Colcon Build"** button in UI.
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
-### 7.1. Common Issues
+### 8.1. Common Issues
 
 **❌ "Failed to create a plan" errors**
 - **Cause**: Goal in obstacle or unreachable
@@ -538,6 +671,21 @@ Or use **"Colcon Build"** button in UI.
 - **Cause**: Display not enabled
 - **Fix**: Enable **"LaserScan_Fused"** and **"LaneObstacles"** in RViz
 
+**❌ `failed to load joint_state_broadcaster` / robot doesn't spawn**
+- **Cause**: Stale Gazebo or DDS state from a previous run
+- **Fix**: **KILL ALL PROCESSES & RESET GAZEBO** in the GUI, or:
+  ```bash
+  pkill -f ign; pkill -f gz; rm -f /dev/shm/fastrtps_*
+  ```
+
+**❌ `waypoint_navigator_recommendation.py` crashes with `FileNotFoundError`**
+- **Cause**: Started outside the workspace root (the waypoint file path is relative)
+- **Fix**: `cd ~/esda_simulation_2025` first. See [section 3.1](#31-launch-order)
+
+**❌ Code changes have no effect**
+- **Cause**: `ros2 run` executes the copy in `install/`, not the file in `src/`
+- **Fix**: Rebuild (`colcon build --packages-select esda_simulation_2025`) and restart the node
+
 **❌ Gazebo crashes or freezes**
 - **Cause**: GPU issues or resource limits
 - **Fix**: 
@@ -546,7 +694,7 @@ Or use **"Colcon Build"** button in UI.
   killall gzserver gzclient        # Kill hung processes
   ```
 
-### 7.2. Verification Commands
+### 8.2. Verification Commands
 
 **Check active topics:**
 ```bash
@@ -573,7 +721,7 @@ ros2 topic echo /lane_obstacles --once
 ros2 topic echo /lane_markers --once
 ```
 
-### 7.3. Performance Tuning
+### 8.3. Performance Tuning
 
 **If navigation too conservative:**
 ```yaml
@@ -597,16 +745,16 @@ time_steps: 35                      # Shorter horizon
 
 ---
 
-## 8. Additional Resources
+## 9. Additional Resources
 
-### 8.1. Documentation
+### 9.1. Documentation
 
 - **Lane Detection Details**: `LANE_DETECTION_FIXES.md`
 - **Nav2 Official Docs**: https://navigation.ros.org/
 - **SLAM Toolbox**: https://github.com/SteveMacenski/slam_toolbox
 - **ROS2 Humble**: https://docs.ros.org/en/humble/
 
-### 8.2. Useful Commands
+### 9.2. Useful Commands
 
 **Save map:**
 ```bash
@@ -625,7 +773,7 @@ ros2 bag record -a  # Record all topics
 ros2 bag play <bag_file>  # Playback
 ```
 
-### 8.3. File Structure Reference
+### 9.3. File Structure Reference
 
 ```
 esda_simulation_2025/
@@ -644,24 +792,37 @@ esda_simulation_2025/
 │   └── *.launch.py                   # Other launchers
 ├── scripts/
 │   ├── ui_launch.py                  # ★ GUI manager
-│   ├── lane_detection.py             # ★ Lane detection
+│   ├── waypoint_navigator_recommendation.py  # ★ Autonomous IGVC navigator
+│   ├── read_gps_waypoints.py         # Loads waypoints/igvc_waypoints.yaml
+│   ├── lane_detection.py             # ★ Lane detection base class (Regular)
+│   ├── lane_detection_esda.py        # Adaptive / YOLO detector
+│   ├── lane_detection_FCN.py         # FCN detector
+│   ├── lane_detection_twinlite.py    # TwinLiteNet+ detector
 │   └── teleop_wasd.py                # Keyboard control
+├── waypoints/
+│   └── igvc_waypoints.yaml           # ★ GPS waypoints (map frame)
 ├── worlds/
-│   └── *.sdf                         # Gazebo worlds
+│   ├── igvc.sdf, igvc_campus.sdf, igvc_carpark.sdf
+│   └── models/                       # orange_igvc track, esda_campus, esda_carpark
 ├── maps/
 │   └── *.yaml, *.pgm                 # Saved costmaps
 └── README.md                         # This file
+
+tools/ (workspace root)
+├── validate_waypoint_logic.py        # Offline tests for the navigator
+├── generate_campus_world.py          # Writes worlds/models/esda_campus
+└── generate_carpark_world.py         # Writes worlds/models/esda_carpark
 ```
 
 **★ = Most frequently modified files**
 
 ---
 
-## 9. Credits & License
+## 10. Credits & License
 
 **Developed by:** ESDA Team 2025  
 **License:** [Specify License]  
 **ROS2 Version:** Humble  
-**Last Updated:** February 2026
+**Last Updated:** October 2026
 
 For questions or issues, please open an issue on the repository.

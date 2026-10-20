@@ -155,7 +155,7 @@ class SimManager(ctk.CTk):
         self.lane_mode_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lane_detector_mode,
-            values=["Regular", "FCN", "TwinLiteNet+"],
+            values=["Adaptive", "YOLO", "Regular", "FCN", "TwinLiteNet+"],
             width=130,
             fg_color=self.bg_dark,
             button_color=self.accent_purple,
@@ -493,7 +493,32 @@ class SimManager(ctk.CTk):
             else "false"
         )
 
-        if mode == "FCN":
+        if mode == "Adaptive":
+            # lane_detection_esda.py: same base class, Hough, profile check and
+            # depth projection; only the mask differs - a local threshold
+            # instead of the fixed grayscale 130, plus a guard that refuses a
+            # mask covering over 15% of the ROI. Holds up under shade and
+            # gradients where the fixed level does not.
+            lane_cmd = (
+                f"ros2 run esda_simulation_2025 lane_detection_esda.py "
+                f"--ros-args "
+                f"-p detector_method:=adaptive "
+                f"-p show_visualization:={show_visualization}"
+            )
+        elif mode == "YOLO":
+            # YOLOv8-seg with separate lane and cone classes; cone pixels are
+            # cut out of the lane mask. Needs ultralytics and trained weights
+            # (research/vision on the yolo-adaptive branch); falls back to
+            # adaptive if either is missing.
+            weights = os.path.expanduser("~/esda_models/lane_seg.pt")
+            lane_cmd = (
+                f"ros2 run esda_simulation_2025 lane_detection_esda.py "
+                f"--ros-args "
+                f"-p detector_method:=yolo "
+                f"-p yolo_weights:={weights} "
+                f"-p show_visualization:={show_visualization}"
+            )
+        elif mode == "FCN":
             model_path = f"{self.workspace_root}/lane-detection-on-rural-roads-master/CS542_Project/Code/FCN_model.h5"
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection_FCN.py "
@@ -524,10 +549,18 @@ class SimManager(ctk.CTk):
         # monocular feed and its depth sensor, and remap outputs so they don't
         # collide with the front camera's /lane_markers, /lane_obstacles, /scan_fused.
         if self.dual_camera_var.get():
+            # Side cameras use the adaptive detector when the front one uses
+            # Adaptive or YOLO (one model instance is enough), otherwise the
+            # base detector.
+            side_script = ("lane_detection_esda.py" if mode in ("Adaptive", "YOLO")
+                           else "lane_detection.py")
+            side_extra = ("-p detector_method:=adaptive "
+                          if mode in ("Adaptive", "YOLO") else "")
             for side in ("left_camera", "right_camera"):
                 side_lane_cmd = (
-                    f"ros2 run esda_simulation_2025 lane_detection.py "
+                    f"ros2 run esda_simulation_2025 {side_script} "
                     f"--ros-args "
+                    f"{side_extra}"
                     f"-r __node:=lane_detection_{side} "
                     f"-r /camera/left/image_raw:=/camera/{side}/image_raw "
                     f"-r /camera/right/image_raw:=/camera/{side}/image_raw "
@@ -658,6 +691,7 @@ class SimManager(ctk.CTk):
         subprocess.run("pkill -9 -f lane_detection.py 2>/dev/null", shell=True)
         subprocess.run("pkill -9 -f lane_detection_FCN.py 2>/dev/null", shell=True)
         subprocess.run("pkill -9 -f lane_detection_twinlite.py 2>/dev/null", shell=True)
+        subprocess.run("pkill -9 -f lane_detection_esda.py 2>/dev/null", shell=True)
         # Clean up shared memory segments that often cause FastDDS errors
         subprocess.run("rm -rf /dev/shm/fastrtps_* /dev/shm/sem.* 2>/dev/null", shell=True)
         # Kill our managed processes
