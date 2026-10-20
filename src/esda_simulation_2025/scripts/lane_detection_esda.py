@@ -454,6 +454,16 @@ def _build_node_class():
                     "committed at research/models/lane_seg_synth_cpu.pt. "
                     "Refusing to start.")
                 raise SystemExit(2)
+            if not os.path.isfile(w):
+                # Only reachable for an EXPLICIT path: the fall-through in
+                # _resolve_yolo_weights returns what was asked for even
+                # when it is missing, precisely so this can name it rather
+                # than silently loading a different model.
+                self.get_logger().fatal(
+                    f"yolo weights not found at {w} -- that path was given "
+                    "explicitly (parameter or $ESDA_YOLO_WEIGHTS), so it is "
+                    "used as written and not substituted. Refusing to start.")
+                raise SystemExit(2)
             try:
                 from ultralytics import YOLO
                 self._yolo = YOLO(w)
