@@ -341,6 +341,7 @@ def _build_node_class():
             # Read live, per frame, so `ros2 param set /lane_detection_node
             # log_stage_counts true` works on a stack that is already up.
             self.declare_parameter('log_stage_counts', False)
+            self.declare_parameter('log_filter_reasons', False)
             self.declare_parameter('yolo_lane_class', 'lane')
             self.declare_parameter('yolo_cone_class', 'cone')
             self.declare_parameter('yolo_cone_dilate_px', 15)
@@ -567,6 +568,8 @@ def _build_node_class():
                 maxLineGap=self.max_line_gap)
             valid = (self.filter_valid_lanes(lines, gray, height, width, hsv)
                      if lines is not None else [])
+            if self.get_parameter('log_filter_reasons').value and lines is not None:
+                self._count_reject_reasons(lines, gray, hsv)
             if self.get_parameter('log_stage_counts').value:
                 # mask_px: lane pixels the network kept after clean_mask.
                 # hough:   straight segments Canny+HoughLinesP found in them.
@@ -577,6 +580,50 @@ def _build_node_class():
                     % (int((white_mask > 0).sum()),
                        0 if lines is None else len(lines), len(valid)))
             return valid, white_mask, edges
+
+        def _count_reject_reasons(self, lines, gray, hsv):
+            """Re-run filter_valid_lanes' gates, counting only.
+
+            Deliberately calls the base class's own is_pixel_white,
+            is_pixel_dark and has_nearby_orange rather than restating the
+            thresholds, so this cannot drift from what actually filters.
+            """
+            short = horiz = notwhite = notdark = orange = ok = 0
+            mid_gray = []
+            for ln in lines:
+                x1, y1, x2, y2 = ln[0]
+                if float(np.hypot(x2 - x1, y2 - y1)) < self.min_line_length:
+                    short += 1
+                    continue
+                if abs(float(np.arctan2(y2 - y1, x2 - x1))) < 0.05:
+                    horiz += 1
+                    continue
+                mx, my = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+                gi, gj = int(my), int(mx)
+                if 0 <= gi < gray.shape[0] and 0 <= gj < gray.shape[1]:
+                    mid_gray.append(int(gray[gi, gj]))
+                if not self.is_pixel_white(gray, mx, my):
+                    notwhite += 1
+                    continue
+                dxx, dyy = float(x2 - x1), float(y2 - y1)
+                mg = float(np.hypot(dxx, dyy)) or 1.0
+                nx, ny = -dyy / mg, dxx / mg
+                d1 = self.is_pixel_dark(gray, mx + nx * 12, my + ny * 12)
+                d2 = self.is_pixel_dark(gray, mx - nx * 12, my - ny * 12)
+                if not (d1 or d2):
+                    notdark += 1
+                    continue
+                if hsv is not None and self.has_nearby_orange(hsv, mx, my, nx, ny):
+                    orange += 1
+                    continue
+                ok += 1
+            med = int(np.median(mid_gray)) if mid_gray else -1
+            lo = int(np.percentile(mid_gray, 10)) if mid_gray else -1
+            self.get_logger().info(
+                "reject: n=%d short=%d horiz=%d not_white=%d not_dark=%d "
+                "orange=%d pass=%d midgray_p10=%d_med=%d (white needs >120)"
+                % (len(lines), short, horiz, notwhite, notdark, orange, ok,
+                   lo, med))
 
     return rclpy, LaneDetectionEsdaNode
 
