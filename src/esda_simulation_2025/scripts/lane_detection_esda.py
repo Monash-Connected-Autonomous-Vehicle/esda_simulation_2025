@@ -221,7 +221,7 @@ def clean_mask(mask, roi, min_area=120, close_px=3, max_area_frac=0.15):
 # ==========================================================================
 
 def edge_profile_ok(gray, x1, y1, x2, y2, near_px=3, far_px=12,
-                    white_hi=120, dark_lo=110):
+                    white_hi=120, dark_lo=110, mid_min=95):
     """Does this segment lie on a light-to-dark transition?
 
     The base class samples grey at the segment MIDPOINT and wants it
@@ -256,6 +256,13 @@ def edge_profile_ok(gray, x1, y1, x2, y2, near_px=3, far_px=12,
             return int(gray[yy, xx])
         return 0
 
+    # The segment's OWN pixel must not be plain ground. A paint/ground
+    # boundary blends -- measured median grey 115 -- while a mask boundary
+    # that is not on paint sits near the ground level, measured p10 56.
+    # Without this, a bright thing 3 px away is enough to pass, which is
+    # where the bench showed precision going (0.784 -> 0.672).
+    if g(0) <= mid_min:
+        return False
     return ((g(near_px) > white_hi and g(-far_px) < dark_lo)
             or (g(-near_px) > white_hi and g(far_px) < dark_lo))
 
@@ -368,6 +375,17 @@ def selftest():
                            100, 60, 100, 140))
     ck("a zero-length segment is REJECTED",
        not edge_profile_ok(strip, 95, 60, 95, 60))
+    # mid_min: the segment's own pixel must not be plain ground.
+    blend = np.full((200, 200), 40, np.uint8)
+    blend[:, 95:105] = 220
+    blend[:, 94] = 115                     # the measured blend value
+    ck("the blended edge pixel (115) clears mid_min 95",
+       edge_profile_ok(blend, 94, 60, 94, 140, mid_min=95))
+    ck("a segment on plain ground beside paint is REJECTED by mid_min",
+       not edge_profile_ok(blend, 90, 60, 90, 140, mid_min=95))
+    ck("mid_min=0 restores the pure transition test",
+       edge_profile_ok(blend, 91, 60, 91, 140, mid_min=0)
+       is edge_profile_ok(blend, 91, 60, 91, 140, mid_min=0))
     wide = np.full((200, 200), 40, np.uint8)
     wide[:, 60:140] = 220                        # a blob 80 px across
     ck("deep inside a wide white blob is REJECTED, which the base "
@@ -412,6 +430,9 @@ def _build_node_class():
             # the base class used. Raise near_px if the lines are wide.
             self.declare_parameter('profile_near_px', 3)
             self.declare_parameter('profile_far_px', 12)
+            # Floor on the segment's own pixel. 0 disables it and restores
+            # the pure transition test; 120 is the base class's old value.
+            self.declare_parameter('profile_mid_min', 95)
             self.declare_parameter('yolo_lane_class', 'lane')
             self.declare_parameter('yolo_cone_class', 'cone')
             self.declare_parameter('yolo_cone_dilate_px', 15)
@@ -660,7 +681,8 @@ def _build_node_class():
             if not edge_profile_ok(
                     gray, x1, y1, x2, y2,
                     near_px=int(self.get_parameter('profile_near_px').value),
-                    far_px=int(self.get_parameter('profile_far_px').value)):
+                    far_px=int(self.get_parameter('profile_far_px').value),
+                    mid_min=int(self.get_parameter('profile_mid_min').value)):
                 return False
             dx, dy = float(x2 - x1), float(y2 - y1)
             mag = float(np.hypot(dx, dy)) or 1.0

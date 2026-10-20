@@ -158,6 +158,8 @@ def main():
         "~/esda_ws/src/esda_simulation_2025/scripts/lane_detection_esda.py"))
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--hit-frac", type=float, default=0.6)
+    ap.add_argument("--mid-sweep", default="0,60,80,95,110,120",
+                    help="floor on the segment's own pixel, swept")
     a = ap.parse_args()
     if a.selftest:
         return selftest()
@@ -175,7 +177,9 @@ def main():
     print("frames: %d" % len(imgs))
 
     DILATIONS = (2, 3, 5)
-    stats = {d: {k: [0, 0] for k in ("old", "new", "all")} for d in DILATIONS}
+    MIDS = [int(v) for v in a.mid_sweep.split(",") if v != ""]
+    keys = ["old", "all"] + ["new%d" % m for m in MIDS]
+    stats = {d: {k: [0, 0] for k in keys} for d in DILATIONS}
     n_seg = 0
 
     for i, ip in enumerate(imgs):
@@ -213,15 +217,17 @@ def main():
                 continue
             n_seg += 1
             o = old_gate(gray, x1, y1, x2, y2)
-            nw = nd.edge_profile_ok(gray, x1, y1, x2, y2)
+            nw = {m: nd.edge_profile_ok(gray, x1, y1, x2, y2, mid_min=m)
+                  for m in MIDS}
             for d in DILATIONS:
                 tru = seg_is_true(x1, y1, x2, y2, truth_d[d], hit_frac=a.hit_frac)
                 s = stats[d]
                 s["all"][0 if tru else 1] += 1
                 if o:
                     s["old"][0 if tru else 1] += 1
-                if nw:
-                    s["new"][0 if tru else 1] += 1
+                for m in MIDS:
+                    if nw[m]:
+                        s["new%d" % m][0 if tru else 1] += 1
         if (i + 1) % 50 == 0:
             print("  %d/%d" % (i + 1, len(imgs)), flush=True)
 
@@ -231,12 +237,13 @@ def main():
         avail = s["all"][0]
         print("\n--- truth dilated by %d px   (%d of %d segments lie on real paint) ---"
               % (d, avail, sum(s["all"])))
-        print("  %-6s %7s %7s %9s %8s" % ("gate", "passed", "true", "precision", "recall"))
-        for k in ("old", "new"):
+        print("  %-10s %7s %7s %9s %8s" % ("gate", "passed", "true", "precision", "recall"))
+        for k in ["old"] + ["new%d" % m for m in MIDS]:
             tp, fp = s[k]
             p = tp / (tp + fp) if tp + fp else float("nan")
             r = tp / avail if avail else float("nan")
-            print("  %-6s %7d %7d %8.3f %8.3f" % (k, tp + fp, tp, p, r))
+            lbl = k if k == "old" else "new mid=%s" % k[3:]
+            print("  %-10s %7d %7d %8.3f %8.3f" % (lbl, tp + fp, tp, p, r))
     return 0
 
 
