@@ -10,6 +10,15 @@ import glob
 import threading
 from tkinter import filedialog
 
+# Dropdown entries served by lane_detection_esda.py, and the detector_method
+# each one asks it for. Everything here shares the base class, the Hough
+# stage and /scan_fused, so these are interchangeable without touching Nav2.
+ESDA_METHODS = {
+    "YOLO lane": "yolo",
+    "Adaptive": "adaptive",
+}
+
+
 class SimManager(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -152,12 +161,12 @@ class SimManager(ctk.CTk):
         self.lane_detection_check = ctk.CTkCheckBox(self.sim_frame, text="Enable Lane Detection", variable=self.lane_detection_var, font=("Orbitron", 14), text_color=self.accent_purple, bg_color=self.bg_panel)
         self.lane_detection_check.grid(row=0, column=1, padx=10, pady=6, sticky="w")
 
-        self.lane_detector_mode = ctk.StringVar(value="Adaptive")
+        self.lane_detector_mode = ctk.StringVar(value="YOLO lane")
         self.lane_mode_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lane_detector_mode,
-            values=["Adaptive", "Regular", "FCN", "TwinLiteNet+",
-                    "YOLO seg (lane+cone)"],
+            values=["YOLO lane", "Adaptive", "Regular", "FCN",
+                    "TwinLiteNet+", "YOLO seg (lane+cone)"],
             width=130,
             fg_color=self.bg_dark,
             button_color=self.accent_purple,
@@ -564,19 +573,29 @@ class SimManager(ctk.CTk):
             self.run_in_terminal("LANE", seg_cmd)
             return
 
-        if mode == "Adaptive":
+        if mode in ESDA_METHODS:
             # lane_detection_esda.py -- same base class, same Hough and
-            # dark-white-dark filter, same depth projection. Only the mask
-            # differs: a LOCAL threshold instead of the fixed grayscale 130,
-            # plus a guard that refuses any mask covering more than a sixth
-            # of the ROI. Measured over four lightings on 395 frames, a fixed
-            # level fell from 0.800 recall to 0.678 under a shadow band and
-            # its precision from 0.452 to 0.178 under a gradient; the local
-            # one held 0.791-0.795 throughout.
+            # dark-white-dark filter, same depth projection, and the same
+            # /scan_fused that Nav2 plans on. Only the MASK differs, which
+            # is why swapping between these two entries changes nothing
+            # downstream.
+            #
+            # "Adaptive" is a LOCAL threshold instead of the fixed grayscale
+            # 130, plus a guard that refuses any mask covering more than a
+            # sixth of the ROI. Measured over four lightings on 395 frames,
+            # a fixed level fell from 0.800 recall to 0.678 under a shadow
+            # band and its precision from 0.452 to 0.178 under a gradient;
+            # the local one held 0.791-0.795 throughout.
+            #
+            # "YOLO lane" is the trained model's lane class. It is the
+            # startup default by team decision, not because the bench
+            # favours it -- see lane_detection_esda.py's header for the
+            # numbers and the argument. Falls back to adaptive, loudly, if
+            # the weights or ultralytics are missing.
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection_esda.py "
                 f"--ros-args "
-                f"-p detector_method:=adaptive "
+                f"-p detector_method:={ESDA_METHODS[mode]} "
                 f"-p show_visualization:={show_visualization}"
             )
         elif mode == "FCN":
@@ -615,10 +634,17 @@ class SimManager(ctk.CTk):
             # another. FCN and TwinLiteNet+ stay on the base detector here --
             # they are single-model nodes and have never been run on the side
             # feeds.
-            side_script = ("lane_detection_esda.py" if mode == "Adaptive"
+            # Cost note for "YOLO lane": this makes it THREE inference
+            # processes, and one alone measured 1.9-2.4 Hz on CPU against a
+            # 10 Hz camera. Consistency is still the right call -- a run
+            # that is YOLO ahead and a threshold sideways is not a run of
+            # anything -- but expect the side feeds to lag, and switch the
+            # main detector to Adaptive if dual-camera is what you are
+            # actually testing.
+            side_script = ("lane_detection_esda.py" if mode in ESDA_METHODS
                            else "lane_detection.py")
-            side_extra = ("-p detector_method:=adaptive "
-                          if mode == "Adaptive" else "")
+            side_extra = (f"-p detector_method:={ESDA_METHODS[mode]} "
+                          if mode in ESDA_METHODS else "")
             for side in ("left_camera", "right_camera"):
                 side_lane_cmd = (
                     f"ros2 run esda_simulation_2025 {side_script} "

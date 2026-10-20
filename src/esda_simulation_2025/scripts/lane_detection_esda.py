@@ -51,24 +51,43 @@ robot carries.
 
 USAGE
 
+    ros2 run esda_simulation_2025 lane_detection_esda.py          # yolo
     ros2 run esda_simulation_2025 lane_detection_esda.py \
         --ros-args -p detector_method:=adaptive
 
     python3 lane_detection_esda.py --selftest     # no ROS needed
 
-detector_method: adaptive | otsu | tophat | value | fixed | yolo
-  adaptive  local mean. The default, and the one the lighting sweep favours.
+detector_method: yolo | adaptive | otsu | tophat | value | fixed
+  yolo      the trained segmentation model, lane class only.
+
+            THE DEFAULT since 2026-10-20, by team decision, and not
+            because the sim bench says so. The bench says the opposite:
+            0.492 recall and 0.362 precision against adaptive's
+            0.795/0.263 and otsu's 0.800/0.452, at 8.4 ms against 2.4.
+
+            The case for it is that the bench cannot see what it would
+            win on. The weights were trained on synthetic frames for a
+            different camera, so it is being scored off its own
+            distribution. This sim lights every frame uniformly, which
+            is the one condition a threshold is built for and an outdoor
+            course never provides. And a threshold has no notion of what
+            a lane IS: it cannot decline a white-striped barrel, which
+            is the failure that walls the robot into a false corridor.
+
+            None of that is measured yet. Scoring it on real footage,
+            watching PRECISION, is what would settle it.
+
+            Weights default to the one shipped in research/models/. If
+            they or ultralytics are missing, this falls back to adaptive
+            and logs why rather than dying mid-run.
+  adaptive  local mean. What the lighting sweep favours, and one
+            parameter away: -p detector_method:=adaptive
   otsu      per-frame global level. Best on clean, evenly lit frames.
   tophat    morphological; best recall at 1-2 m but the worst precision,
             because tarmac speckle narrower than the kernel survives it.
   value     bright AND desaturated in HSV. Collapses in shade; kept for
             completeness, not recommended.
   fixed     the base class's own behaviour, for a baseline.
-  yolo      a trained segmentation model. Measured 0.492 recall against
-            0.795 for adaptive on the same frames, at 8.4 ms against 2.4,
-            so it is NOT the default -- but the weights were trained for a
-            different camera, so this is the hook to re-test after a
-            retrain rather than a recommendation.
 """
 
 import argparse
@@ -293,7 +312,7 @@ def _build_node_class():
     class LaneDetectionEsdaNode(LaneDetectionNode):
         def __init__(self):
             super().__init__()
-            self.declare_parameter('detector_method', 'adaptive')
+            self.declare_parameter('detector_method', 'yolo')
             self.declare_parameter('max_area_frac', 0.15)
             self.declare_parameter('adaptive_block', 61)
             self.declare_parameter('adaptive_c', -8)

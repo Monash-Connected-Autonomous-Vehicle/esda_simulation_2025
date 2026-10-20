@@ -10,7 +10,7 @@
 #
 # Options for `up`:
 #   --world NAME     default igvc.sdf
-#   --method NAME    adaptive (default) | fixed | otsu | tophat | value | yolo
+#   --method NAME    yolo (default) | adaptive | fixed | otsu | tophat | value
 #   --no-lane        skip lane detection  (also switches the stack to /scan)
 #   --no-nav         skip Nav2
 #   --no-rviz        skip RViz
@@ -26,7 +26,7 @@ LOGDIR="$WS/.demo_logs"
 PIDDIR="$WS/.demo_pids"
 
 WORLD="igvc.sdf"
-METHOD="adaptive"
+METHOD="yolo"
 DO_LANE=1; DO_NAV=1; DO_RVIZ=1; DO_BUILD=1; DO_DRIVE=0
 
 C_OK=$'\033[32m'; C_WARN=$'\033[33m'; C_ERR=$'\033[31m'; C_DIM=$'\033[2m'; C_0=$'\033[0m'

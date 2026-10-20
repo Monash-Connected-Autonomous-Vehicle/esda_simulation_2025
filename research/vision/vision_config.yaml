@@ -32,6 +32,13 @@
 #  which already gated vision cones as unconfirmed guesses anyway.
 # ---------------------------------------------------------------------
 detector:
+  # NOTE 2026-10-20: the SIMULATION's main lane detector is now YOLO --
+  # lane_detection_esda.py defaults to detector_method:=yolo, and that is
+  # the node Nav2's /scan_fused comes from. `classic` below is this node's
+  # own default and is not the project's position; lane_seg.launch.py
+  # already passes detector:=yolo. The justification below is the record of
+  # the measurement, not of the decision.
+  #
   # To run the network instead, either flip this to `yolo` or leave it and
   # pass `--detector yolo` on the command line -- the flag wins, and is the
   # better way to A/B the two without a config edit everyone has to undo.
