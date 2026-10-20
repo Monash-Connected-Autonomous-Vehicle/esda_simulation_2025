@@ -72,6 +72,47 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# ---------------------------------------------------------------------------
+# The YOLO lane+cone segmentation node.
+#
+# It is installed FROM research/vision/ rather than copied into scripts/.
+# Two copies of a detector drift, and this project has already lost a day to
+# the wrong copy of a workspace being the one that ran. research/vision is
+# also where its training and scoring tools live, and they import the same
+# two modules it does.
+#
+# Guarded, so a checkout of this package on its own still configures -- it
+# just does not get the node, and `ros2 run` then says so, which is true.
+# ---------------------------------------------------------------------------
+set(ESDA_VISION_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../research/vision)
+set(ESDA_VISION_MODELS ${CMAKE_CURRENT_SOURCE_DIR}/../../research/models)
+if(EXISTS ${ESDA_VISION_DIR}/lane_seg_node.py)
+  install(PROGRAMS
+    ${ESDA_VISION_DIR}/lane_seg_node.py
+    ${ESDA_VISION_DIR}/lane_link.py
+    ${ESDA_VISION_DIR}/lane_classic.py
+    DESTINATION lib/${PROJECT_NAME}
+  )
+  # share/<pkg>/vision/vision_config.yaml and share/<pkg>/models/<weight>:
+  # the config's relative "../models/..." then resolves the same way
+  # installed as it does in the source tree.
+  install(FILES ${ESDA_VISION_DIR}/vision_config.yaml
+    DESTINATION share/${PROJECT_NAME}/vision
+  )
+  if(EXISTS ${ESDA_VISION_MODELS}/lane_seg_synth_cpu.pt)
+    install(FILES ${ESDA_VISION_MODELS}/lane_seg_synth_cpu.pt
+      DESTINATION share/${PROJECT_NAME}/models
+    )
+  else()
+    message(WARNING
+      "research/models/lane_seg_synth_cpu.pt is missing; lane_seg_node.py "
+      "will only work with --detector classic")
+  endif()
+else()
+  message(WARNING
+    "research/vision/ not found; the lane+cone node will not be installed")
+endif()
+
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/NavigationRecommendation.msg"
   "msg/LaneParameters.msg"

@@ -156,7 +156,8 @@ class SimManager(ctk.CTk):
         self.lane_mode_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lane_detector_mode,
-            values=["Adaptive", "Regular", "FCN", "TwinLiteNet+"],
+            values=["Adaptive", "Regular", "FCN", "TwinLiteNet+",
+                    "YOLO seg (lane+cone)"],
             width=130,
             fg_color=self.bg_dark,
             button_color=self.accent_purple,
@@ -543,6 +544,26 @@ class SimManager(ctk.CTk):
                      if _mount == "pole_top" else
                      " -p camera_mount_height:=0.315 -p camera_mount_pitch:=0.0")
 
+        if mode == "YOLO seg (lane+cone)":
+            # The only detector that separates cones from lane paint, and so
+            # the only one that can tell a white-striped barrel from a line.
+            #
+            # Launched through lane_seg.launch.py rather than assembled here,
+            # because its camera geometry has to be derived from the mount
+            # and that derivation belongs in one place. Nothing to append:
+            # lane_geom above is in the OTHER sign convention and for the
+            # other node's parameters.
+            #
+            # It does not publish /scan_fused, so Nav2 stays on the raw
+            # LiDAR while it runs -- see nav_scan_topic(). Watch
+            # /cone/points, /lane/points and /lane/debug_image.
+            seg_cmd = (
+                f"ros2 launch esda_simulation_2025 lane_seg.launch.py "
+                f"camera_mount:={_mount}"
+            )
+            self.run_in_terminal("LANE", seg_cmd)
+            return
+
         if mode == "Adaptive":
             # lane_detection_esda.py -- same base class, same Hough and
             # dark-white-dark filter, same depth projection. Only the mask
@@ -887,6 +908,12 @@ class SimManager(ctk.CTk):
         # The real robot launch has no camera, so nothing publishes
         # /scan_fused there - always use the LiDAR's /scan.
         if self.is_robot_running():
+            return "/scan"
+        # The segmentation node publishes /lane/points, never /scan_fused.
+        # Pointing Nav2 at /scan_fused while it is the selected detector
+        # would subscribe to a topic nobody publishes, and the robot would
+        # plan blind -- with the detector window up and looking healthy.
+        if self.lane_detector_mode.get().startswith("YOLO seg"):
             return "/scan"
         return "/scan_fused" if self.lane_detection_var.get() else "/scan"
 

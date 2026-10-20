@@ -216,6 +216,31 @@ SHIPPED_WEIGHTS = os.path.normpath(os.path.join(
     os.pardir, "models", "lane_seg_synth_cpu.pt"))
 
 
+def _installed(*parts):
+    """A path inside the installed package share, or None when not installed.
+
+    `ros2 run` executes the copy in install/<pkg>/lib/<pkg>/, which has no
+    config or weight beside it -- those install into share/. Without this,
+    running the node the normal ROS way would need --config every time.
+    """
+    try:
+        from ament_index_python.packages import get_package_share_directory
+        q = os.path.join(get_package_share_directory("esda_simulation_2025"),
+                         *parts)
+        return q if os.path.isfile(q) else None
+    except Exception:
+        return None
+
+
+def default_config():
+    """vision_config.yaml beside this file, else the installed one."""
+    here = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "vision_config.yaml")
+    if os.path.isfile(here):
+        return here
+    return _installed("vision", "vision_config.yaml") or here
+
+
 def resolve_weights(path, config_dir=None):
     """model.weights -> an absolute path that exists, if one can be found.
 
@@ -237,7 +262,7 @@ def resolve_weights(path, config_dir=None):
             return p
     if os.path.isfile(SHIPPED_WEIGHTS):
         return SHIPPED_WEIGHTS
-    return p
+    return _installed("models", "lane_seg_synth_cpu.pt") or p
 
 
 def load_config(path):
@@ -847,8 +872,7 @@ class LaneSegNode(Node):
 
 def main():
     ap = argparse.ArgumentParser()
-    here = os.path.dirname(os.path.abspath(__file__))
-    ap.add_argument("--config", default=os.path.join(here, "vision_config.yaml"))
+    ap.add_argument("--config", default=default_config())
     ap.add_argument("--mode", default=None, choices=["full", "lane_cone", "lane_only"],
                     help="override classes.mode from the config")
     # GPU overrides, so you can A/B without editing the config file.
@@ -868,6 +892,27 @@ def main():
                     help="which threshold, when --detector classic")
     ap.add_argument("--no-link", action="store_true",
                     help="disable lane linking (publish raw lane points)")
+    ap.add_argument("--weights", default=None,
+                    help="override model.weights")
+    # Topics and geometry, so one config file can serve several robots and
+    # camera mounts. The launch file derives these from the SAME mount
+    # argument it passes to xacro -- a detector projecting from a camera pose
+    # the robot does not have is the failure mode this exists to prevent, and
+    # it is silent: points still come out, just in the wrong place.
+    ap.add_argument("--image-topic", default=None, help="override topics.image_in")
+    ap.add_argument("--scan-topic", default=None, help="override topics.scan_in")
+    ap.add_argument("--cam-height", type=float, default=None,
+                    help="optical centre above GROUND, metres")
+    ap.add_argument("--cam-pitch-deg", type=float, default=None,
+                    help="+ve is tilted DOWN (note: the opposite sign to "
+                         "lane_detection_esda.py's camera_mount_pitch)")
+    ap.add_argument("--cam-x-offset", type=float, default=None,
+                    help="camera's forward offset from base_link, metres")
+    ap.add_argument("--fx", type=float, default=None,
+                    help="focal length px; sets fy too unless --fy is given")
+    ap.add_argument("--fy", type=float, default=None)
+    ap.add_argument("--cx", type=float, default=None)
+    ap.add_argument("--cy", type=float, default=None)
     args, _ = ap.parse_known_args()
 
     cfg = load_config(args.config)
@@ -881,6 +926,25 @@ def main():
         cfg.setdefault("detector", {})["method"] = args.classic_method
     if args.no_link:
         cfg.setdefault("linking", {})["enabled"] = False
+    if args.weights is not None:
+        cfg.setdefault("model", {})["weights"] = args.weights
+    if args.image_topic is not None:
+        cfg.setdefault("topics", {})["image_in"] = args.image_topic
+    if args.scan_topic is not None:
+        cfg.setdefault("topics", {})["scan_in"] = args.scan_topic
+    proj = cfg.setdefault("projection", {})
+    for flag, key in (("cam_height", "cam_height"),
+                      ("cam_pitch_deg", "cam_pitch_deg"),
+                      ("cam_x_offset", "cam_x_offset"),
+                      ("cx", "cx"), ("cy", "cy")):
+        v = getattr(args, flag)
+        if v is not None:
+            proj[key] = float(v)
+    if args.fx is not None:
+        proj["fx"] = float(args.fx)
+        proj["fy"] = float(args.fx)       # square pixels unless told otherwise
+    if args.fy is not None:
+        proj["fy"] = float(args.fy)
     rclpy.init()
     node = LaneSegNode(cfg, mode_override=args.mode)
     try:

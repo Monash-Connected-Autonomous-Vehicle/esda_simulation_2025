@@ -12,22 +12,52 @@ wall across the drivable gap.
 
 ---
 
-## 1. The cone detector — `lane_seg_node.py`
+## 1. From the UI
 
-This is the node with cone detection. Lanes and cones go to **separate
-topics**, so they can feed different costmap layers and can never be mixed.
+Launch the simulation, then pick **YOLO seg (lane+cone)** in the lane
+detector dropdown and press the lane detection button. That is it.
+
+The UI passes the camera mount it launched the sim with, so the projection
+matches the robot that is actually standing there.
+
+**While it is selected, Nav2 drives on the raw LiDAR.** See the Nav2 note
+below — this is deliberate, and it is the one thing to understand before
+reading a lap result.
+
+## 2. From a launch file
 
 ```bash
-# ROS 2 sourced, sim already running
-pip install ultralytics                      # once; the only extra dep
+pip install ultralytics          # once; the only extra dep
+ros2 launch esda_simulation_2025 lane_seg.launch.py
+```
+
+| argument | default | |
+|---|---|---|
+| `camera_mount` | `pole_top` | **must match the mount the sim was launched with**; the projection is derived from it |
+| `detector` | `yolo` | `classic` for the threshold instead |
+| `mode` | `full` | `lane_cone`, `lane_only` to trim compute |
+| `device` | config | `0` for the first GPU, `cpu` to force CPU |
+| `image_topic` | `/camera/left/image_raw` | |
+| `scan_topic` | `/scan` | raw LiDAR, for the cone gate |
+
+Geometry comes from the xacro chain, not from a measurement anyone took
+with a ruler: `pole_top` is 1.4625 m above the ground, 15° down, 0.405 m
+behind `base_link`; `front` is 0.4775 m, level, 0.165 m behind. Getting
+this wrong fails **silently** — points still come out, just in the wrong
+place.
+
+## 3. By hand, from the research folder
+
+```bash
 cd research/vision
 python3 lane_seg_node.py --detector yolo
 ```
 
-That is the whole command. `model.weights` in `vision_config.yaml` is a
-relative path resolved against the config file, so it finds the committed
-weight from any working directory. Point it at an absolute path or
-`~/esda_models/...` to use your own instead.
+`model.weights` in `vision_config.yaml` is a relative path resolved against
+the config file, so it finds the committed weight from any working
+directory. Point it at an absolute path or `~/esda_models/...` to use your
+own instead. Run from the installed package instead and it picks up
+`share/esda_simulation_2025/vision/vision_config.yaml` on its own.
 
 | flag | what it does |
 |---|---|
@@ -53,7 +83,7 @@ not become an obstacle — it has already fired on cast shadows and a black
 board. Set `cone_gate.enabled: false` to see the ungated detections, but
 don't drive on them.
 
-## 2. The sim's own lane node — `lane_detection_esda.py`
+## 4. The sim's own lane node — `lane_detection_esda.py`
 
 Lane only, no cones, but it's the one the UI and the launch files already
 use. It now takes `yolo` as a method:
@@ -66,6 +96,25 @@ ros2 run esda_simulation_2025 lane_detection_esda.py \
 `yolo_weights` defaults to the committed weight; pass it to override, or set
 `ESDA_YOLO_WEIGHTS`. If the weight or `ultralytics` is missing it logs the
 reason and falls back to `adaptive` rather than dying mid-run.
+
+---
+
+## Nav2 does not consume any of this yet
+
+The stack plans on `/scan_fused`, a LaserScan that `lane_detection.py` and
+`lane_detection_esda.py` publish with lane obstacles already fused into it.
+This node publishes point clouds instead and no `/scan_fused`, so while it
+is the selected detector the UI points Nav2 back at the raw `/scan`.
+
+That means: **a lap run with this detector is a lap run on LiDAR only.** The
+lanes and cones are published, drawn and scoreable, but nothing plans around
+them. Do not read a distance from such a run as a verdict on the detector.
+
+Wiring the clouds in is a separate, deliberate change —
+`nav2_vision_costmap_snippet.yaml` in this folder has the observation-source
+block for `/lane/points` and `/cone/points`. It wants a scored run before
+anyone relies on it, because false lane pixels become lethal cells and we
+have walled the robot in with those once already.
 
 ---
 
