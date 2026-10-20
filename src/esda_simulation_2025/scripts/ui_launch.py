@@ -165,8 +165,14 @@ class SimManager(ctk.CTk):
         self.lane_mode_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lane_detector_mode,
-            values=["Adaptive", "YOLO", "Regular", "FCN", "TwinLiteNet+",
-                    "YOLO seg (lane+cone)"],
+            # YOLO only, by decision. The threshold methods are
+            # measurement baselines, not run options: eval_recall.py still
+            # scores every one of them, which is how we know what the
+            # network's numbers mean. The launchers for Adaptive, Regular,
+            # FCN and TwinLiteNet+ are still further down this file, so
+            # putting an entry back is a one-line change, and
+            # `-p detector_method:=adaptive` still works from a terminal.
+            values=["YOLO", "YOLO seg (lane+cone)"],
             width=130,
             fg_color=self.bg_dark,
             button_color=self.accent_purple,

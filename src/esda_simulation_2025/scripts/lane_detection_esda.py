@@ -435,22 +435,41 @@ def _build_node_class():
         def _load_yolo(self):
             w = _resolve_yolo_weights(
                 self.get_parameter('yolo_weights').value)
+            # No fallback. YOLO is the lane detector, so if it cannot
+            # load, this node has nothing to offer and says so by exiting.
+            #
+            # It used to fall back to the adaptive threshold and log one
+            # line. That is indistinguishable from success from outside --
+            # same topics, same rates, better numbers -- and it is how you
+            # end up benchmarking a threshold and calling it the network.
+            # Pass -p detector_method:=adaptive to ask for a threshold on
+            # purpose; the methods are all still here.
             if not w:
-                self.get_logger().error(
-                    "detector_method:=yolo but no weights were found. Pass "
-                    "-p yolo_weights:=<path>, set ESDA_YOLO_WEIGHTS, or keep "
-                    "research/models/lane_seg_synth_cpu.pt in the repo. "
-                    "Falling back to 'adaptive'")
-                self.method = 'adaptive'
-                return
+                self.get_logger().fatal(
+                    "detector_method:=yolo and no weights were found. "
+                    "Looked at: the yolo_weights parameter, "
+                    "$ESDA_YOLO_WEIGHTS, then "
+                    f"{SHIPPED_YOLO_WEIGHTS}. "
+                    "Pass -p yolo_weights:=<path>, or restore the weight "
+                    "committed at research/models/lane_seg_synth_cpu.pt. "
+                    "Refusing to start.")
+                raise SystemExit(2)
             try:
                 from ultralytics import YOLO
                 self._yolo = YOLO(w)
                 self.get_logger().info(f"loaded {w}")
+            except ImportError as e:
+                self.get_logger().fatal(
+                    f"detector_method:=yolo needs ultralytics: {e}. "
+                    "Install it with: pip install ultralytics. "
+                    "Refusing to start.")
+                raise SystemExit(2)
             except Exception as e:                       # noqa: BLE001
-                self.get_logger().error(
-                    f"could not load {w}: {e} -- falling back to 'adaptive'")
-                self.method = 'adaptive'
+                self.get_logger().fatal(
+                    f"could not load {w}: {e}. The file exists but did not "
+                    "load as a model -- check it is a YOLOv8-seg .pt and "
+                    "not truncated. Refusing to start.")
+                raise SystemExit(2)
 
         def _yolo_class_masks(self, image):
             """(lane, cone) boolean masks at image size from one inference."""
@@ -541,7 +560,15 @@ def _build_node_class():
 def main(args=None):
     rclpy, cls = _build_node_class()
     rclpy.init(args=args)
-    node = cls()
+    try:
+        node = cls()
+    except SystemExit:
+        # A refused start. Shut the context down so the exit is clean, then
+        # let it propagate -- the non-zero exit code is how a launch file,
+        # demo.sh and the job queue find out the detector is not running.
+        if rclpy.ok():
+            rclpy.shutdown()
+        raise
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

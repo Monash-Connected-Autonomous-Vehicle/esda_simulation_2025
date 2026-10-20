@@ -10,7 +10,10 @@
 #
 # Options for `up`:
 #   --world NAME     default igvc.sdf
-#   --method NAME    yolo (default) | adaptive | fixed | otsu | tophat | value
+#   --method NAME    yolo only. The thresholds are measurement baselines and
+#                    live in bench_run.sh, which still takes any of them;
+#                    this script refuses them so a demo cannot quietly be
+#                    a demo of something else.
 #   --no-lane        skip lane detection  (also switches the stack to /scan)
 #   --no-nav         skip Nav2
 #   --no-rviz        skip RViz
@@ -302,7 +305,14 @@ ACTION="${1:-up}"; shift || true
 while [ $# -gt 0 ]; do
   case "$1" in
     --world)   WORLD="$2"; shift 2 ;;
-    --method)  METHOD="$2"; shift 2 ;;
+    --method)
+      if [ "$2" != "yolo" ]; then
+        say "demo.sh runs the yolo detector only; got --method $2."
+        say "For a threshold, use the bench: METHOD=$2 bash bench_run.sh ..."
+        say "or run the node directly with -p detector_method:=$2"
+        exit 1
+      fi
+      METHOD="$2"; shift 2 ;;
     --no-lane) DO_LANE=0; shift ;;
     --no-nav)  DO_NAV=0;  shift ;;
     --no-rviz) DO_RVIZ=0; shift ;;
