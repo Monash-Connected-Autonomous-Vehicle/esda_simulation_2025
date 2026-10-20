@@ -18,6 +18,10 @@
 #   --no-nav         skip Nav2
 #   --no-rviz        skip RViz
 #   --no-build       skip the colcon build
+#   --debug-window   show the detector preview in a cv2 window instead of
+#                    publishing it. Default is to PUBLISH /lane/debug_image,
+#                    which RViz can show, record_combined.py can record, and
+#                    which works with no display attached.
 #
 # Deliberately NOT `set -e`: a failed health check should report and stop
 # cleanly, not kill the shell mid-launch.
@@ -31,6 +35,12 @@ PIDDIR="$WS/.demo_pids"
 WORLD="igvc.sdf"
 METHOD="yolo"
 DO_LANE=1; DO_NAV=1; DO_RVIZ=1; DO_BUILD=1; DO_DRIVE=0
+DEBUG_WINDOW=false      # publish /lane/debug_image rather than popping a window
+# pole_top + low: launch_sim.launch.py's defaults, from the 36-run sweep.
+# Camera height governs how much lane is visible, lidar height governs
+# whether the robot drives; this pair won on both in all three worlds.
+CAMERA_MOUNT="pole_top"; LIDAR_MOUNT="low"
+CAM_HEIGHT=""; CAM_PITCH=""   # override the geometry derived from the mount
 
 C_OK=$'\033[32m'; C_WARN=$'\033[33m'; C_ERR=$'\033[31m'; C_DIM=$'\033[2m'; C_0=$'\033[0m'
 say()  { printf '%s\n' "$*"; }
@@ -224,15 +234,28 @@ cmd_up() {
   start SIM "ros2 launch $PKG launch_sim.launch.py \
       use_lidar:=true world_file:=$world_path \
       spawn_x:=$spawn_x spawn_y:=$spawn_y \
-      robot_model:=robot.urdf.xacro camera_mount:=front lidar_mount:=pole_top"
+      robot_model:=robot.urdf.xacro camera_mount:=$CAMERA_MOUNT lidar_mount:=$LIDAR_MOUNT"
   wait_topic /clock 90 "Gazebo never published /clock. Check $LOGDIR/SIM.log" || die "simulation did not start"
   wait_topic /scan  60 "The LiDAR plugin did not come up." || warn "no /scan -- SLAM will have nothing to map"
 
   # 2 ------------------------------------------------------------ lane detect
   if [ "$DO_LANE" = 1 ]; then
     step "2/5  Lane detection   (method: $METHOD)"
+    # Derived from the SAME mount the sim was launched with, two lines
+    # above. If these disagree the preview still looks perfect and the
+    # projected lane points land at the wrong ground range -- there is no
+    # symptom in the place anyone would look. Pitch is NEGATIVE for a
+    # downward tilt here and POSITIVE in camera.xacro for the same angle:
+    # this node works in the optical frame, where Y points down.
+    if [ "$CAMERA_MOUNT" = "pole_top" ]; then _CH=1.30; _CP=-0.2618
+    else                                      _CH=0.315; _CP=0.0; fi
+    [ -n "$CAM_HEIGHT" ] && _CH="$CAM_HEIGHT"
+    [ -n "$CAM_PITCH" ]  && _CP="$CAM_PITCH"
+    say "      detector geometry: height ${_CH} m, pitch ${_CP} rad  (mount: $CAMERA_MOUNT)"
     start LANE "ros2 run $PKG lane_detection_esda.py --ros-args \
-        -p detector_method:=$METHOD -p use_sim_time:=true -p show_visualization:=true"
+        -p detector_method:=$METHOD -p use_sim_time:=true -p show_visualization:=true \
+  -p camera_mount_height:=$_CH -p camera_mount_pitch:=$_CP \
+  -p debug_window:=$DEBUG_WINDOW -p debug_image_topic:=/lane/debug_image"
     wait_topic /scan_fused 60 \
       "NOTHING ELSE PUBLISHES /scan_fused. SLAM, Nav2 and RViz all subscribe to it,
       so without this the costmap stays empty and the robot will not move.
@@ -317,6 +340,11 @@ while [ $# -gt 0 ]; do
     --no-nav)  DO_NAV=0;  shift ;;
     --no-rviz) DO_RVIZ=0; shift ;;
     --no-build) DO_BUILD=0; shift ;;
+    --debug-window) DEBUG_WINDOW=true; shift ;;
+    --camera-mount) CAMERA_MOUNT="$2"; shift 2 ;;
+    --lidar-mount)  LIDAR_MOUNT="$2";  shift 2 ;;
+    --cam-height)   CAM_HEIGHT="$2";   shift 2 ;;
+    --cam-pitch)    CAM_PITCH="$2";    shift 2 ;;
     --drive)   DO_DRIVE=1; shift ;;
     *) break ;;
   esac
@@ -330,5 +358,5 @@ case "${ACTION:-up}" in
   drive)  cmd_drive ;;
   view)   cmd_view ;;
   logs)   cmd_logs "$@" ;;
-  *) say "usage: ./demo.sh {up|down|status|drive|view|goal X Y|logs NAME} [--world W] [--method M] [--drive] [--no-lane] [--no-nav] [--no-rviz] [--no-build]"; exit 1 ;;
+  *) say "usage: ./demo.sh {up|down|status|drive|view|goal X Y|logs NAME} [--world W] [--method M] [--drive] [--no-lane] [--no-nav] [--no-rviz] [--no-build] [--camera-mount front|pole_top] [--lidar-mount pole_top|low] [--cam-height H] [--cam-pitch R] [--debug-window]"; exit 1 ;;
 esac
