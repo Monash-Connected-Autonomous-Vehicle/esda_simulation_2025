@@ -338,6 +338,9 @@ def _build_node_class():
             self.declare_parameter('tophat_thresh', 12)
             self.declare_parameter('min_blob_area', 120)
             self.declare_parameter('yolo_weights', '')
+            # Read live, per frame, so `ros2 param set /lane_detection_node
+            # log_stage_counts true` works on a stack that is already up.
+            self.declare_parameter('log_stage_counts', False)
             self.declare_parameter('yolo_lane_class', 'lane')
             self.declare_parameter('yolo_cone_class', 'cone')
             self.declare_parameter('yolo_cone_dilate_px', 15)
@@ -553,6 +556,8 @@ def _build_node_class():
                 self.get_logger().debug(
                     "no lane mask this frame (nothing found, or the flood "
                     "guard refused it)")
+                if self.get_parameter('log_stage_counts').value:
+                    self.get_logger().info("stages: mask_px=0 hough=0 valid=0")
                 return [], white_mask, np.zeros_like(white_mask)
 
             edges = cv2.Canny(white_mask, 50, 150)
@@ -562,6 +567,15 @@ def _build_node_class():
                 maxLineGap=self.max_line_gap)
             valid = (self.filter_valid_lanes(lines, gray, height, width, hsv)
                      if lines is not None else [])
+            if self.get_parameter('log_stage_counts').value:
+                # mask_px: lane pixels the network kept after clean_mask.
+                # hough:   straight segments Canny+HoughLinesP found in them.
+                # valid:   what survived the dark-white-dark profile check.
+                # The navigator only ever sees the third number.
+                self.get_logger().info(
+                    "stages: mask_px=%d hough=%d valid=%d"
+                    % (int((white_mask > 0).sum()),
+                       0 if lines is None else len(lines), len(valid)))
             return valid, white_mask, edges
 
     return rclpy, LaneDetectionEsdaNode
