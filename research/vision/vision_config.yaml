@@ -32,6 +32,11 @@
 #  which already gated vision cones as unconfirmed guesses anyway.
 # ---------------------------------------------------------------------
 detector:
+  # To run the network instead, either flip this to `yolo` or leave it and
+  # pass `--detector yolo` on the command line -- the flag wins, and is the
+  # better way to A/B the two without a config edit everyone has to undo.
+  # `yolo` is also the only setting that produces CONES: the classic path is
+  # lane-only by construction (see the note below).
   kind: classic       # yolo | classic
   #
   # SWITCHED 2026-10-14 on the 395-frame teleport bench. Every threshold beat
@@ -99,7 +104,18 @@ detector:
 model:
   # Path to the trained weights. During sim-first dev this is a .pt;
   # on Jetson later point it at a .engine (TensorRT) and set half:true.
-  weights: "~/esda_models/lane_seg.pt"
+  #
+  # A RELATIVE path is resolved against THIS FILE's directory, not the cwd,
+  # so the default below finds the weight committed in the repo and a fresh
+  # clone runs `--detector yolo` with nothing to download. An absolute or ~
+  # path is used exactly as written, so an existing
+  # ~/esda_models/lane_seg.pt still takes precedence if you point at it.
+  #
+  # lane_seg_synth_cpu.pt is OUR model: yolov8n-seg fine-tuned on CPU over
+  # synth_gen.py frames, three classes (lane, cone, drivable). It is the only
+  # weight in the repo -- the yolov8n/s-seg base weights are not committed
+  # because train.py re-downloads them from Ultralytics on demand.
+  weights: "../models/lane_seg_synth_cpu.pt"
   task: "segment"            # segment | detect  (we train segment)
   imgsz: 640
   conf: 0.35                 # min confidence to keep a detection

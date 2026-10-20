@@ -1,5 +1,10 @@
 # ESDA Vision — YOLOv8-seg lane + cone detection
 
+> **Just want to run it?** See **[RUN_YOLO.md](RUN_YOLO.md)**. The trained
+> weight is committed at `research/models/lane_seg_synth_cpu.pt`, so
+> `python3 lane_seg_node.py --detector yolo` works from a fresh clone.
+> This file is the design and the measurements behind it.
+
 Replaces the classical white-threshold lane detector, which tagged
 **white-striped barrels as lane** and inflated the Nav2 costmap into a false
 wall the robot couldn't drive through. Here `lane` and `cone` are **separate

@@ -15,7 +15,6 @@ research/build/
 research/install/
 research/log/
 research/logs/
-research/models/
 research/recordings/
 research/runs/
 *.pt
@@ -23,3 +22,13 @@ research/runs/
 
 # demo.sh runtime logs
 .demo_logs/
+
+# the one tracked weight -- see research/vision/RUN_YOLO.md
+#
+# `research/models/` as a directory rule would stop git descending into it at
+# all, so the negation below could never be seen. `/*` excludes the CONTENTS
+# and leaves the directory visible. Everything else there stays ignored: the
+# yolov8n/s-seg base weights are re-downloaded by train.py on demand, and
+# only this one file cannot be got back any other way.
+research/models/*
+!research/models/lane_seg_synth_cpu.pt

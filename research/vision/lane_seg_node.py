@@ -208,10 +208,46 @@ def solidify_cones(pts3d, scan_xy, gate_on, confirm_r, cluster_eps,
             len(kept), dropped)
 
 
+# The weight committed alongside the code: research/vision -> research/models.
+# Its whole purpose is that a fresh clone can run --detector yolo without first
+# finding, downloading or training anything.
+SHIPPED_WEIGHTS = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    os.pardir, "models", "lane_seg_synth_cpu.pt"))
+
+
+def resolve_weights(path, config_dir=None):
+    """model.weights -> an absolute path that exists, if one can be found.
+
+    A RELATIVE path is resolved against the CONFIG's directory, never against
+    the cwd: which weights load must not depend on where the node was
+    launched from. An absolute or ~ path is honoured exactly as written, so
+    an existing ~/esda_models/lane_seg.pt keeps working.
+
+    If what that names is not on disk, fall back to the weight shipped with
+    the repo. Returns the configured path unchanged when neither exists, so
+    the caller's "weights not found" error names what was actually asked for.
+    """
+    p = os.path.expanduser(str(path or "").strip())
+    if p and not os.path.isabs(p):
+        p = os.path.join(config_dir or os.getcwd(), p)
+    if p:
+        p = os.path.normpath(p)
+        if os.path.isfile(p):
+            return p
+    if os.path.isfile(SHIPPED_WEIGHTS):
+        return SHIPPED_WEIGHTS
+    return p
+
+
 def load_config(path):
     path = os.path.expanduser(path)
     with open(path) as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    # Stashed so a relative model.weights can be resolved against the config
+    # rather than the cwd. Leading underscore: not a config key anyone sets.
+    cfg["_config_dir"] = os.path.dirname(os.path.abspath(path))
+    return cfg
 
 
 class LaneSegNode(Node):
@@ -282,7 +318,7 @@ class LaneSegNode(Node):
 
         # ---- load model ----
         mcfg = cfg["model"]
-        weights = os.path.expanduser(mcfg["weights"])
+        weights = resolve_weights(mcfg.get("weights"), cfg.get("_config_dir"))
         if self.detector == "classic":
             pass                      # no network to load
         elif not os.path.isfile(weights):
