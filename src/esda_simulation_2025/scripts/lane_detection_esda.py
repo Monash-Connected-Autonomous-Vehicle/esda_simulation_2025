@@ -330,7 +330,7 @@ def _build_node_class():
     class LaneDetectionEsdaNode(LaneDetectionNode):
         def __init__(self):
             super().__init__()
-            self.declare_parameter('detector_method', 'adaptive')
+            self.declare_parameter('detector_method', 'yolo')
             self.declare_parameter('max_area_frac', 0.15)
             self.declare_parameter('adaptive_block', 61)
             self.declare_parameter('adaptive_c', -8)

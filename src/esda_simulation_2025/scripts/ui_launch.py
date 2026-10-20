@@ -161,7 +161,7 @@ class SimManager(ctk.CTk):
         self.lane_detection_check = ctk.CTkCheckBox(self.sim_frame, text="Enable Lane Detection", variable=self.lane_detection_var, font=("Orbitron", 14), text_color=self.accent_purple, bg_color=self.bg_panel)
         self.lane_detection_check.grid(row=0, column=1, padx=10, pady=6, sticky="w")
 
-        self.lane_detector_mode = ctk.StringVar(value="FCN")
+        self.lane_detector_mode = ctk.StringVar(value="YOLO")
         self.lane_mode_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lane_detector_mode,
