@@ -207,13 +207,24 @@ frames:
 # ---------------------------------------------------------------------
 projection:
   enabled: true
-  fx: 224.0664       # (W/2)/tan(hfov/2) = 320/tan(55 deg), ZED 2i 2.1mm at 640x360
-  fy: 224.0664       # square pixels in the Ignition camera sensor
+  # THE CAMERA THE ROBOT ACTUALLY HAS. Until 2026-10-20 this block
+  # described a 640x360 sensor with a 110 deg lens at 1.1 m and 20 deg
+  # down -- a different robot. synth_gen.py reads this block for its
+  # camera model and autolabel.py computes every ground-truth label
+  # through it, so every labelled bench built before this date was built
+  # for a camera nobody has. Change these only with the xacro.
+  #
+  #   camera.xacro pole_top: chassis -> camera_link xyz 0.560407 0.10 1.30
+  #                                                 rpy 0 0.2618 0
+  #   chassis_joint: base_link -> chassis  xyz -0.965423 0 0
+  #   base_link rides at the wheel axle, wheel_radius 0.1625
+  fx: 528.4338       # (640/2)/tan(1.089/2), horizontal_fov 1.089 rad = 62.4 deg
+  fy: 528.4338       # square pixels in the Ignition camera sensor
   cx: 320.0
-  cy: 180.0
-  cam_height: 1.1   # m, optical centre above GROUND (0.315 + wheel_radius 0.1625)
-  cam_pitch_deg: 20.0   # +down. xacro chain is level, so 0 in sim
-  cam_x_offset: -0.165423  # camera is BEHIND base_link (base_link is at the chassis front edge)
+  cy: 240.0          # 640x480
+  cam_height: 1.4625    # 1.30 on the chassis + wheel_radius 0.1625
+  cam_pitch_deg: 15.0   # +down, matching the xacro's +0.2618 rad
+  cam_x_offset: -0.405016  # 0.560407 - 0.965423; camera is BEHIND base_link
   # 4.0, matching the costmap's obstacle_max_range. Anything past that was
   # being projected, linked, resampled and published, and then dropped on
   # the floor by the costmap -- and those far points have the worst
