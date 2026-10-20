@@ -20,3 +20,6 @@ research/recordings/
 research/runs/
 *.pt
 *.mp4
+
+# demo.sh runtime logs
+.demo_logs/
