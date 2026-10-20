@@ -83,12 +83,45 @@ detector_method: adaptive | otsu | tophat | value | fixed | yolo
 """
 
 import argparse
+import os
 import sys
 
 import cv2
 import numpy as np
 
 METHODS = ("adaptive", "otsu", "tophat", "value", "fixed", "yolo")
+
+# The weight committed with the repo. This file lives at
+# <repo>/src/esda_simulation_2025/scripts/, so three levels up is the repo
+# root. realpath first: --symlink-install means __file__ is the symlink in
+# install/, and the repo is only reachable through the real source path.
+SHIPPED_YOLO_WEIGHTS = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    os.pardir, os.pardir, os.pardir,
+    "research", "models", "lane_seg_synth_cpu.pt"))
+
+
+def _resolve_yolo_weights(param_value):
+    """Where to load YOLO weights from, in order of who gets the last word.
+
+    1. the `yolo_weights` parameter, if set
+    2. $ESDA_YOLO_WEIGHTS
+    3. the weight shipped in research/models/
+
+    Returns "" when none of them names a file that exists, which the caller
+    reports before falling back to the adaptive threshold. An explicit path
+    that does not exist is returned ANYWAY, so the error names the file the
+    operator asked for rather than silently substituting a different model.
+    """
+    explicit = str(param_value or "").strip()
+    if explicit:
+        return os.path.expanduser(explicit)
+    env = os.environ.get("ESDA_YOLO_WEIGHTS", "").strip()
+    if env:
+        return os.path.expanduser(env)
+    if os.path.isfile(SHIPPED_YOLO_WEIGHTS):
+        return SHIPPED_YOLO_WEIGHTS
+    return ""
 
 
 # ==========================================================================
@@ -265,6 +298,17 @@ def selftest():
                             yolo_mask_fn=lambda im: np.zeros((H, W), bool)),
                    roi) > 0).sum() == 0)
 
+    ck("explicit yolo_weights wins over everything",
+       _resolve_yolo_weights(" /tmp/nope.pt ") == "/tmp/nope.pt")
+    os.environ["ESDA_YOLO_WEIGHTS"] = "/tmp/from_env.pt"
+    try:
+        ck("empty param falls through to $ESDA_YOLO_WEIGHTS",
+           _resolve_yolo_weights("") == "/tmp/from_env.pt")
+    finally:
+        del os.environ["ESDA_YOLO_WEIGHTS"]
+    ck("no param, no env -> the shipped weight or nothing, never a guess",
+       _resolve_yolo_weights(None) in ("", SHIPPED_YOLO_WEIGHTS))
+
     print()
     if fails:
         print(f"{len(fails)} FAILED: " + ", ".join(fails))
@@ -389,11 +433,14 @@ def _build_node_class():
             logger.info(f"debug image -> {topic} (window={window})")
 
         def _load_yolo(self):
-            w = str(self.get_parameter('yolo_weights').value)
+            w = _resolve_yolo_weights(
+                self.get_parameter('yolo_weights').value)
             if not w:
                 self.get_logger().error(
-                    "detector_method:=yolo but yolo_weights is empty -- "
-                    "falling back to 'adaptive'")
+                    "detector_method:=yolo but no weights were found. Pass "
+                    "-p yolo_weights:=<path>, set ESDA_YOLO_WEIGHTS, or keep "
+                    "research/models/lane_seg_synth_cpu.pt in the repo. "
+                    "Falling back to 'adaptive'")
                 self.method = 'adaptive'
                 return
             try:

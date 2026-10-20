@@ -9,6 +9,15 @@ import glob
 import threading
 from tkinter import filedialog
 
+# Dropdown entries served by lane_detection_esda.py, and the detector_method
+# each one asks it for. These share the base class, the Hough stage and
+# /scan_fused, so they are interchangeable without touching Nav2.
+ESDA_METHODS = {
+    "YOLO": "yolo",
+    "Adaptive": "adaptive",
+}
+
+
 class SimManager(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -121,7 +130,8 @@ class SimManager(ctk.CTk):
 
         self.camera_mount_label = ctk.CTkLabel(self.sim_frame, text="ZED Mount:", font=("Orbitron", 11), text_color=self.accent_blue, bg_color=self.bg_panel)
         self.camera_mount_label.grid(row=2, column=1, padx=(10, 0), pady=(0, 8), sticky="e")
-        self.camera_mount_var = ctk.StringVar(value="front")
+        # pole_top + low: what the 36-run sweep picked. See launch_sim.
+        self.camera_mount_var = ctk.StringVar(value="pole_top")
         self.camera_mount_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.camera_mount_var,
@@ -135,7 +145,7 @@ class SimManager(ctk.CTk):
 
         self.lidar_mount_label = ctk.CTkLabel(self.sim_frame, text="LiDAR Mount:", font=("Orbitron", 11), text_color=self.accent_blue, bg_color=self.bg_panel)
         self.lidar_mount_label.grid(row=3, column=0, padx=10, pady=(0, 8), sticky="w")
-        self.lidar_mount_var = ctk.StringVar(value="pole_top")
+        self.lidar_mount_var = ctk.StringVar(value="low")
         self.lidar_mount_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lidar_mount_var,
@@ -155,7 +165,8 @@ class SimManager(ctk.CTk):
         self.lane_mode_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lane_detector_mode,
-            values=["Adaptive", "YOLO", "Regular", "FCN", "TwinLiteNet+"],
+            values=["Adaptive", "YOLO", "Regular", "FCN", "TwinLiteNet+",
+                    "YOLO seg (lane+cone)"],
             width=130,
             fg_color=self.bg_dark,
             button_color=self.accent_purple,
@@ -430,7 +441,7 @@ class SimManager(ctk.CTk):
             return
         
         selected_costmap_name = self.selected_costmap.get()
-        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
+        scan_topic = self.nav_scan_topic()
         
         # Check if user wants to load an existing map
         if selected_costmap_name != "[New Costmap]":
@@ -493,6 +504,43 @@ class SimManager(ctk.CTk):
             else "false"
         )
 
+        # The detector projects lane pixels to the ground with its own
+        # camera_mount_height and camera_mount_pitch, whose defaults (0.315 m,
+        # 0 rad) describe the FRONT mount. The sim above is launched with
+        # whatever the mount dropdown says. If these are not passed and the
+        # two disagree, the preview window still looks perfect while
+        # /lane_obstacles lands at the wrong ground range -- a failure
+        # invisible in the one place you would look. So they are derived from
+        # the same dropdown that launched the sim.
+        #
+        # Pitch is NEGATIVE for a downward tilt here and POSITIVE in
+        # camera.xacro for the same 15 degrees: this node works in the
+        # optical frame, where Y points down.
+        _mount = self.camera_mount_var.get()
+        lane_geom = (" -p camera_mount_height:=1.30 -p camera_mount_pitch:=-0.2618"
+                     if _mount == "pole_top" else
+                     " -p camera_mount_height:=0.315 -p camera_mount_pitch:=0.0")
+
+        if mode == "YOLO seg (lane+cone)":
+            # lane_seg_node.py -- the only detector that separates cones from
+            # lane paint, on separate topics so they can never be mixed.
+            #
+            # Launched through lane_seg.launch.py rather than assembled here,
+            # because its camera geometry has to be derived from the mount and
+            # that derivation belongs in one place. Nothing to append:
+            # lane_geom is in the other sign convention and for the other
+            # node's parameters.
+            #
+            # It publishes point clouds and no /scan_fused, so Nav2 stays on
+            # the raw LiDAR while it runs -- see nav_scan_topic(). Watch
+            # /cone/points, /lane/points and /lane/debug_image.
+            seg_cmd = (
+                f"ros2 launch esda_simulation_2025 lane_seg.launch.py "
+                f"camera_mount:={_mount}"
+            )
+            self.run_in_terminal("LANE", seg_cmd)
+            return
+
         if mode == "Adaptive":
             # lane_detection_esda.py: same base class, Hough, profile check and
             # depth projection; only the mask differs - a local threshold
@@ -510,12 +558,14 @@ class SimManager(ctk.CTk):
             # cut out of the lane mask. Needs ultralytics and trained weights
             # (research/vision on the yolo-adaptive branch); falls back to
             # adaptive if either is missing.
-            weights = os.path.expanduser("~/esda_models/lane_seg.pt")
+            # yolo_weights is left unset on purpose: the node resolves it
+            # from $ESDA_YOLO_WEIGHTS and then from the weight committed at
+            # research/models/lane_seg_synth_cpu.pt, so a fresh clone works
+            # with no path. Pass -p yolo_weights:= to override.
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection_esda.py "
                 f"--ros-args "
                 f"-p detector_method:=yolo "
-                f"-p yolo_weights:={weights} "
                 f"-p show_visualization:={show_visualization}"
             )
         elif mode == "FCN":
@@ -543,7 +593,7 @@ class SimManager(ctk.CTk):
                 f"-p show_visualization:={show_visualization}"
             )
 
-        self.run_in_terminal("LANE", lane_cmd)
+        self.run_in_terminal("LANE", lane_cmd + lane_geom)
 
         # Side cameras have no stereo pair - remap left/right/depth to the same
         # monocular feed and its depth sensor, and remap outputs so they don't
@@ -552,10 +602,10 @@ class SimManager(ctk.CTk):
             # Side cameras use the adaptive detector when the front one uses
             # Adaptive or YOLO (one model instance is enough), otherwise the
             # base detector.
-            side_script = ("lane_detection_esda.py" if mode in ("Adaptive", "YOLO")
+            side_script = ("lane_detection_esda.py" if mode in ESDA_METHODS
                            else "lane_detection.py")
             side_extra = ("-p detector_method:=adaptive "
-                          if mode in ("Adaptive", "YOLO") else "")
+                          if mode in ESDA_METHODS else "")
             for side in ("left_camera", "right_camera"):
                 side_lane_cmd = (
                     f"ros2 run esda_simulation_2025 {side_script} "
@@ -595,19 +645,31 @@ class SimManager(ctk.CTk):
     
     def _launch_amcl_delayed(self, costmap_file):
         time.sleep(3)  # Wait for simulation to be ready
-        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
+        scan_topic = self.nav_scan_topic()
         cmd = (f"ros2 launch esda_simulation_2025 localization_launch.py "
                f"use_sim_time:=true map:={costmap_file} "
                f"amcl_base_frame_id:=base_link amcl_odom_frame_id:=odom "
                f"scan_topic:={scan_topic}")
         self.run_in_terminal("AMCL", cmd)
 
+    def nav_scan_topic(self):
+        """Which scan Nav2, SLAM and AMCL should consume.
+
+        The segmentation detector publishes /lane/points and no /scan_fused.
+        Pointing Nav2 at /scan_fused while it is selected would subscribe to
+        a topic nobody publishes, and the robot would plan blind -- with the
+        detector window up and looking healthy.
+        """
+        if self.lane_detector_mode.get().startswith("YOLO seg"):
+            return "/scan"
+        return "/scan_fused" if self.lane_detection_var.get() else "/scan"
+
     def toggle_nav(self):
         if not self.is_sim_running():
             self.status_label.configure(text="Error: Launch Simulation first!", text_color="#E74C3C")
             return
         selected_costmap_name = self.selected_costmap.get()
-        scan_topic = "/scan_fused" if self.lane_detection_var.get() else "/scan"
+        scan_topic = self.nav_scan_topic()
         
         if selected_costmap_name == "[New Costmap]":
             # Launch Nav2 without a map (for SLAM mode)

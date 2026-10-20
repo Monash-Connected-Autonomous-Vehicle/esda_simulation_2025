@@ -20,8 +20,12 @@ def generate_launch_description():
     spawn_x = LaunchConfiguration('spawn_x', default='0.0')
     spawn_y = LaunchConfiguration('spawn_y', default='0.0')
     robot_model = LaunchConfiguration('robot_model', default='robot.urdf.xacro')
-    camera_mount = LaunchConfiguration('camera_mount', default='front')
-    lidar_mount = LaunchConfiguration('lidar_mount', default='pole_top')
+    # camera pole_top + lidar low. Chosen over front + pole_top by a 36-run
+    # sweep across three worlds: camera height governs how much lane is
+    # VISIBLE, lidar height governs whether the robot drives, and this pair
+    # won on both in every world. See research/ and the sweep RESULTS.md.
+    camera_mount = LaunchConfiguration('camera_mount', default='pole_top')
+    lidar_mount = LaunchConfiguration('lidar_mount', default='low')
     package_name = 'esda_simulation_2025'
     
     # ROS Controller Files:
@@ -196,9 +200,9 @@ def generate_launch_description():
           get_package_share_directory(package_name), 'worlds', 'igvc.sdf')),
       DeclareLaunchArgument('robot_model',     default_value='robot.urdf.xacro',
           description='xacro filename under description/ to load (e.g. robot_dual_camera.urdf.xacro)'),
-      DeclareLaunchArgument('camera_mount',    default_value='front',
+      DeclareLaunchArgument('camera_mount',    default_value='pole_top',
           description='ZED mount point: "front" (low, forward) or "pole_top" (on the LiDAR pole)'),
-      DeclareLaunchArgument('lidar_mount',     default_value='pole_top',
+      DeclareLaunchArgument('lidar_mount',     default_value='low',
           description='LiDAR mount point: "pole_top" (on the mounting pole) or "low" (original, directly on chassis)'),
       rsp,
       ekf_launch,
