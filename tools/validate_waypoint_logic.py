@@ -833,6 +833,45 @@ def v11_timing(snap):
     check('path_clearance under 1 ms', path < 1e-3, f'{path * 1e3:.3f} ms')
 
 
+def v17_lane_centreline():
+    print('\nV-17  lane centreline from the two lane lines')
+    f = TARGET.lane_centreline_from_boundaries
+
+    def line(lat, n, start=0.5, end=6.0):
+        return [(start + (end - start) * i / (n - 1), lat) for i in range(n)]
+
+    # Robot at the origin facing +x, lane 3 m wide, centred on y = 0.2.
+    left, right = line(1.7, 120), line(-1.3, 9)
+    centre, mode = f(left, right, 0.0, 0.0, 0.0)
+    worst = max(abs(y - 0.2) for _, y in centre)
+    check('uneven point counts still give the true centre',
+          mode == 'both' and worst < 0.05, f'mode={mode}, worst {worst:.3f} m')
+    # The old index pairing on the same input, for contrast.
+    l_sorted = sorted(left, key=lambda p: math.hypot(*p))
+    r_sorted = sorted(right, key=lambda p: math.hypot(*p))
+    old = [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) for a, b in zip(l_sorted, r_sorted)]
+    skew = max(abs(b[0] - a[0]) for a, b in zip(l_sorted, r_sorted))
+    print(f'      (info) old index pairing matched points up to {skew:.1f} m apart along the lane')
+
+    centre, mode = f(line(1.5, 30), [], 0.0, 0.0, 0.0, half_width=1.5)
+    check('left line only: centre half a lane to its right',
+          mode == 'left' and all(abs(y - 0.0) < 1e-6 for _, y in centre), f'mode={mode}')
+    centre, mode = f([], line(-1.4, 30), 0.0, 0.0, 0.0, half_width=1.5)
+    check('right line only: centre half a lane to its left',
+          mode == 'right' and all(abs(y - 0.1) < 1e-6 for _, y in centre), f'mode={mode}')
+
+    # Rotated robot: same lane seen from a robot at (5, 5) facing +y.
+    rot = lambda pts: [(5 - y, 5 + x) for x, y in pts]
+    centre, mode = f(rot(left), rot(right), 5.0, 5.0, math.pi / 2)
+    worst = max(abs((5 - x) - 0.2) for x, _ in centre)
+    check('works in any map pose', mode == 'both' and worst < 0.05, f'worst {worst:.3f} m')
+
+    # Two "lines" too close together are not a lane.
+    centre, mode = f(line(0.4, 30), line(-0.3, 30), 0.0, 0.0, 0.0)
+    check('implausible lane width is not paired as both', mode != 'both', f'mode={mode}')
+    check('nothing in, nothing out', f([], [], 0, 0, 0) == ([], None))
+
+
 def main():
     print('Offline validation for waypoint_navigator_recommendation.py')
     print('=' * 62)
@@ -846,6 +885,7 @@ def main():
     v14_far_goals()
     v15_lane_points_on_obstacles()
     v16_gps_waypoints()
+    v17_lane_centreline()
     v9_travel_geometry()
     v10_yaml_lint()
     v11_timing(snap)

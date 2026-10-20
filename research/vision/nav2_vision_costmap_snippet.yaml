@@ -1,0 +1,86 @@
+# =====================================================================
+#  MERGE INTO config/nav2_params.yaml  —  the cone-as-lane fix.
+#
+#  Idea: lane and cone arrive on SEPARATE pointcloud topics and become
+#  SEPARATE observation sources, so nothing can tag a cone as "lane" and
+#  paint a false lane wall into the costmap.
+#
+#  >>> READ THIS BEFORE PASTING <<<
+#  An earlier version of this file listed
+#      plugins: ["obstacle_layer", "vision_lane", "vision_cone", "inflation_layer"]
+#  Pasting that into THIS repo's nav2_params.yaml breaks Nav2 two ways:
+#    1. the real local_costmap uses  plugins: ["voxel_layer", "inflation_layer"]
+#       -- there is no `obstacle_layer` in it, so Nav2 fails to configure;
+#    2. it would DROP voxel_layer, which is the only lidar source. The robot
+#       would go blind to /scan and keep only the camera.
+#  The lists below are the actual merged values for this repo. Keep
+#  voxel_layer, and keep the `filters: ["keepout_filter"]` line already there.
+#
+#  /lane/points and /cone/points are published by lane_seg_node.py, already
+#  ground-projected into base_link. /lane/points is the LINKED cloud: dashed
+#  and barrel-occluded boundaries have been rebuilt into continuous lines, so
+#  the lane layer gets an unbroken wall rather than a dotted one that Nav2
+#  would plan straight through. /lane/points_raw carries the unlinked points
+#  if you want to compare in RViz. (which matches robot_base_frame: base_link
+#  in nav2_params.yaml and the URDF root link in robot_core_ref.xacro).
+# =====================================================================
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # was: ["voxel_layer", "inflation_layer"]   <- keep voxel_layer, it is the lidar
+      plugins: ["voxel_layer", "vision_lane", "vision_cone", "inflation_layer"]
+      # leave the existing `filters: ["keepout_filter"]` line untouched
+
+      # LANE: mark a thin boundary, not a blob. Camera only -- no lidar here.
+      vision_lane:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: lane_cloud
+        lane_cloud:
+          topic: /lane/points
+          data_type: "PointCloud2"
+          sensor_frame: base_link
+          marking: true
+          clearing: true
+          # lane points are projected flat onto the ground (z = 0 exactly), so
+          # this window only has to straddle zero.
+          min_obstacle_height: -0.10
+          max_obstacle_height: 0.10
+          obstacle_max_range: 4.0
+          raytrace_max_range: 5.0
+
+      # CONE: camera cones as obstacles. Lidar sees them too, so treat this as
+      # confirmation / earlier range. Set enabled:false if lidar alone is enough.
+      vision_cone:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: cone_cloud
+        cone_cloud:
+          topic: /cone/points
+          data_type: "PointCloud2"
+          sensor_frame: base_link
+          marking: true
+          clearing: true
+          min_obstacle_height: -0.10
+          max_obstacle_height: 0.50
+          obstacle_max_range: 4.0
+          raytrace_max_range: 5.0
+
+# The global costmap in this repo uses plugins:
+#   ["static_layer", "obstacle_layer", "inflation_layer"]
+# Lane keeping is a local behaviour, so local-only is normally enough. If you
+# do want lanes to shape the global plan, add "vision_lane" to THAT list (it
+# really does have an obstacle_layer) and repeat the vision_lane block there.
+
+# ---------------------------------------------------------------------
+#  VERIFY after merging
+#    ros2 param get /local_costmap/local_costmap plugins
+#        -> must still contain voxel_layer
+#    ros2 topic hz /lane/points        # data on lane frames
+#    ros2 topic hz /cone/points        # data on cone frames
+#    RViz: local costmap shows lane lines as a THIN boundary and cones as
+#    separate blobs -- not one solid wall across the corridor.
+#  If /lane/points has data but the costmap stays empty, the usual cause is a
+#  TF gap: `ros2 run tf2_ros tf2_echo odom base_link` must resolve.
+# ---------------------------------------------------------------------

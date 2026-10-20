@@ -1,0 +1,14 @@
+# Sim ZED, camera_mount:=front (camera.xacro default). Derived from the xacro:
+#   chassis -> camera_link   xyz = 0.8 0 0.315, rpy = 0 0 0
+#   base_link -> chassis     xyz = -0.965423 0 0, base_link on the axle (r 0.1625)
+#   => height 0.315 + 0.1625 = 0.4775 m, x = 0.8 - 0.965423 = -0.165423, level
+#   640x480, hfov 1.089 rad => fx = 320 / tan(0.5445) = 528.43
+# Use with: ESDA_VISION_CONFIG=camera_front.yaml python3 synth_gen.py ...
+projection:
+  fx: 528.43
+  fy: 528.43
+  cx: 320.0
+  cy: 240.0
+  cam_height: 0.4775
+  cam_pitch_deg: 0.0
+  cam_x_offset: -0.165423

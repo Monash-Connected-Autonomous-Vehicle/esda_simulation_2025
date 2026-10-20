@@ -511,8 +511,14 @@ class SimManager(ctk.CTk):
             # (research/vision on the yolo-adaptive branch); falls back to
             # adaptive if either is missing.
             weights = os.path.expanduser("~/esda_models/lane_seg.pt")
+            # ultralytics and a CUDA torch live in their own venv (it sees the
+            # system ROS packages), so the system torch the other detectors
+            # use is left alone. Without the venv, fall back to plain python.
+            venv_python = os.path.expanduser("~/esda_venvs/yolo/bin/python3")
+            prefix = (f"--prefix {venv_python} "
+                      if os.path.exists(venv_python) else "")
             lane_cmd = (
-                f"ros2 run esda_simulation_2025 lane_detection_esda.py "
+                f"ros2 run {prefix}esda_simulation_2025 lane_detection_esda.py "
                 f"--ros-args "
                 f"-p detector_method:=yolo "
                 f"-p yolo_weights:={weights} "

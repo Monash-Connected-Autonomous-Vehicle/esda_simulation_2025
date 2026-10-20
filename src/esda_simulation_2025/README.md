@@ -420,23 +420,60 @@ All five detectors share the base class in `lane_detection.py`. They publish the
 | Dropdown | Script | Mask | Needs |
 |----------|--------|------|-------|
 | **Adaptive** | `lane_detection_esda.py`, `detector_method:=adaptive` | Local (neighbourhood) threshold. Throws away any mask covering more than 15% of the image region | Nothing extra |
-| **YOLO** | `lane_detection_esda.py`, `detector_method:=yolo` | YOLOv8-seg `lane` class, with the model's `cone` pixels (grown by 15 px) cut out, so barrel stripes aren't read as lane | `pip install ultralytics` (a CUDA torch for speed) and weights at `~/esda_models/lane_seg.pt`. Falls back to Adaptive if either is missing |
+| **YOLO** | `lane_detection_esda.py`, `detector_method:=yolo` | YOLOv8-seg `lane` class, with the model's `cone` pixels (grown by 15 px) cut out, so barrel stripes aren't read as lane | The `~/esda_venvs/yolo` venv and weights at `~/esda_models/lane_seg.pt` (see [5.3](#53-yolo-model-setup-training-and-viewing)). Falls back to Adaptive if either is missing |
 | **Regular** | `lane_detection.py` | Fixed grayscale threshold of 130 | Nothing extra |
 | **FCN** | `lane_detection_FCN.py` | FCN segmentation | `lane-detection-on-rural-roads-master/.../FCN_model.h5` in the workspace root |
 | **TwinLiteNet+** | `lane_detection_twinlite.py` | TwinLiteNet+ (nano) | `TwinLiteNetPlus/` repo and weights in the workspace root (see `LANE_DETECTION.md`) |
 
 **Adaptive vs Regular:** the yolo-adaptive branch benchmarked them on 395 frames. Under a shadow band, the fixed threshold's recall fell from 0.800 to 0.678; under a lighting gradient, its precision fell from 0.452 to 0.178. Adaptive held 0.79 recall in every lighting condition.
 
-**YOLO weights** aren't in the repo (`*.pt` is gitignored). Get `lane_seg.pt` from whoever trained it, or train one with `research/vision/` on the `yolo-adaptive` branch (`synth_gen.py`, then `train.py`). The existing weights were trained for a different camera, and measured 0.492 recall against Adaptive's 0.795, so retrain before relying on it.
+**Cones are obstacles** in both Adaptive and YOLO mode. Adaptive finds them with the base class's orange HSV thresholds; YOLO uses the model's `cone` class. Cone pixels are back-projected with the depth image and injected into `/scan_fused` next to the lane points, so the costmaps, SLAM and AMCL see them even where the pole-mounted lidar ring passes over a low cone. They are also cut out of the lane mask, and published on `/cone_obstacles` (PointCloud2) for RViz. Turn this off with `-p cone_obstacles:=false`.
 
 `lane_detection_esda.py` has its own self-test, which needs no ROS:
 ```bash
 python3 src/esda_simulation_2025/scripts/lane_detection_esda.py --selftest
 ```
 
-Useful parameters (`--ros-args -p …`): `detector_method`, `max_area_frac` (0.15), `adaptive_block` (61), `adaptive_c` (-8), `yolo_weights`, `yolo_conf` (0.25), `yolo_cone_dilate_px` (15), `yolo_device` (e.g. `0`).
+Useful parameters (`--ros-args -p …`): `detector_method`, `max_area_frac` (0.15), `adaptive_block` (61), `adaptive_c` (-8), `yolo_weights`, `yolo_conf` (0.25), `yolo_cone_dilate_px` (15), `yolo_device` (e.g. `0`), `yolo_image_topic`, `cone_obstacles` (true), `cone_max_range` (8.0 m), `cone_min_area_px` (150).
 
-### 5.3. Lane Detection Pipeline
+### 5.3. YOLO Model: Setup, Training and Viewing
+
+**Environment.** YOLO runs from its own venv with a CUDA torch and `ultralytics`. The venv still sees the system ROS packages, and it leaves the system torch (used by TwinLiteNet+) alone:
+```bash
+python3 -m venv --system-site-packages ~/esda_venvs/yolo
+~/esda_venvs/yolo/bin/pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu121
+~/esda_venvs/yolo/bin/pip install ultralytics==8.3.40 "numpy<2"
+```
+`numpy<2` keeps `cv_bridge` working. The GUI's **YOLO** option runs the detector with this venv's Python automatically. By hand:
+```bash
+ros2 run --prefix ~/esda_venvs/yolo/bin/python3 esda_simulation_2025 lane_detection_esda.py \
+  --ros-args -p detector_method:=yolo -p yolo_weights:=$HOME/esda_models/lane_seg.pt
+```
+
+**Watching it.** The annotated view (tinted masks, a box and confidence for every `lane` and `cone`) is on `/lane_detection/yolo_image`. It is only drawn while something subscribes:
+```bash
+ros2 run rqt_image_view rqt_image_view /lane_detection/yolo_image
+```
+
+**Training.** Weights are gitignored, so train them on the GPU with the tools in `research/vision/`. Start from the stock COCO `yolov8n-seg.pt` and fine-tune on two kinds of data:
+1. **Synthetic frames** from `synth_gen.py`, rendered for the sim camera. Pick the mount with `ESDA_VISION_CONFIG`; `camera_front.yaml` and `camera_pole_top.yaml` are derived from the URDF:
+   ```bash
+   cd research/vision
+   TEX=../../src/esda_simulation_2025/worlds/models/orange_igvc/materials/textures
+   ESDA_VISION_CONFIG=camera_front.yaml    python3 synth_gen.py --textures $TEX --out ~/esda_datasets/lane_seg_front    --n-train 2000 --n-val 300
+   ESDA_VISION_CONFIG=camera_pole_top.yaml python3 synth_gen.py --textures $TEX --out ~/esda_datasets/lane_seg_pole_top --n-train 2000 --n-val 300
+   ```
+2. **Real Gazebo frames** from `gz_autolabel.py`. It renders RGB and depth from cameras at known poses on the track. A pixel is labelled `lane` where its ground point lands on the track's paint texture, and `cone` where its 3D point falls inside a barrel. Shadows are in the images but not in the labels:
+   ```bash
+   python3 gz_autolabel.py render --world igvc.sdf --mount front --n 30 --seed 1 --out ~/esda_capture/gz_igvc
+   # ...repeat for other seeds, mounts, and igvc_carpark.sdf...
+   python3 gz_autolabel.py label --capture ~/esda_capture/gz_igvc --out ~/esda_datasets/lane_seg_gz --overlay
+   ```
+   Check `~/esda_datasets/lane_seg_gz/overlay/` by eye before training.
+
+Then train with `ultralytics` from the venv, pointing `data=` at a yaml that lists both datasets (see `~/esda_datasets/lane_seg_mixed.yaml`), and copy `runs/.../weights/best.pt` to `~/esda_models/lane_seg.pt`.
+
+### 5.4. Lane Detection Pipeline
 
 ```
 Camera Images → CV Processing → 3D Projection → Scan Fusion → Costmap
@@ -478,7 +515,7 @@ Camera Images → CV Processing → 3D Projection → Scan Fusion → Costmap
    - Lane points marked as obstacles
    - Inflation layer adds safety buffer
 
-### 5.4. Lane Detection Parameters
+### 5.5. Lane Detection Parameters
 
 Located in `scripts/lane_detection.py`:
 
@@ -500,7 +537,7 @@ fx = 640 / (2 * tan(1.089 / 2))  # Focal length (from FOV)
 camera_height = 0.315             # Height above ground (meters)
 ```
 
-### 5.5. Visualization
+### 5.6. Visualization
 
 **In RViz:**
 - **Purple/Magenta LaserScan points** (`/scan_fused`) - Fused LiDAR + lanes
@@ -513,7 +550,7 @@ camera_height = 0.315             # Height above ground (meters)
 - Bottom row: White mask & edge detection
 - Green lines overlaid on detected lanes
 
-### 5.6. Toggling Lane Detection
+### 5.7. Toggling Lane Detection
 
 **Via UI:**
 - Check/uncheck **"Enable Lane Detection"** checkbox

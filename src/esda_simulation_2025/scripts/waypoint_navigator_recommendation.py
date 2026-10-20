@@ -403,6 +403,68 @@ def polyline_length(points) -> float:
     ))
 
 
+def lane_centreline_from_boundaries(left_points, right_points, robot_x: float,
+                                    robot_y: float, robot_yaw: float,
+                                    half_width: float = 1.5,
+                                    bin_size: float = 0.25,
+                                    min_width: float = 1.5,
+                                    max_width: float = 5.0):
+    """
+    Lane centre points (map frame, near to far) from the two lane lines, and
+    which lines were used: 'both', 'left', 'right' or None.
+
+    Points are binned by distance AHEAD of the robot and the centre is taken
+    only where both lines have points in the same bin and sit a plausible
+    lane width apart. Pairing the n-th nearest left point with the n-th
+    nearest right point (the old way) paired points metres apart along the
+    lane whenever one side had more detections, and the "centre" then ran
+    diagonally across the lane.
+
+    With fewer than two such bins, a single visible line is used instead:
+    the centre is half_width in from it, on the robot's side.
+    """
+    cos_yaw, sin_yaw = math.cos(robot_yaw), math.sin(robot_yaw)
+
+    def to_robot(points):
+        out = []
+        for x, y in points:
+            dx, dy = x - robot_x, y - robot_y
+            out.append((dx * cos_yaw + dy * sin_yaw, -dx * sin_yaw + dy * cos_yaw))
+        return out
+
+    def binned(points):
+        bins = {}
+        for lon, lat in points:
+            if lon < 0.0:
+                continue
+            bins.setdefault(int(lon // bin_size), []).append((lon, lat))
+        return {k: (sum(p[0] for p in v) / len(v), sum(p[1] for p in v) / len(v))
+                for k, v in bins.items()}
+
+    def to_map(centre):
+        return [(robot_x + lon * cos_yaw - lat * sin_yaw,
+                 robot_y + lon * sin_yaw + lat * cos_yaw)
+                for lon, lat in sorted(centre)]
+
+    left = binned(to_robot(left_points))
+    right = binned(to_robot(right_points))
+
+    both = []
+    for k in sorted(set(left) & set(right)):
+        (l_lon, l_lat), (r_lon, r_lat) = left[k], right[k]
+        if min_width <= l_lat - r_lat <= max_width:
+            both.append(((l_lon + r_lon) / 2.0, (l_lat + r_lat) / 2.0))
+    if len(both) >= 2:
+        return to_map(both), 'both'
+
+    # One line only: the centre is half a lane in from it.
+    if len(left) >= 2 and len(left) >= len(right):
+        return to_map([(lon, lat - half_width) for lon, lat in left.values()]), 'left'
+    if len(right) >= 2:
+        return to_map([(lon, lat + half_width) for lon, lat in right.values()]), 'right'
+    return [], None
+
+
 def angle_difference(a: float, b: float) -> float:
     """Signed a - b, wrapped to [-pi, pi]."""
     return math.atan2(math.sin(a - b), math.cos(a - b))
@@ -445,6 +507,26 @@ class WaypointNavigator(Node):
         
         self.declare_parameter('safety_bubble_radius', 0.5) # Safety bubble radius around the robot to avoid collisions
 
+        # Gentler turns: lane goals lose goal_turn_weight per radian of turn
+        # (bearing from the robot vs its heading) beyond goal_turn_free_deg,
+        # so a goal needing a sharp turn only wins when it is clearly safer.
+        self.declare_parameter('goal_turn_free_deg', 15.0)
+        # Half the lane width: a single visible lane line puts the centre
+        # this far in from it (IGVC lanes are about 3 m).
+        self.declare_parameter('lane_half_width', 1.5)
+        # Lane goals: minimum clearance at the goal and along the way (m).
+        self.declare_parameter('lane_goal_min_clearance', 0.8)
+        self.declare_parameter('lane_path_min_clearance', 0.7)
+        # Fallback goals (forward march, stuck nudge, recovery) treat global
+        # costmap cells above this (0-100; lane lines and their inflation) as
+        # walls, so they cannot cut through a lane line the costmap knows.
+        self.declare_parameter('fallback_max_cost', 50)
+        # Lane and far goals lose cost_weight * cost/100 in their score, so
+        # the low-cost middle of the lane beats the edge of a line's
+        # inflation band when both are clear.
+        self.declare_parameter('cost_weight', 15.0)
+        self.declare_parameter('goal_turn_weight', 6.0)
+
         # Try the next GPS waypoint before generating a lane/forward goal.
         # Outside this radius, use normal navigation until it is in range.
         self.declare_parameter('gps_distance_threshold', 10.0)
@@ -456,7 +538,7 @@ class WaypointNavigator(Node):
         # gps_heading_max_turn_deg from the current heading per goal. While
         # any lane line is visible the lanes alone decide.
         self.declare_parameter('enable_gps_heading_pull', True)
-        self.declare_parameter('gps_heading_max_turn_deg', 60.0)
+        self.declare_parameter('gps_heading_max_turn_deg', 35.0)
         self.declare_parameter('gps_heading_no_lane_timeout', 3.0)
 
         # How far into unobserved space a waypoint may sit before it stops
@@ -558,6 +640,20 @@ class WaypointNavigator(Node):
         self.frame_id = self.get_parameter('frame_id').get_parameter_value().string_value
         self.odometry_topic = self.get_parameter('odometry_topic').get_parameter_value().string_value
         self.safety_bubble_radius = self.get_parameter('safety_bubble_radius').get_parameter_value().double_value
+        self.goal_turn_free = math.radians(self.get_parameter(
+            'goal_turn_free_deg').get_parameter_value().double_value)
+        self.goal_turn_weight = self.get_parameter(
+            'goal_turn_weight').get_parameter_value().double_value
+        self.lane_half_width = self.get_parameter(
+            'lane_half_width').get_parameter_value().double_value
+        self.lane_goal_min_clearance = self.get_parameter(
+            'lane_goal_min_clearance').get_parameter_value().double_value
+        self.lane_path_min_clearance = self.get_parameter(
+            'lane_path_min_clearance').get_parameter_value().double_value
+        self.fallback_max_cost = self.get_parameter(
+            'fallback_max_cost').get_parameter_value().integer_value
+        self.cost_weight = self.get_parameter(
+            'cost_weight').get_parameter_value().double_value
 
         self.unknown_clearance_allowance = self.get_parameter(
             'unknown_clearance_allowance').get_parameter_value().double_value
@@ -810,6 +906,17 @@ class WaypointNavigator(Node):
         # reverses with Nav2's BackUp behaviour, then enters recovery.
         self.dead_end_backup_distance = 0.6  # metres
         self.dead_end_backup_speed = 0.15  # m/s
+        # Where the last dead end was, and how many times in a row the robot
+        # has dead-ended within dead_end_repeat_radius of it. Recovery after
+        # a backup must not send the robot straight back into that pocket.
+        self.dead_end_point = None
+        self.dead_end_count = 0
+        self.dead_end_repeat_radius = 1.5  # metres
+        self.dead_end_avoid_radius = 0.7   # metres
+        self.dead_end_turnaround_after = 3
+        # One "clear the costmaps and back up" per stuck episode, tried
+        # before the 20 s no-candidate wait (see robot_recovery).
+        self.recovery_escape_attempted = False
 
         # Direction of recent forward progress (see update_progress_heading).
         # The nudge, recovery and forward searches all fan out from the
@@ -1407,6 +1514,9 @@ class WaypointNavigator(Node):
             if candidate_clearance < min_nudge_clearance:
                 continue
 
+            if not self.fallback_cost_ok(candidate_x, candidate_y):
+                continue
+
             best_x = candidate_x
             best_y = candidate_y
             best_clearance = candidate_clearance
@@ -1450,8 +1560,18 @@ class WaypointNavigator(Node):
         looks for a different opening from the new pose; without that the
         straight-ahead forward goal would lead straight back in.
         """
+        here = (self.robot_x, self.robot_y)
+        if (self.dead_end_point is not None
+                and math.hypot(here[0] - self.dead_end_point[0],
+                               here[1] - self.dead_end_point[1])
+                < self.dead_end_repeat_radius):
+            self.dead_end_count += 1
+        else:
+            self.dead_end_count = 1
+        self.dead_end_point = here
+
         self.get_logger().warn(
-            f"Dead end: backing up "
+            f"Dead end #{self.dead_end_count} here: backing up "
             f"{self.dead_end_backup_distance:.2f} m."
         )
 
@@ -1759,6 +1879,15 @@ class WaypointNavigator(Node):
                 ):
                     break
 
+                # Stop at lane lines: the SLAM map only has them where fused
+                # scan points landed, so the ray used to slip through gaps
+                # in a line. The costmap's lane layers fill those in.
+                # Not within the robot's own radius, which is already
+                # inflated whenever it drives near a line.
+                if (current_distance > 0.5
+                        and not self.fallback_cost_ok(check_world_x, check_world_y)):
+                    break
+
                 cell_value = snapshot.grid[
                     check_grid_y,
                     check_grid_x
@@ -2015,50 +2144,22 @@ class WaypointNavigator(Node):
             f"Right points: {len(right_points)}"
         )
 
-        if len(left_points) < 2 or len(right_points) < 2:
+        centreline, mode = lane_centreline_from_boundaries(
+            left_points, right_points,
+            self.robot_x, self.robot_y, self.robot_yaw,
+            half_width=self.lane_half_width)
+
+        if len(centreline) < 2:
+            # Keep the previous centreline: one frame without lanes is
+            # usually detector flicker. It still expires through
+            # lane_centreline_timeout in calculate_lane_goal. Wiping it here
+            # sent the robot to the lane-blind forward search every time one
+            # line dropped out for a single frame.
             self.get_logger().warn(
-                "Not enough left/right lane points."
+                "Not enough left/right lane points.",
+                throttle_duration_sec=2.0
             )
-            self.lane_centreline = []
-            self.last_lane_update_time = None
             return
-
-        # Sort each boundary from near to far.
-        left_points.sort(
-            key=lambda point: math.hypot(
-                point[0] - self.robot_x,
-                point[1] - self.robot_y
-            )
-        )
-
-        right_points.sort(
-            key=lambda point: math.hypot(
-                point[0] - self.robot_x,
-                point[1] - self.robot_y
-            )
-        )
-
-        number_of_pairs = min(
-            len(left_points),
-            len(right_points)
-        )
-
-        centreline = []
-
-        for i in range(number_of_pairs):
-            centre_x = (
-                left_points[i][0]
-                + right_points[i][0]
-            ) / 2.0
-
-            centre_y = (
-                left_points[i][1]
-                + right_points[i][1]
-            ) / 2.0
-
-            centreline.append(
-                (centre_x, centre_y)
-            )
 
         self.lane_centreline = self.smooth_centerline(
             centreline,
@@ -2072,7 +2173,7 @@ class WaypointNavigator(Node):
 
         self.get_logger().info(
             f"Updated lane centreline with "
-            f"{len(self.lane_centreline)} points"
+            f"{len(self.lane_centreline)} points ({mode} lines)"
         )
 
     def drop_lane_points_on_obstacles(self, left_points, right_points):
@@ -2297,7 +2398,11 @@ class WaypointNavigator(Node):
             or right_clearance < 0.8
             or left_clearance < 0.8
         ):
-            lookahead_distances = [0.40, 0.60, 0.80]
+            # Not 0.4-0.8 m: with the 0.7-1.3 m sideways offsets below, a
+            # goal that close needs a 60-70 deg snap turn. Further out the
+            # same shift is a gentler angle; the path clearance check below
+            # still rejects any that are not clear.
+            lookahead_distances = [0.60, 0.90, 1.20]
 
         else:
             lookahead_distances = [1.60, 1.90, 2.20]
@@ -2445,10 +2550,24 @@ class WaypointNavigator(Node):
                 )
 
                 # Hard rejection rather than merely reducing the score.
-                if goal_clearance < 1:
+                # robot_radius 0.45 + inflation 0.1 = 0.55, so 0.8 / 0.7
+                # still keep a margin. The old 1.0 / 0.9 rejected nearly
+                # every lane goal next to barrels, sending the robot to the
+                # lane-blind forward search instead.
+                if goal_clearance < self.lane_goal_min_clearance:
                     continue
 
-                if path_clearance < 0.9:
+                if path_clearance < self.lane_path_min_clearance:
+                    continue
+
+                # The SLAM map only has lane lines where fused scan points
+                # landed; the costmap has all of them, inflated. Without this
+                # a goal could sit right on a line's inflation band.
+                if not self.fallback_cost_ok(candidate_x, candidate_y):
+                    continue
+
+                if not self.path_cost_ok(self.robot_x, self.robot_y,
+                                         candidate_x, candidate_y):
                     continue
 
                 # --------------------------------------------------
@@ -2503,11 +2622,19 @@ class WaypointNavigator(Node):
                     if left_is_wall and candidate_lateral > 0.0:
                         wall_bias -= 20.0
 
+                # Prefer goals that need less turning (see goal_turn_weight).
+                turn = abs(angle_difference(
+                    math.atan2(dy, dx), self.robot_yaw))
+                turn_penalty = self.goal_turn_weight * max(
+                    0.0, turn - self.goal_turn_free)
+
                 score = (
                     clearance_score
                     + progress_score
                     + wall_bias
                     - lane_offset_penalty
+                    - turn_penalty
+                    - self.cost_penalty(candidate_x, candidate_y)
                 )
 
                 self.get_logger().info(
@@ -2600,14 +2727,22 @@ class WaypointNavigator(Node):
             goal_y
         )
 
-        if final_goal_clearance < 1.0:
+        if final_goal_clearance < self.lane_goal_min_clearance:
             self.get_logger().warn(
                 f"Final waypoint clearance too small: "
                 f"{final_goal_clearance:.2f} m"
             )
             return None
 
-        if final_path_clearance < 0.80:
+        if not (self.fallback_cost_ok(goal_x, goal_y)
+                and self.path_cost_ok(self.robot_x, self.robot_y, goal_x, goal_y)):
+            self.get_logger().warn(
+                "Final waypoint is in or behind high costmap cost "
+                "(lane line / inflation); rejecting."
+            )
+            return None
+
+        if final_path_clearance < self.lane_path_min_clearance:
             self.get_logger().warn(
                 f"Final waypoint path too close to obstacle: "
                 f"{final_path_clearance:.2f} m"
@@ -3072,24 +3207,63 @@ class WaypointNavigator(Node):
 
         return goal
 
-    def robot_recovery(self):
+    def robot_recovery(self, after_dead_end=False):
         """
         Search the front half of the robot for a recovery goal that:
         1. is locally safe,
         2. is in front of the robot,
         3. can actually be planned to by Nav2.
+
+        after_dead_end: the robot just backed out of a dead end. The 1.5 m
+        search would happily pick the clear spot it backed out of (0.8 m
+        straight ahead) and drive straight back in, so first ask the planner
+        for a route PAST the blockage, and keep any short goal away from
+        where the robot got stuck. After dead_end_turnaround_after dead ends
+        in the same place, the no-U-turn limit is lifted so it can leave the
+        way it came.
         """
 
         self.get_logger().warn(
             "Recovery mode: searching for a reachable front-space goal."
         )
 
-        recovery_goal = self.find_front_recovery_goal()
+        avoid_point = None
+        if after_dead_end:
+            avoid_point = self.dead_end_point
+            if self.dead_end_count >= self.dead_end_turnaround_after:
+                self.get_logger().error(
+                    f"Dead end {self.dead_end_count} times here: allowing "
+                    f"any direction, including back the way it came."
+                )
+                self.progress_heading = None
+
+        recovery_goal = None
+        if after_dead_end:
+            recovery_goal = self.find_far_recovery_goal()
+
+        if recovery_goal is None:
+            recovery_goal = self.find_front_recovery_goal(avoid_point=avoid_point)
 
         # Nothing clear within 1.5 m: ask the planner to route past the
         # obstacles instead.
-        if recovery_goal is None:
+        if recovery_goal is None and not after_dead_end:
             recovery_goal = self.find_far_recovery_goal()
+
+        if recovery_goal is None and not self.recovery_escape_attempted:
+            # Usually the robot has squeezed into a gap the global planner's
+            # bigger inflation calls blocked: it is inside the inflated zone,
+            # so NavFn rejects every path out and waiting changes nothing.
+            # Clear stale marks and reverse out; BackUp needs no planner.
+            self.recovery_escape_attempted = True
+            self.get_logger().error(
+                "No reachable recovery goal: clearing costmaps and backing up."
+            )
+            try:
+                self.navigator.clearAllCostmaps()
+            except Exception as ex:
+                self.get_logger().warn(f"clearAllCostmaps failed: {ex}")
+            self.back_out_of_dead_end()
+            return
 
         if recovery_goal is None:
             self.get_logger().error(
@@ -3227,7 +3401,8 @@ class WaypointNavigator(Node):
 
         self.robot_recovery()
 
-    def find_front_recovery_goal(self, unknown_allowance: float = None):
+    def find_front_recovery_goal(self, unknown_allowance: float = None,
+                                 avoid_point=None):
         if self.map_snapshot is None:
             return None
 
@@ -3358,6 +3533,15 @@ class WaypointNavigator(Node):
                 ]
 
                 if cell_value >= 50:
+                    continue
+
+                if not self.fallback_cost_ok(candidate_x, candidate_y):
+                    continue
+
+                # Not back into the dead end the robot just reversed out of.
+                if avoid_point is not None and math.hypot(
+                        candidate_x - avoid_point[0],
+                        candidate_y - avoid_point[1]) < self.dead_end_avoid_radius:
                     continue
 
                 # --------------------------------------------------
@@ -3814,7 +3998,7 @@ class WaypointNavigator(Node):
             )
 
             self.enter_recovery_mode = True
-            self.robot_recovery()
+            self.robot_recovery(after_dead_end=True)
             return
 
         if result == TaskResult.SUCCEEDED:
@@ -3827,6 +4011,7 @@ class WaypointNavigator(Node):
                 self.enter_recovery_mode = False
                 self.no_candidate_since = None
                 self.relaxed_recovery_attempted = False
+                self.recovery_escape_attempted = False
 
             elif completed_mode == "recovery":
                 self.get_logger().warn(
@@ -3837,6 +4022,7 @@ class WaypointNavigator(Node):
                 self.enter_recovery_mode = False
                 self.no_candidate_since = None
                 self.relaxed_recovery_attempted = False
+                self.recovery_escape_attempted = False
 
             elif completed_mode == "gps":
                 self.get_logger().info(
@@ -4011,6 +4197,51 @@ class WaypointNavigator(Node):
 
         return base_x, base_y, yaw, max_distance
 
+    def global_cost_at(self, world_x: float, world_y: float):
+        """Global costmap value (0-100, -1 unknown) here, or None off the map
+        or before the first costmap arrives."""
+        costmap = self.global_costmap_data
+        if costmap is None:
+            return None
+        info = costmap.info
+        grid_x = int((world_x - info.origin.position.x) / info.resolution)
+        grid_y = int((world_y - info.origin.position.y) / info.resolution)
+        if not (0 <= grid_x < info.width and 0 <= grid_y < info.height):
+            return None
+        return costmap.data[grid_y * info.width + grid_x]
+
+    def fallback_cost_ok(self, world_x: float, world_y: float) -> bool:
+        """Whether a fallback goal (or a cell its ray passes) may sit here:
+        not above fallback_max_cost in the global costmap. Unknown, off-map
+        and no-costmap-yet all pass; the occupancy map checks cover those."""
+        value = self.global_cost_at(world_x, world_y)
+        return value is None or value < 0 or value <= self.fallback_max_cost
+
+    def path_cost_ok(self, start_x: float, start_y: float, end_x: float,
+                     end_y: float, skip: float = 0.5, step: float = 0.1) -> bool:
+        """fallback_cost_ok at every step along a straight line, ignoring the
+        first `skip` metres (the robot's own, often inflated, cells)."""
+        length = math.hypot(end_x - start_x, end_y - start_y)
+        if length <= skip:
+            return self.fallback_cost_ok(end_x, end_y)
+        n = int(length / step)
+        for i in range(n + 1):
+            d = min(length, i * step)
+            if d < skip:
+                continue
+            t = d / length
+            if not self.fallback_cost_ok(start_x + t * (end_x - start_x),
+                                         start_y + t * (end_y - start_y)):
+                return False
+        return True
+
+    def cost_penalty(self, world_x: float, world_y: float) -> float:
+        """cost_weight * (global cost / 100); 0 where unknown or unmapped."""
+        value = self.global_cost_at(world_x, world_y)
+        if value is None or value < 0:
+            return 0.0
+        return self.cost_weight * value / 100.0
+
     def far_goal_cost_ok(self, world_x: float, world_y: float) -> bool:
         """
         Whether the global costmap allows a far goal here: inside the
@@ -4109,6 +4340,9 @@ class WaypointNavigator(Node):
             candidate for candidate in candidates
             if self.far_goal_cost_ok(candidate[1], candidate[2])
         ]
+        # Prefer the low-cost middle of the lane over the edge of a band.
+        filtered.sort(key=lambda c: c[0] - self.cost_penalty(c[1], c[2]),
+                      reverse=True)
 
         if not filtered:
             self.get_logger().info(

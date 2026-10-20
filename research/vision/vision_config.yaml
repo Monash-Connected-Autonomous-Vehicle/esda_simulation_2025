@@ -1,0 +1,273 @@
+# =====================================================================
+#  ESDA vision config  —  one place to tune the lane/cone seg pipeline
+#  Used by: lane_seg_node.py (inference) and train.py (as defaults)
+#
+#  The whole point of this file: lanes and cones are SEPARATE classes
+#  and go to SEPARATE topics, so a white-striped cone can never be fed
+#  into the lane layer and inflate the costmap into a false wall.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+#  WHICH DETECTOR PRODUCES THE LANE MASK
+#
+#  yolo    = the trained segmentation network (model: below).
+#  classic = vision/lane_classic.py, a morphological top-hat and a
+#            threshold. No weights, no GPU, no training, and its ROI is
+#            derived from the projection at runtime so moving the camera
+#            does not invalidate it -- which is what happened to the
+#            weights twice this week.
+#
+#  Why this switch exists: on an Orin NX the ZED's depth is GPU work on
+#  the same GPU a network would use (NEURAL depth alone is 20 Hz at
+#  ~26 W), so the real choice is what the GPU is spent on. And the IGVC
+#  AutoNav 2025 winning run's own debug pane is a binary image, not a
+#  segmentation mask.
+#
+#  Default stays yolo until the teleport bench scores both on the same
+#  400 frames. Watch PRECISION as much as recall: false lane pixels
+#  become lethal costmap cells, and we have already had the robot walled
+#  into a thicket of them once.
+#
+#  The classic detector produces LANE ONLY. Cones belong to the lidar,
+#  which already gated vision cones as unconfirmed guesses anyway.
+# ---------------------------------------------------------------------
+detector:
+  kind: classic       # yolo | classic
+  #
+  # SWITCHED 2026-10-14 on the 395-frame teleport bench. Every threshold beat
+  # the network on every axis, and by margins that are not close:
+  #
+  #   detector   recall  prec   IoU    1-2m recall  ms/frame
+  #   yolo        0.492  0.362  0.263      0.592       8.4
+  #   otsu        0.800  0.452  0.406      0.814       0.9
+  #   value       0.789  0.454  0.405      0.806       1.1
+  #   adaptive    0.795  0.263  0.247      0.816       2.4
+  #   tophat      0.759  0.213  0.199      0.887       2.5
+  #
+  # otsu, not tophat, despite tophat being the prediction. The prediction was
+  # made by eyeballing three frames of green turf, where otsu returned zero
+  # pixels; across 395 frames spanning both the turf and the asphalt sections
+  # otsu has the best recall, the best precision and the best IoU, and it is
+  # the fastest. tophat owns the carrot band (0.887 at 1-2 m) but fires on
+  # asphalt speckle, which is where its 0.213 precision goes -- and false lane
+  # pixels become lethal costmap cells.
+  #
+  # OPEN: shadows. This sim lights uniformly, so the bench cannot separate a
+  # method that survives a shadow edge from one that does not, and that is
+  # exactly where a GLOBAL threshold like otsu is weakest and tophat is
+  # strongest by construction. Job 110d perturbs the same 395 frames with
+  # brightness shifts, gradients and hard shadow bands and re-scores. If otsu
+  # collapses there, switch method to tophat and raise tophat_thresh to buy
+  # precision back.
+  method: adaptive    # classic only: otsu | value | adaptive | tophat
+  #
+  # otsu was the choice for about an hour, on the clean bench where it had the
+  # best recall, precision and IoU. Job 110d then re-scored the same 395
+  # frames under four lightings, and the clean bench turns out to have been
+  # flattering it -- this sim lights every frame uniformly, which is the one
+  # condition a GLOBAL threshold is built for and an outdoor course never
+  # provides.
+  #
+  #   recall        none  bright   dark  gradient  shadow      worst
+  #   otsu         0.800   0.817  0.799     0.788   0.678      0.678
+  #   adaptive     0.795   0.792  0.793     0.795   0.791      0.791
+  #   tophat       0.759   0.717  0.758     0.756   0.758      0.717
+  #   value        0.789   0.920  0.510     0.764   0.185      0.185
+  #
+  #   precision    none  bright   dark  gradient  shadow      worst
+  #   otsu         0.452   0.447  0.452     0.178   0.424      0.178
+  #   adaptive     0.263   0.262  0.309     0.272   0.119      0.119
+  #
+  # adaptive is FLAT: 0.791-0.795 recall and 0.814-0.825 at the carrot band
+  # across every lighting, because it thresholds against a local mean and a
+  # local mean moves with the light. otsu loses 15% of its recall to a shadow
+  # band and three fifths of its precision to a gradient -- and outdoors,
+  # gradients and shade are the normal case, not the exception. value is
+  # unusable: 0.185 recall in shade, 0.036 precision in sun.
+  #
+  # The cost is precision, 0.263 clean against otsu's 0.452. The linker, the
+  # bow guard and the costmap's clearing are what have to absorb that, and the
+  # next sweep should push adaptive_c more negative to buy some back and find
+  # where recall starts to pay for it.
+  min_area: 120       # drop connected components smaller than this (px)
+  close_px: 3         # morphological close, to bridge sampling gaps
+  tophat_px: 25       # structuring element; must be WIDER than a painted
+                      # line in pixels, or the line is removed with the
+                      # background. A 10 cm line is 11 px at 2 m here.
+  tophat_thresh: 12   # how far above the local background counts as paint
+
+model:
+  # Path to the trained weights. During sim-first dev this is a .pt;
+  # on Jetson later point it at a .engine (TensorRT) and set half:true.
+  weights: "~/esda_models/lane_seg.pt"
+  task: "segment"            # segment | detect  (we train segment)
+  imgsz: 640
+  conf: 0.35                 # min confidence to keep a detection
+  iou: 0.50
+  half: false                # true on Jetson/TensorRT for FP16 speed
+  device: "0"                # "0" = first CUDA GPU, "cpu" = fallback
+
+# ---------------------------------------------------------------------
+#  CLASS SCHEME  — build with all of these, but flip `active` to cut
+#  computation. Lidar already sees cones, so lane_only is the fallback
+#  if the GPU/Jetson can't keep up.  Changing `mode` needs NO retrain:
+#  the model still outputs every class; we just ignore the muted ones.
+# ---------------------------------------------------------------------
+classes:
+  # index order here MUST match the order in the dataset data.yaml
+  names: ["lane", "cone", "drivable"]
+  mode: "full"               # full | lane_cone | lane_only
+  modes:
+    full:      ["lane", "cone", "drivable"]
+    lane_cone: ["lane", "cone"]
+    lane_only: ["lane"]
+
+# which class feeds which downstream consumer
+routing:
+  lane:     { publish_points: true,  cloud_topic: "/lane/points"  }
+  cone:     { publish_points: true,  cloud_topic: "/cone/points"  }
+  drivable: { publish_points: false, cloud_topic: "/drivable/points" }
+
+topics:
+  image_in:    "/head_camera/images"   # sim camera (set to real cam on robot)
+  scan_in:     "/scan"                 # lidar, used to confirm cone detections
+  debug_image: "/lane/debug_image"     # annotated overlay for RViz/Foxglove
+  lane_mask:   "/lane/mask"            # mono8 lane mask (debug)
+
+# ---------------------------------------------------------------------
+#  CONE GATING  —  mark a cone in the costmap only where the lidar agrees
+#
+#  A vision cone is a guess. The model runs on renders it was not trained on
+#  and has produced false positives on cast shadows and a black board. A
+#  lidar return is a measurement: a solid object in front of a lidar always
+#  comes back, and it cannot be fooled by appearance. Requiring both before
+#  marking an obstacle is a far stronger claim than either alone.
+#
+#  This does NOT weaken the thing the cone class exists for. Separating
+#  barrels from lane paint happens in the mask, upstream of this, so a cone
+#  that the lidar cannot confirm is still kept out of the lane layer -- it
+#  just does not become an obstacle on its own say-so.
+#
+#  Solidity matters too. The ground-contact edge is a thin arc, and at the
+#  0.05 m costmap resolution that marks a dotted line of cells with gaps a
+#  planner will try to drive through. Each confirmed cone is replaced by a
+#  filled disc of its real radius so the costmap gets a blob.
+# ---------------------------------------------------------------------
+cone_gate:
+  enabled: true
+  confirm_radius: 0.60   # lidar return must be within this of the cone, m
+  cluster_eps: 0.45      # contact points within this are one barrel, m
+  disc_radius: 0.28      # barrel radius -> size of the marked blob, m
+  disc_step: 0.04        # point spacing in the disc; keep < costmap 0.05
+
+frames:
+  # frame the projected pointclouds are published in (costmap-ready)
+  output_frame: "base_link"
+
+# ---------------------------------------------------------------------
+#  GROUND PROJECTION (Inverse Perspective Mapping)
+#  Lane pixels are projected onto the flat ground so Nav2 can use them.
+#
+#  DERIVED FROM THE ACTUAL XACRO CHAIN (verified, do not guess):
+#    camera.xacro        camera_joint: chassis -> camera_link  xyz = 0.8 0 0.315
+#    robot_core_ref.xacro chassis_joint: base_link -> chassis  xyz = -0.965423 0 0
+#      => camera_link in base_link:  x = -0.965423 + 0.8 = -0.165423
+#                                    z = 0.315
+#    base_link sits at the WHEEL AXLE, which is wheel_radius = 0.1625 m
+#    above the ground, so the camera's height above GROUND is
+#      0.315 + 0.1625 = 0.4775 m
+#    camera rpy = 0 0 0 all the way up the chain  =>  cam_pitch_deg = 0
+#    image 640x480, horizontal_fov 1.089 rad, square pixels
+#      => fx = fy = (640/2)/tan(1.089/2) = 528.43 ;  cx,cy = 320,240
+#
+#  Geometry sanity check with these numbers: the visible ground strip runs
+#  from ~0.88 m (image bottom row) to 6.0 m (max_range) in front of
+#  base_link, which lands in image rows ~281-480. If /lane/points comes out
+#  empty, check that the lane mask has pixels BELOW row 281 (the horizon).
+#
+#  ON THE REAL ROBOT: re-measure cam_height (optical centre above ground)
+#  and cam_pitch_deg (+ve = tilted down), and recompute cam_x_offset as the
+#  camera's forward offset from base_link. Everything else carries over.
+# ---------------------------------------------------------------------
+projection:
+  enabled: true
+  fx: 224.0664       # (W/2)/tan(hfov/2) = 320/tan(55 deg), ZED 2i 2.1mm at 640x360
+  fy: 224.0664       # square pixels in the Ignition camera sensor
+  cx: 320.0
+  cy: 180.0
+  cam_height: 1.1   # m, optical centre above GROUND (0.315 + wheel_radius 0.1625)
+  cam_pitch_deg: 20.0   # +down. xacro chain is level, so 0 in sim
+  cam_x_offset: -0.165423  # camera is BEHIND base_link (base_link is at the chassis front edge)
+  # 4.0, matching the costmap's obstacle_max_range. Anything past that was
+  # being projected, linked, resampled and published, and then dropped on
+  # the floor by the costmap -- and those far points have the worst
+  # flat-ground error, so they were the ones smearing.
+  max_range: 4.0       # drop projected points beyond this (metres)
+  min_range: 0.25      # note: nearest visible ground is ~0.88 m anyway
+  row_stride: 4        # subsample mask rows for speed (1 = every row)
+  col_stride: 4
+
+runtime:
+  rate_hz: 5.0         # inference loop cap (sim camera update_rate is 5 Hz)
+  draw_debug: true
+
+# ---------------------------------------------------------------------
+#  LANE LINKING  —  turn broken lane fragments back into whole lines
+#
+#  A dashed marking, a barrel standing on the line, or worn paint all reach
+#  the costmap as SEPARATE blobs. Nav2 does not know they are one wall and
+#  will plan a path straight through the holes between them. Linking groups
+#  the fragments that belong to one physical boundary, fits a curve, and
+#  resamples it densely so the boundary is continuous.
+#
+#  Association is done in GROUND space, never in pixels: a 2 m dash gap at
+#  10 m is a couple of pixels, and the same gap at 1.5 m is half the frame.
+#
+#  Fragments are judged on POSITION ONLY. Measured on real detections, the
+#  median fragment is 0.50 m long, and same-line pairs disagree in heading by
+#  a median of 52 degrees -- a stubby blob has no usable direction. Direction
+#  comes from the accumulated group curve instead.
+#
+#  Topics when enabled:
+#    /lane/points      continuous, gap-free  -> this is what Nav2 consumes
+#    /lane/points_raw  the unlinked points   -> for comparison in RViz
+#    /lane/lines       MarkerArray, one coloured LINE_STRIP per lane line
+#  The debug image also draws each line in its own colour with its fragment
+#  centroids dotted, so you can see which pieces got joined.
+# ---------------------------------------------------------------------
+linking:
+  enabled: true
+  cell: 0.05              # bird's-eye grid resolution, metres
+  # [0.3, 4.5], was [0.3, 9.0]. The linker was fitting curves through points
+  # out to 9 m -- well past where the projection is trustworthy and past
+  # where the costmap will even accept them. Those far, badly-placed points
+  # dominated the fit and bent it, which then misplaced the NEAR line, where
+  # accuracy actually matters. A little headroom past the 4 m marking range
+  # so a line is not cut off exactly at the boundary.
+  x_range: [0.3, 4.5]
+  y_range: [-5.0, 5.0]
+  close_cells: 2          # heal speckle only -- must NOT jump dash gaps
+  min_fragment_cells: 4
+  max_gap: 2.5            # furthest a line may reach past its own ends, m.
+                          # Was 3.5; the real dash gap is 1.65 m, so this
+                          # still joins dashes and halves what can be invented.
+  min_extrap: 1.8         # a short seed may still reach this far. Must exceed
+                          # the real dash gap, period*(1-duty) ~ 1.65 m here.
+  max_lateral: 0.50       # absorb a fragment within this of the curve, m.
+                          # The opposite boundary is a corridor-width away
+                          # (2.4-4.4 m), so it can never be absorbed.
+  grow_iters: 6
+  fit_degree: 2           # quadratic: enough for the curvature in this course
+  resample_step: 0.025    # spacing of the emitted continuous points, m.
+                          # Keep it BELOW the costmap resolution (0.05 in
+                          # nav2_params.yaml) or a diagonal line can skip
+                          # cells and the "continuous" wall gets holes.
+  max_fit_rms: 0.30       # worse than this -> assume a bad merge, do not bridge
+  max_bridge_bow: 0.25    # metres a bridge may bow off the straight chord
+                          # joining the fragments it connects. max_fit_rms is
+                          # measured on the POINTS, so it says nothing about
+                          # the span between them -- and that span is what
+                          # gets painted into a costmap that no longer clears.
+  end_frac: 0.35
+  raw_topic: "/lane/points_raw"
+  marker_topic: "/lane/lines"

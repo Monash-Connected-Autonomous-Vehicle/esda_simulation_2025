@@ -1,0 +1,13 @@
+# Sim ZED, camera_mount:=pole_top. Derived from the xacro:
+#   chassis -> camera_link   xyz = 0.560407 0.10 1.30, rpy = 0 0.2618 0 (15 deg down)
+#   => height 1.30 + 0.1625 = 1.4625 m, x = 0.560407 - 0.965423 = -0.405016
+#   640x480, hfov 1.089 rad => fx = 528.43
+# Use with: ESDA_VISION_CONFIG=camera_pole_top.yaml python3 synth_gen.py ...
+projection:
+  fx: 528.43
+  fy: 528.43
+  cx: 320.0
+  cy: 240.0
+  cam_height: 1.4625
+  cam_pitch_deg: 15.0
+  cam_x_offset: -0.405016

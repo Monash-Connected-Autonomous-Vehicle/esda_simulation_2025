@@ -49,6 +49,18 @@ projection, which is correct but ties the detector to one specific lens and
 mount. It does not belong in a file that has to run on whatever camera the
 robot carries.
 
+CONES AS OBSTACLES
+
+Every method also finds cones/barrels: the model's `cone` class in yolo mode,
+otherwise the base class's orange HSV thresholds (on 80 labelled Gazebo frames:
+0.998 precision, 0.54 recall -- the misses are the white bands and black base,
+but the orange body spans the barrel's full width, so every barrel is found).
+Cone pixels are back-projected with the depth image and injected into
+/scan_fused next to the lane points, so Nav2's costmaps, SLAM and AMCL treat
+them as obstacles even where the lidar ring passes over a low cone. They are
+also cut out of the lane mask, and published on /cone_obstacles for RViz.
+Turn off with -p cone_obstacles:=false.
+
 USAGE
 
     ros2 run esda_simulation_2025 lane_detection_esda.py \
@@ -152,6 +164,79 @@ def subtract_cones(lane_mask, cone_mask, dilate_px=15):
                                       (2 * dilate_px + 1, 2 * dilate_px + 1))
         cone = cv2.dilate(cone.astype(np.uint8), k) > 0
     return lane & ~cone
+
+
+def cone_mask_hsv(image, hue_low=5, hue_high=25, sat_min=100, val_min=70):
+    """Boolean mask of cone/barrel orange (OpenCV HSV, hue 0-179)."""
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    m = ((hsv[..., 0] >= hue_low) & (hsv[..., 0] <= hue_high)
+         & (hsv[..., 1] >= sat_min) & (hsv[..., 2] >= val_min))
+    m = cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    return m > 0
+
+
+def cone_points(cone_mask, depth, fx, cx, cy, stride=4, min_area=150,
+                min_range=0.2, max_range=8.0):
+    """3D points on every cone blob, in the camera OPTICAL frame.
+
+    Optical frame as the base class uses it: x right, y down, z forward.
+    Blobs under min_area pixels are ignored (specks). Returns
+    (points [(x, y, z)], number of blobs that produced a point).
+    """
+    m = np.asarray(cone_mask).astype(np.uint8)
+    if depth is None or not m.any():
+        return [], 0
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(m, 8)
+    big = np.zeros(n, bool)
+    big[1:] = stats[1:, cv2.CC_STAT_AREA] >= min_area
+    if not big.any():
+        return [], 0
+    keep = big[lab]
+    sub = np.zeros_like(keep)
+    sub[::stride, ::stride] = keep[::stride, ::stride]
+    v, u = np.nonzero(sub)
+    d = np.asarray(depth, dtype=np.float64)[v, u]
+    ok = np.isfinite(d) & (d > min_range) & (d < max_range)
+    u, v, d = u[ok], v[ok], d[ok]
+    if d.size == 0:
+        return [], 0
+    x = (u - cx) * d / fx
+    y = (v - cy) * d / fx
+    blobs = len(np.unique(lab[v, u]))
+    return [(float(a), float(b), float(c)) for a, b, c in zip(x, y, d)], blobs
+
+
+# BGR. Lane green and cone orange, like the usual YOLO debug view.
+DET_COLOURS = {'lane': (0, 255, 0), 'cone': (0, 140, 255)}
+MASK_COLOURS = {'lane': (255, 255, 0), 'cone': (0, 140, 255)}
+
+
+def draw_detections(image, detections, lane_mask=None, cone_mask=None,
+                    mask_alpha=0.45):
+    """The annotated YOLO view: masks tinted, a box and class name per detection.
+
+    detections: iterable of (name, conf, x1, y1, x2, y2) in image pixels.
+    Returns a new image; the input is not modified.
+    """
+    out = image.copy()
+    for name, mask in (('lane', lane_mask), ('cone', cone_mask)):
+        if mask is None:
+            continue
+        m = np.asarray(mask).astype(bool)
+        if m.any():
+            colour = np.array(MASK_COLOURS[name], np.float32)
+            out[m] = ((1 - mask_alpha) * out[m] + mask_alpha * colour).astype(np.uint8)
+    for name, conf, x1, y1, x2, y2 in detections:
+        colour = DET_COLOURS.get(name, (255, 255, 255))
+        p1, p2 = (int(x1), int(y1)), (int(x2), int(y2))
+        cv2.rectangle(out, p1, p2, colour, 2)
+        text = f"{name} {conf:.2f}"
+        (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        ty = max(p1[1] - 4, th + 2)
+        cv2.rectangle(out, (p1[0], ty - th - 3), (p1[0] + tw + 4, ty + 2), colour, -1)
+        cv2.putText(out, text, (p1[0] + 2, ty - 1), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5, (0, 0, 0), 1, cv2.LINE_AA)
+    return out
 
 
 def clean_mask(mask, roi, min_area=120, close_px=3, max_area_frac=0.15):
@@ -260,6 +345,32 @@ def selftest():
        cut[400:, lo:hi].all() and cut[:280, lo:hi].all())
     ck("subtract_cones with no cones changes nothing",
        (subtract_cones(lane, np.zeros((H, W), bool)) == lane).all())
+    img = scene(60, 230)
+    drawn = draw_detections(img, [("lane", 0.9, 300, 250, 340, 470),
+                                  ("cone", 0.8, 100, 200, 160, 300)],
+                            lane_mask=lane, cone_mask=cone)
+    ck("draw_detections leaves the input untouched",
+       (img == scene(60, 230)).all())
+    ck("draw_detections draws a green lane box",
+       (drawn[470, 320] == DET_COLOURS["lane"]).all())
+    ck("draw_detections draws an orange cone box",
+       (drawn[300, 130] == DET_COLOURS["cone"]).all())
+    orange = np.full((H, W, 3), 60, np.uint8)
+    orange[200:320, 280:360] = (0, 110, 230)           # BGR barrel orange
+    cm = cone_mask_hsv(orange)
+    ck("cone_mask_hsv finds an orange barrel", cm[210:310, 290:350].all())
+    ck("cone_mask_hsv ignores grey ground", not cm[:150].any())
+    depth = np.full((H, W), 4.0, np.float32)
+    pts, nb = cone_points(cm, depth, fx=528.43, cx=320.0, cy=240.0)
+    ck("cone_points gives one blob at the depth", nb == 1 and len(pts) > 50
+       and all(abs(p[2] - 4.0) < 1e-6 for p in pts))
+    ck("cone_points puts it where the pixels are",
+       abs(np.mean([p[0] for p in pts]) - (320 - 320) * 4 / 528.43) < 0.1)
+    ck("cone_points ignores specks",
+       cone_points(cm & False, depth, 528.43, 320, 240)[1] == 0)
+    far = np.full((H, W), 20.0, np.float32)
+    ck("cone_points drops cones beyond max_range",
+       cone_points(cm, far, 528.43, 320, 240, max_range=8.0)[0] == [])
     ck("yolo path uses the supplied mask",
        (clean_mask(raw_mask(scene(60, 230), "yolo",
                             yolo_mask_fn=lambda im: np.zeros((H, W), bool)),
@@ -299,6 +410,28 @@ def _build_node_class():
             self.declare_parameter('yolo_cone_dilate_px', 15)
             self.declare_parameter('yolo_conf', 0.25)
             self.declare_parameter('yolo_device', '')
+            # Annotated view (boxes, class names, tinted masks). Watch with
+            # `ros2 run rqt_image_view rqt_image_view <topic>`. Empty = off.
+            self.declare_parameter('yolo_image_topic', '/lane_detection/yolo_image')
+
+            # Cones as obstacles (see CONES AS OBSTACLES above).
+            self.declare_parameter('cone_obstacles', True)
+            self.declare_parameter('cone_min_area_px', 150)
+            self.declare_parameter('cone_max_range', 8.0)
+            self.declare_parameter('cone_point_stride', 4)
+            self.declare_parameter('cone_hold_sec', 0.5)
+            self.declare_parameter('cone_cut_dilate_px', 15)
+            self.declare_parameter('cone_topic', '/cone_obstacles')
+            self.cone_obstacles = bool(self.get_parameter('cone_obstacles').value)
+            self.latest_cone_points = []
+            self._cone_points_time = None
+            self._last_cone_mask = None
+            self._last_detections = []
+            self._cone_pub = None
+            if self.cone_obstacles:
+                from sensor_msgs.msg import PointCloud2
+                self._cone_pub = self.create_publisher(
+                    PointCloud2, str(self.get_parameter('cone_topic').value), 10)
 
             self.method = str(self.get_parameter('detector_method').value).lower()
             if self.method not in METHODS:
@@ -308,8 +441,11 @@ def _build_node_class():
                 self.method = 'adaptive'
             self.max_area_frac = float(self.get_parameter('max_area_frac').value)
             self._yolo = None
+            self._yolo_image_pub = None
             if self.method == 'yolo':
                 self._load_yolo()
+            if self._yolo is not None:
+                self._install_yolo_image_publisher()
             self.get_logger().info(
                 f"lane_detection_esda: method={self.method} "
                 f"max_area_frac={self.max_area_frac}")
@@ -405,6 +541,34 @@ def _build_node_class():
                     f"could not load {w}: {e} -- falling back to 'adaptive'")
                 self.method = 'adaptive'
 
+        def _install_yolo_image_publisher(self):
+            topic = str(self.get_parameter('yolo_image_topic').value).strip()
+            if not topic:
+                return
+            from sensor_msgs.msg import Image
+            try:
+                from cv_bridge import CvBridge
+            except ImportError as e:                      # noqa: BLE001
+                self.get_logger().error(f"no cv_bridge, YOLO image off: {e}")
+                return
+            self._yolo_bridge = CvBridge()
+            self._yolo_image_pub = self.create_publisher(Image, topic, 1)
+            self.get_logger().info(f"YOLO annotated image -> {topic}")
+
+        def _publish_yolo_image(self, image, detections, lane, cone):
+            if self._yolo_image_pub is None or \
+                    self._yolo_image_pub.get_subscription_count() == 0:
+                return
+            try:
+                msg = self._yolo_bridge.cv2_to_imgmsg(
+                    draw_detections(image, detections, lane, cone), encoding='bgr8')
+                msg.header.stamp = self.get_clock().now().to_msg()
+                msg.header.frame_id = 'camera_link'
+                self._yolo_image_pub.publish(msg)
+            except Exception as e:                        # noqa: BLE001
+                self.get_logger().warn(f"YOLO image publish failed: {e}",
+                                       throttle_duration_sec=10.0)
+
         def _yolo_class_masks(self, image):
             """(lane, cone) boolean masks at image size from one inference."""
             kwargs = {'verbose': False,
@@ -416,16 +580,22 @@ def _build_node_class():
             h, w = image.shape[:2]
             lane = np.zeros((h, w), bool)
             cone = np.zeros((h, w), bool)
+            self._last_detections = []
             if res.masks is None or res.boxes is None:
                 return lane, cone
             names = getattr(res, 'names', None) or getattr(self._yolo, 'names', {})
             lane_name = str(self.get_parameter('yolo_lane_class').value).lower()
             cone_name = str(self.get_parameter('yolo_cone_class').value).lower()
             ids = res.boxes.cls.cpu().numpy().astype(int)
+            confs = res.boxes.conf.cpu().numpy()
+            boxes = res.boxes.xyxy.cpu().numpy()
             for i, cid in enumerate(ids):
                 name = str(names.get(int(cid), cid)).lower()
                 if name not in (lane_name, cone_name):
                     continue
+                self._last_detections.append(
+                    ('lane' if name == lane_name else 'cone',
+                     float(confs[i]), *boxes[i]))
                 mk = res.masks.data[i].cpu().numpy()
                 mk = cv2.resize(mk, (w, h), interpolation=cv2.INTER_NEAREST) > 0.5
                 if name == lane_name:
@@ -436,12 +606,78 @@ def _build_node_class():
 
         def _yolo_mask(self, image):
             lane, cone = self._yolo_class_masks(image)
+            self._last_cone_mask = cone
+            self._publish_yolo_image(image, self._last_detections, lane, cone)
             if cone.any():
                 self.get_logger().debug(
                     f"yolo: cutting {int(cone.sum())} cone pixels out of the lane mask")
             return subtract_cones(
                 lane, cone,
                 int(self.get_parameter('yolo_cone_dilate_px').value))
+
+        def _update_cones(self, image):
+            """Find cones this frame, refresh their obstacle points, publish them.
+
+            Returns the cone mask (or None when cone handling is off).
+            """
+            if not self.cone_obstacles:
+                return None
+            if self.method == 'yolo' and self._yolo is not None:
+                # _yolo_mask runs after this, so use the previous frame's
+                # cones only if this frame has not been inferred yet.
+                cone = self._last_cone_mask
+            else:
+                cone = cone_mask_hsv(image, self.orange_hue_low, self.orange_hue_high,
+                                     self.orange_sat_min, self.orange_val_min)
+            if cone is None:
+                return None
+            h, w = cone.shape
+            fx = (w / 2) / np.tan(1.089 / 2)      # same intrinsics as the base class
+            pts, blobs = cone_points(
+                cone, self.latest_depth_image, fx, w / 2, h / 2,
+                stride=int(self.get_parameter('cone_point_stride').value),
+                min_area=int(self.get_parameter('cone_min_area_px').value),
+                max_range=float(self.get_parameter('cone_max_range').value))
+            self.latest_cone_points = pts
+            self._cone_points_time = self.get_clock().now()
+            if blobs:
+                self.get_logger().info(
+                    f"{blobs} cone(s) -> {len(pts)} obstacle points",
+                    throttle_duration_sec=2.0)
+            self._publish_cone_cloud(pts)
+            return cone
+
+        def _publish_cone_cloud(self, pts):
+            if self._cone_pub is None:
+                return
+            import struct
+            from sensor_msgs.msg import PointCloud2, PointField
+            msg = PointCloud2()
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.header.frame_id = self.camera_frame_id
+            msg.height, msg.width = 1, len(pts)
+            msg.is_bigendian, msg.is_dense = False, True
+            msg.fields = [PointField(name=n, offset=4 * i,
+                                     datatype=PointField.FLOAT32, count=1)
+                          for i, n in enumerate('xyz')]
+            msg.point_step, msg.row_step = 12, 12 * len(pts)
+            msg.data = b''.join(struct.pack('fff', *p) for p in pts)
+            self._cone_pub.publish(msg)
+
+        def scan_callback(self, msg):
+            """The base injection, with fresh cone points added to the lane ones."""
+            fresh = (
+                self.latest_cone_points and self._cone_points_time is not None
+                and (self.get_clock().now() - self._cone_points_time).nanoseconds / 1e9
+                < float(self.get_parameter('cone_hold_sec').value))
+            if not fresh:
+                return super().scan_callback(msg)
+            lane_points = self.latest_3d_points
+            self.latest_3d_points = list(lane_points) + self.latest_cone_points
+            try:
+                return super().scan_callback(msg)
+            finally:
+                self.latest_3d_points = lane_points
 
         def detect_white_lanes(self, image):
             """Same return contract as the base: (valid_lines, mask, edges).
@@ -464,6 +700,13 @@ def _build_node_class():
                 tophat_px=int(self.get_parameter('tophat_px').value),
                 tophat_thresh=int(self.get_parameter('tophat_thresh').value),
                 yolo_mask_fn=self._yolo_mask if self._yolo is not None else None)
+
+            cone = self._update_cones(image)
+            if cone is not None and self.method != 'yolo':
+                # yolo already cut its own cone class out of the lane mask.
+                m = (subtract_cones(
+                    m, cone, int(self.get_parameter('cone_cut_dilate_px').value))
+                    * 255).astype(np.uint8)
 
             white_mask = clean_mask(
                 m, roi_mask_lower(height, width),

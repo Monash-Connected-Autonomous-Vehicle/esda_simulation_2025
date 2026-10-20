@@ -136,14 +136,14 @@ controller_server:
       ax_min: -3.0
       ay_max: 3.0
       ay_min: -3.0
-      az_max: 3.5
+      az_max: 2.0      # was 3.5; gentler turn-in
       vx_std: 0.15
       vy_std: 0.0
       wz_std: 0.3
       vx_max: 1.0
       vx_min: 0.0
       vy_max: 0.0
-      wz_max: 1.2
+      wz_max: 0.8      # was 1.2; less aggressive turns
       iteration_count: 1
       prune_distance: 2.5
       transform_tolerance: 1.0
@@ -173,7 +173,14 @@ controller_server:
           "PathFollowCritic",
           "PathAngleCritic",
           "PreferForwardCritic",
+          "TwirlingCritic",
         ]
+      # Penalises angular velocity, so MPPI prefers smooth arcs over
+      # snap turns when both reach the goal.
+      TwirlingCritic:
+        enabled: true
+        cost_power: 1
+        cost_weight: 5.0
       ConstraintCritic:
         enabled: true
         cost_power: 1
@@ -265,7 +272,11 @@ local_costmap:
         enabled: True
         publish_voxel_map: True
         origin_z: 0.0
-        z_resolution: 0.05
+        # 16 voxels (the layer's maximum) x 0.125 m = 2.0 m. At 0.05 m it was
+        # 0.8 m tall, below the pole-mounted lidar (1.30 m), so every scan was
+        # "out of map bounds", raytracing never ran and obstacle marks were
+        # never cleared.
+        z_resolution: 0.125
         z_voxels: 16
         max_obstacle_height: 2.0
         mark_threshold: 0
@@ -625,10 +636,10 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [1.0, 0.0, 2.0]
-    min_velocity: [-0.5, 0.0, -2.0]
-    max_accel: [2.5, 0.0, 3.2]
-    max_decel: [-2.5, 0.0, -3.2]
+    max_velocity: [1.0, 0.0, 0.8]     # wz was 2.0
+    min_velocity: [-0.5, 0.0, -0.8]
+    max_accel: [2.5, 0.0, 2.0]        # wz was 3.2
+    max_decel: [-2.5, 0.0, -2.0]
     odom_topic: "odometry/filtered"  # EKF-fused odom+IMU, not raw wheel odom
     # odom_topic: /diff_drive_base_controller/odom
     odom_duration: 0.1
