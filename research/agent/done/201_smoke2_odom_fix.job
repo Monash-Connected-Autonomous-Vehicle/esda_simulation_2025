@@ -1,0 +1,29 @@
+# ============================================================================
+# 201 -- re-run the smoke test with odometry discovered rather than guessed.
+#
+# Run 200 proved three of four parts: the stack comes up, our adaptive
+# detector publishes (1073 lane messages), and the four-pane view records to
+# video. Frames 25 seconds apart show the robot visibly closer to a barrel,
+# so it drives.
+#
+# What it did not prove is distance, because the scorer logged
+# odom_samples: 0 and odom_topic_used: None. /odom and /odometry/filtered
+# were my guesses. /odom is bridged from Gazebo while the robot is driven by
+# gz_ros2_control's diff_drive_base_controller, and the EKF feeding
+# /odometry/filtered takes odom0: /odom -- so if the bridge is silent, both
+# are. bench_run.sh now enumerates every nav_msgs/Odometry topic, probes each
+# for an actual message, and refuses to score if none speak.
+# ============================================================================
+set -uo pipefail
+SWEEP="/mnt/c/work/felix/mcav/sweep"
+SIM_SECONDS=120 WALL_CAP=400 bash "$SWEEP/bench_run.sh" \
+    smoke2_igvc_front_poletop igvc.sdf front pole_top 0.315 0.0
+R="$SWEEP/results/smoke2_igvc_front_poletop"
+echo
+echo "=== which odometry topics exist, and which spoke ==="
+cat "$R/odom.json" 2>/dev/null || echo "(no odom.json -- discovery failed)"
+grep -i odom "$R/topics.txt" 2>/dev/null
+echo
+if [ -f "$R/FAILED" ]; then echo "SMOKE2 FAILED: $(cat "$R/FAILED")"; exit 1; fi
+echo "=== score ==="; head -25 "$R/score.txt" 2>/dev/null
+echo "SMOKE2 OK"

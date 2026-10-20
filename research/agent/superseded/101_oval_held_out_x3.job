@@ -1,0 +1,11 @@
+# Same three changes, on the held-out generated world, so it is comparable
+# with last night's numbers: 13.8 / 12.9 / 0.0 m at 0.045-0.056 carrots per
+# simulated second (and one run where Nav2 never came up at all).
+set -uo pipefail
+cd "$ESDA_HOME"
+for i in 1 2 3; do
+  echo "============ igvc_oval_test, repeat $i of 3 ============"
+  ./demo.sh lap igvc_oval_test --seconds 420 \
+    --note "held-out oval, repeat $i/3: 320x240 camera + 8x lighter MPPI" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done

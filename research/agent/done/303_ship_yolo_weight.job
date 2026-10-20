@@ -1,0 +1,171 @@
+# ============================================================================
+# 303 -- ship the trained YOLO lane+cone weight, so the branch is runnable.
+#
+# The team wants to try the network instead of the threshold, and currently
+# cannot: the code went up with the branch but the weight did not. The backup
+# rsync excluded '*.pt' and .gitignore carries both 'research/models/' and
+# '*.pt', so a clone logs "weights not found: ~/esda_models/lane_seg.pt" and
+# runs lane_seg_node.py in pass-through mode -- no detections, no cones.
+#
+# lane_seg_node.py is the ONLY detector that produces cones. The classic
+# thresholds are lane-only by construction, which is the whole reason the
+# model exists: a white-striped barrel read as lane paint walls off the gap.
+#
+# detector.kind stays 'classic'. The bench says the network loses in sim
+# (0.492/0.362 against otsu's 0.800/0.452), so flipping the default would
+# make everyone's runs worse by surprise. --detector yolo is one flag.
+#
+# apply_yolo_ship.py is idempotent and was dry-run against the real branch
+# contents from the Windows side: all four anchors matched exactly once, the
+# patched self-test passes 38/38, and the .gitignore result was verified both
+# ways (this weight tracked, a base weight dropped beside it still ignored).
+#
+# Nothing is staged with `git add -A` this time -- only the seven paths this
+# job is about. Anything else dirty in the tree is printed and left alone.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"; SWEEP="/mnt/c/work/felix/mcav/sweep"
+cd "$WS" || { echo "no workspace at $WS"; exit 1; }
+W="research/models/lane_seg_synth_cpu.pt"
+
+echo "=== 0. starting point ==="
+echo "  branch: $(git rev-parse --abbrev-ref HEAD)"
+echo "  head:   $(git log --oneline -1)"
+echo "  dirty before we touch anything:"
+git status --porcelain | head -20
+
+echo
+echo "=== 1. apply ==="
+python3 "$SWEEP/apply_yolo_ship.py" "$WS" || { echo "APPLY FAILED"; exit 1; }
+
+echo
+echo "=== 2. the weight ==="
+ls -l "$W" || { echo "weight missing"; exit 1; }
+python3 - "$W" <<'PY'
+import os, sys
+p = sys.argv[1]; s = os.path.getsize(p)
+print("  %.1f MB" % (s / 1e6))
+assert 20e6 < s < 40e6, "unexpected size -- refusing to commit it"
+print("  size sane, and well under GitHub's 50 MB warning")
+PY
+[ $? -eq 0 ] || exit 1
+
+echo
+echo "=== 3. .gitignore does exactly one thing, not two ==="
+if git check-ignore -q "$W"; then echo "  FAIL still ignored"; exit 1; fi
+echo "  this weight: tracked"
+printf 'x' > research/models/_probe.pt
+if git check-ignore -q research/models/_probe.pt; then
+  echo "  other .pt beside it: still ignored"
+else
+  echo "  FAIL a base weight dropped there would now be committed"
+  rm -f research/models/_probe.pt; exit 1
+fi
+rm -f research/models/_probe.pt
+
+echo
+echo "=== 4. self-test of the sim lane node ==="
+python3 src/esda_simulation_2025/scripts/lane_detection_esda.py --selftest > /tmp/st303.txt 2>&1
+rc=$?
+tail -6 /tmp/st303.txt
+[ $rc -eq 0 ] || { echo "SELFTEST FAILED -- not committing"; exit 1; }
+
+echo
+echo "=== 5. config and node still parse ==="
+python3 -m py_compile research/vision/lane_seg_node.py || { echo "lane_seg_node.py does not compile"; exit 1; }
+python3 - <<'PY'
+import yaml
+c = yaml.safe_load(open("research/vision/vision_config.yaml"))
+w = c["model"]["weights"]
+print("  model.weights  =", w)
+print("  detector.kind  =", c["detector"]["kind"], "(unchanged on purpose)")
+print("  classes        =", c["classes"]["names"])
+assert w == "../models/lane_seg_synth_cpu.pt", w
+assert c["detector"]["kind"] == "classic"
+assert c["classes"]["names"] == ["lane", "cone", "drivable"]
+print("  OK")
+PY
+[ $? -eq 0 ] || exit 1
+
+echo
+echo "=== 6. (soft) the node resolves the weight from an unrelated cwd ==="
+set +u; source /opt/ros/humble/setup.bash 2>/dev/null; set -u
+( cd /tmp && python3 - "$WS" <<'PY'
+import os, sys
+ws = sys.argv[1]
+sys.path.insert(0, os.path.join(ws, "research", "vision"))
+try:
+    import lane_seg_node as L
+except Exception as e:
+    print("  could not import (environment, not the change):", e); raise SystemExit(0)
+cfg = L.load_config(os.path.join(ws, "research", "vision", "vision_config.yaml"))
+w = L.resolve_weights(cfg["model"]["weights"], cfg["_config_dir"])
+print("  cwd      :", os.getcwd())
+print("  resolved :", w)
+print("  exists   :", os.path.isfile(w))
+assert os.path.isfile(w) and w.endswith("lane_seg_synth_cpu.pt")
+print("  OK -- launching from anywhere loads the same file")
+PY
+) || echo "  (soft check failed; see above -- not blocking the commit)"
+
+echo
+echo "=== 7. (soft) the weight actually infers ==="
+python3 - "$WS" <<'PY'
+import glob, os, sys
+ws = sys.argv[1]
+try:
+    from ultralytics import YOLO
+except Exception as e:
+    print("  ultralytics not installed in WSL:", type(e).__name__)
+    print("  the team installs it with: pip install ultralytics")
+    raise SystemExit(0)
+w = os.path.join(ws, "research", "models", "lane_seg_synth_cpu.pt")
+m = YOLO(w)
+print("  class names:", m.names)
+frames = sorted(glob.glob("/mnt/c/work/felix/mcav/sweep/frames/*.jpg"))
+if not frames:
+    print("  no bench frame to try it on"); raise SystemExit(0)
+r = m.predict(frames[0], verbose=False, conf=0.35)[0]
+n = 0 if r.boxes is None else len(r.boxes)
+print("  %s -> %d detections, masks=%s"
+      % (os.path.basename(frames[0]), n, r.masks is not None))
+if n:
+    import collections
+    ids = r.boxes.cls.cpu().numpy().astype(int).tolist()
+    print("  by class:", dict(collections.Counter(m.names[i] for i in ids)))
+PY
+
+echo
+echo "=== 8. stage ONLY what this job is about ==="
+git add src/esda_simulation_2025/scripts/lane_detection_esda.py \
+        research/vision/lane_seg_node.py \
+        .gitignore
+git add --chmod=-x "$W" \
+        research/vision/vision_config.yaml \
+        research/vision/README_VISION.md \
+        research/vision/RUN_YOLO.md
+echo "--- staged ---"
+git diff --cached --stat
+echo "--- modes (md/yaml/weight must be 644, scripts 755) ---"
+git ls-files -s -- "$W" research/vision/RUN_YOLO.md research/vision/vision_config.yaml \
+    research/vision/README_VISION.md research/vision/lane_seg_node.py \
+    src/esda_simulation_2025/scripts/lane_detection_esda.py
+echo "--- left dirty on purpose (not ours) ---"
+git status --porcelain | grep -v '^[MARD]' | head -20
+echo "  (empty above = nothing else was dirty)"
+
+echo
+echo "=== 9. commit and push ==="
+git commit -F "$SWEEP/commitmsg_yolo.txt" || { echo "COMMIT FAILED"; exit 1; }
+git log --oneline -3
+git push origin yolo-adaptive 2>&1 | tail -4
+
+echo
+echo "=== 10. the remote really has it ==="
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git ls-remote origin yolo-adaptive | cut -f1)
+echo "  local  $LOCAL"
+echo "  remote $REMOTE"
+[ "$LOCAL" = "$REMOTE" ] && echo "  PUSHED OK" || { echo "  REMOTE DOES NOT MATCH"; exit 1; }
+git cat-file -s "$(git rev-parse HEAD:$W)" | awk '{printf "  weight blob on the branch: %.1f MB\n", $1/1e6}'
+echo "DONE"

@@ -1,0 +1,107 @@
+# THE RECALL NUMBER, FROM THE CAPTURE WE ALREADY PAID FOR.
+#
+# Job 109 did everything right except produce a number. It captured 672 frames
+# (456 distinct, so the robot really moved), then autolabel died on the first
+# line: it derives the ground-truth texture from the WORLD NAME, and
+# "igvc_oval_slow_test" implies ground_oval_slow_test.png, which does not
+# exist. The slow and crawl variants reuse ground_oval_test.dae. No labels, no
+# data.yaml, no overlays, and "no images under .../val" where the recall should
+# have been. Then `yolo val` failed on the data.yaml that was never written.
+#
+# AND A SECOND BUG, WHICH WAS THE DANGEROUS ONE.
+#
+# capture_labelled.py defaulted --spawn to 0,0,0 and job 109 never passed it.
+# igvc_oval_slow_test spawns at (11.86, -2.31, 1.263 rad). So every one of
+# those 672 poses is off by that rigid transform. Fixing only the texture would
+# have projected the arena's paint into the wrong part of every image and
+# produced a recall near zero -- which reads as "the model is blind at the new
+# camera", the exact conclusion we were hoping to draw. A wrong number that
+# confirms your expectation is worse than no number.
+#
+# WHAT CHANGED
+#   - config/world_spawns.txt is now the only copy of the spawn poses.
+#     demo.sh reads it via world_spawn() in esda_lib.sh; capture_labelled.py
+#     reads it via vision/world_spawns.py and REFUSES to run if the world is
+#     unlisted and no --spawn was given. test_spawn_table.py asserts the two
+#     readers and the file agree (34 checks).
+#   - autolabel.py follows the chain the simulator follows: world .sdf -> ground
+#     mesh .dae -> its texture image. Nothing is guessed from a name. It refuses
+#     the stock igvc world outright, because that arena is included at
+#     pose 0 16.3 0 and w2p() does not model the offset.
+#   - fix_capture_poses.py recomposes a capture's poses from the raw odometry
+#     each frame already stored, so 109's frames are salvageable: seconds of
+#     arithmetic instead of another ten-minute capture and another roll of the
+#     dice on where the robot wanders.
+#
+# NO SIM RUNS HERE. Tests, arithmetic and inference only -- a few minutes.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync110.log 2>&1 || { tail -20 /tmp/sync110.log; exit 1; }
+
+echo "=== 0. the geometry and the spawn table must both hold ==="
+python3 vision/test_camera_consistency.py || { echo "GEOMETRY DRIFTED"; exit 1; }
+python3 vision/test_spawn_table.py        || { echo "SPAWN TABLE DRIFTED"; exit 1; }
+python3 vision/eval_recall.py --selftest  || exit 1
+
+echo
+echo "=== 1. find 109's capture ==="
+CAP="$(ls -1dt "$HOME"/esda_capture/eval_* 2>/dev/null | head -1)"
+[ -n "$CAP" ] || { echo "no ~/esda_capture/eval_* to rescore"; exit 1; }
+n=$(ls -1 "$CAP"/*.jpg 2>/dev/null | wc -l)
+echo "capture: $CAP  ($n frames)"
+[ "$n" -ge 200 ] || { echo "only $n frames -- recapture instead of rescoring"; exit 1; }
+
+echo
+echo "=== 2. repair the poses from the raw odometry ==="
+python3 vision/fix_capture_poses.py --capture "$CAP" --check || exit 1
+python3 vision/fix_capture_poses.py --capture "$CAP"         || exit 1
+
+echo
+echo "=== 3. ground truth from world geometry ==="
+DS="$HOME/esda_datasets/rescore_$(date +%Y%m%d_%H%M%S)"
+python3 vision/autolabel.py --capture "$CAP" --repo "$ESDA_HOME" \
+        --out "$DS" --val-frac 0.5 --overlay --overlay-every 15 || exit 1
+
+rm -rf "$ESDA_HOME/logs/eval_overlay" 2>/dev/null || true
+mkdir -p "$ESDA_HOME/logs/eval_overlay"
+cp "$DS"/overlay/*.jpg "$ESDA_HOME/logs/eval_overlay/" 2>/dev/null || true
+ov=$(ls -1 "$ESDA_HOME/logs/eval_overlay"/*.jpg 2>/dev/null | wc -l)
+echo "overlays -> logs/eval_overlay/  ($ov files)"
+[ "$ov" -gt 0 ] || { echo "no overlays written -- not scoring blind"; exit 1; }
+
+# THE GATE. autolabel skips a frame when no paint is visible from its pose. On a
+# lane-following run most frames should see paint, so a low keep rate means the
+# pose transform is still wrong -- and a recall number computed from wrong
+# labels would look exactly like a model failure. Refuse rather than mislead.
+kept=$(ls -1 "$DS"/images/train/*.jpg "$DS"/images/val/*.jpg 2>/dev/null | wc -l)
+pct=$(( 100 * kept / n ))
+echo "kept $kept of $n frames (${pct}%) -- frames where ground truth sees paint"
+if [ "$pct" -lt 40 ]; then
+  echo "KEEP RATE ${pct}% IS TOO LOW TO TRUST."
+  echo "Either the pose transform is still wrong, or the robot spent the run"
+  echo "somewhere with no paint in view. Look at logs/eval_overlay/ and at the"
+  echo "lap report for that run before believing any recall number."
+  exit 1
+fi
+
+echo
+echo "=== 4. recall by range -- the number this project has never had ==="
+python3 vision/eval_recall.py --data "$DS" --split val \
+        --weights "$HOME/esda_models/lane_seg.pt" --conf 0.35 \
+        2>&1 | tee "$ESDA_HOME/logs/eval_recall.txt"
+
+echo
+echo "=== 5. detector metrics, for the record ==="
+yolo val model="$HOME/esda_models/lane_seg.pt" data="$DS/data.yaml" \
+     imgsz=640 conf=0.35 2>&1 | tail -25 || echo "(yolo val unavailable)"
+
+echo
+echo "=== 6. where the model was trained vs where it is being scored ==="
+python3 - <<'PY'
+import sys; sys.path.insert(0, "vision")
+import synth_gen as sg
+print(sg.camera_summary())
+print("The weights were trained at 62.4 deg hfov, 0.478 m, level. Everything")
+print("above is scored at the camera the robot actually has now. A low number")
+print("here is the BEFORE for the retrain, not a verdict on YOLOv8-seg.")
+PY

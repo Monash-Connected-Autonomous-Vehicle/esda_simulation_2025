@@ -1,0 +1,18 @@
+# THE finding from the first batch: the robot does not go blind, it PARKS.
+#
+#   nav2: "Reached the goal! / Goal succeeded"  ... then nothing, ever again
+#
+# Once it stops, the carrot stops moving with it, --min-goal-shift suppresses
+# the next publish, and with no new goal there is no reason to move. The
+# stillness sustains itself. Every run in the first batch spent 59-96% of its
+# time in a single stall that never ended.
+#
+# Two changes under test here:
+#   * re-send the goal after 6 s without moving, breaking the deadlock
+#   * always log a change of state, and repeat it every 10 s while it holds,
+#     so a stopped robot can never again be silent in the log
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_oval_test --seconds 420 \
+  --note "goal heartbeat + visible idle logging" \
+  -- --lane-memory 3.0 --lidar-corridor

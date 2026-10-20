@@ -1,0 +1,15 @@
+# The cure rather than the workaround: render on the GPU.
+#
+# A 640x480 camera at 5 Hz is trivial for an RTX 5060 Ti and brutal for
+# llvmpipe, which is what is producing one frame every 9 s. If --gpu lifts
+# the camera to anywhere near 5 Hz, the lane pipeline gets ~45x more
+# information per metre travelled and the 4 s patience is no longer absurd.
+#
+# gpu_check.sh warned that hardware GL on WSL can silently resolve to a
+# software renderer, so the run prints what it actually got.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash gpu_check.sh 2>&1 | tail -15 || true
+./demo.sh lap igvc_oval_test --seconds 420 --gpu \
+  --note "GPU rendering, default 4 s timeout" \
+  -- --lane-memory 3.0 --lidar-corridor

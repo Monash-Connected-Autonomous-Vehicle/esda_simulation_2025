@@ -1,0 +1,49 @@
+# Does the robot stop driving out of the course?
+#
+# Identical to 106 in every respect except one driver flag: --fov-deg 90.
+# Same world, same budget, same everything else, and it runs immediately
+# after 106 so the machine is in the same state. One variable.
+#
+# WHAT IT TURNS ON
+#
+# band_gap() used to turn a single visible lane line into a lane by assuming
+# the lane lies on the far side of it, never checking. The robot therefore
+# settles a fixed half-lane from whatever line it can see and cannot tell
+# the lane's left edge from its right edge. Cross the right-hand line once
+# and it tracks 1.5 m to the right of it -- parallel to the course,
+# outside it, steering further out. Absorbing, which is why it looks like
+# confident driving until there is nothing left to see.
+#
+# Three saved frames from 103_lane_watch show the whole sequence: one line
+# pinned to the left edge of a 90 deg view with empty ground to the right
+# (130 lane points, detection working fine), then a cone and two slivers of
+# paint all on the left, then empty ground at odom (5.81, 27.16), parked,
+# 27 m from the start. The detector never failed. The robot left.
+#
+# With --fov-deg 90, each hypothesis about which edge the line is predicts
+# where the OTHER line should be, and the field of view says whether that
+# prediction is falsifiable. A prediction that lands well inside the visible
+# window and finds nothing is refuted. See vision/lane_side.py; 23 offline
+# checks in test_lane_side.py, including that it does NOT fire when the
+# robot is genuinely inside the lane and has lost the near line to the
+# camera's near limit.
+#
+# WHAT TO READ: distance, and the band counts below. If the fix works the
+# robot should stay on the course rather than driving off it, so the runs
+# should end with paint still in view instead of 0 lane points.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync106b.log 2>&1 || { tail -20 /tmp/sync106b.log; exit 1; }
+for i in 1 2 3; do
+  echo "====== igvc_oval_slow_test, lane-side check ON, repeat $i of 3 ======"
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 \
+    --note "lane-side check on (--fov-deg 90) $i/3: otherwise identical to 106" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8 --fov-deg 90
+done
+echo "=== band counts, newest three runs: 1 band means one line in frame ==="
+for d in $(ls -dt logs/run_igvc_oval_slow_test_* | head -3); do
+  echo "-- $d"; grep -oP "\[\d+ band" "$d/drive.log" 2>/dev/null | sort | uniq -c
+done
+echo "=== distance, 106 then 106b ==="
+grep -H -E "path length|stalls|lane publishes|goals published" \
+  logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -32

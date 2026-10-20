@@ -1,0 +1,63 @@
+# ============================================================================
+# 308 -- actually drive it. One scored run on the new YOLO default.
+#
+# Everything so far has shown the node STARTS. This drives the course with
+# their navigator and scores it, at the mounts that are now the defaults
+# (camera pole_top, lidar low) on igvc.sdf, and records the detector's own
+# view to video.
+#
+# METHOD=yolo is passed explicitly. bench_run.sh still defaults to adaptive
+# on purpose -- it is the measurement harness -- so the default moving in
+# demo.sh does not silently move what the bench measures.
+#
+# One run is NOT a verdict. Measured run-to-run spread on this stack is
+# 2.3x, so read the distance as "it drove", not as a score. The paired
+# comparison against adaptive is a separate job.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"; SWEEP="/mnt/c/work/felix/mcav/sweep"
+cd "$WS" || exit 1
+TAG=try_yolo_default
+R="$SWEEP/results/$TAG"
+rm -rf "$R"
+
+echo "=== what is about to run ==="
+echo "  head:   $(git log --oneline -1)"
+grep -n "declare_parameter('detector_method'" src/esda_simulation_2025/scripts/lane_detection_esda.py
+echo
+
+METHOD=yolo SIM_SECONDS=400 WALL_CAP=900 \
+  bash "$SWEEP/bench_run.sh" "$TAG" igvc.sdf pole_top low 1.30 -0.2618
+echo "  bench rc=$?"
+
+echo
+echo "=== did it run on yolo, or on the fallback? ==="
+LL=$(ls "$R"/*.log 2>/dev/null | head -20)
+grep -h -iE "method=|loaded .*\.pt|falling back" "$R"/vision.log "$R"/lane*.log 2>/dev/null | head -5 | sed 's/^/  /'
+if [ -f "$R/FAILED" ]; then echo "  RUN FAILED: $(cat "$R/FAILED")"; fi
+
+echo
+echo "=== the numbers ==="
+python3 - "$R" <<'PY'
+import glob, json, os, sys
+r = sys.argv[1]
+g = sorted(glob.glob(os.path.join(r, "lap_*.json")))
+if not g:
+    print("  no report written"); raise SystemExit(0)
+d = json.load(open(g[0]))
+def f(k, fmt="%.2f"):
+    return (fmt % d[k]) if k in d and d[k] is not None else "-"
+print("  furthest from start : %s m" % f("max_distance_from_start_m", "%.1f"))
+print("  path length         : %s m" % f("path_length_m", "%.1f"))
+print("  detector rate       : %s /sim-s" % f("lane_per_sim_s"))
+print("  stalled fraction    : %s" % f("stalled_fraction"))
+print("  net rotation        : %s rad" % f("turn_net_rad", "%.1f"))
+print("  odom samples        : %s" % f("odom_samples", "%d"))
+print("  verdict in report   : %s" % d.get("result", d.get("pass", "-")))
+PY
+
+echo
+echo "=== files left behind ==="
+ls -la "$R" | head -20
+echo "  video: $R/view_$TAG.mp4"
+echo DONE

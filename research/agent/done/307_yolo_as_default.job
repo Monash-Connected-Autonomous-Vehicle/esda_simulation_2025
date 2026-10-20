@@ -1,0 +1,113 @@
+# ============================================================================
+# 307 -- make YOLO the default lane detector for the sim stack.
+#
+# The drop-in swap: lane_detection_esda.py keeps the base class, the Hough
+# stage and /scan_fused, so Nav2 is untouched and this is reversible with
+# one parameter. Cones are NOT part of this -- they come from
+# lane_seg_node.py, a different detector on different plumbing.
+#
+# The gate that matters: this node falls back to adaptive when the weights
+# or ultralytics are missing, and says so in a log line nobody reads. From
+# the outside a fallback is indistinguishable from success -- same topics,
+# same rates, better numbers. So the live check below requires the log to
+# say method=yolo AND to have loaded the weight, and FAILS if it finds a
+# fallback message.
+#
+# apply_yolo_default.py is idempotent and was dry-run against dbe7d1f from
+# the Windows side: every anchor matched once, selftest still passes.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"; SWEEP="/mnt/c/work/felix/mcav/sweep"
+cd "$WS" || exit 1
+PKG=esda_simulation_2025
+set +u; source /opt/ros/humble/setup.bash; set -u
+
+echo "=== 0. starting point ==="
+echo "  head: $(git log --oneline -1)"
+git status --porcelain | head
+
+echo
+echo "=== 1. apply ==="
+python3 "$SWEEP/apply_yolo_default.py" "$WS" || { echo "APPLY FAILED"; exit 1; }
+
+echo
+echo "=== 2. self-test and build ==="
+python3 src/$PKG/scripts/lane_detection_esda.py --selftest > /tmp/st307.txt 2>&1
+rc=$?; tail -3 /tmp/st307.txt
+[ $rc -eq 0 ] || { echo "SELFTEST FAILED"; exit 1; }
+python3 -m py_compile src/$PKG/scripts/ui_launch.py || exit 1
+bash -n demo.sh || exit 1
+colcon build --symlink-install --packages-select "$PKG" 2>&1 | tail -3
+set +u; source "$WS/install/setup.bash"; set -u
+
+echo
+echo "=== 3. the defaults really moved ==="
+grep -n "declare_parameter('detector_method'" src/$PKG/scripts/lane_detection_esda.py
+grep -n '^METHOD=' demo.sh
+grep -n 'StringVar(value="YOLO lane")' src/$PKG/scripts/ui_launch.py
+python3 - <<'PY'
+import subprocess
+# the installed copy is what ros2 run executes
+out = subprocess.run(["grep", "-c", "'detector_method', 'yolo'",
+                      "install/esda_simulation_2025/lib/esda_simulation_2025/"
+                      "lane_detection_esda.py"],
+                     capture_output=True, text=True).stdout.strip()
+print("  installed copy carries the new default:", out == "1")
+assert out == "1"
+PY
+[ $? -eq 0 ] || exit 1
+
+echo
+echo "=== 4. LIVE: demo.sh up with NO --method, so the default is what runs ==="
+./demo.sh down >/dev/null 2>&1
+./demo.sh up --no-nav --no-rviz --no-build > /tmp/307_up.log 2>&1
+echo "  rc=$?"
+sleep 20
+LANELOG=$(ls -t "$WS"/.demo_logs/LANE.log 2>/dev/null | head -1)
+echo "  lane log: ${LANELOG:-NONE}"
+if [ -n "$LANELOG" ]; then
+  grep -iE "method=|loaded |falling back|weights|Traceback" "$LANELOG" | head -8 | sed 's/^/    /'
+fi
+
+echo "  --- rates with yolo (20 s) ---"
+for t in /scan_fused /lane_markers; do
+  R=$(timeout 25 ros2 topic hz "$t" --window 15 2>&1 | grep -m1 "average rate" || true)
+  echo "    $t  ${R:-NO MESSAGES}"
+done
+YOLO_OK=1
+grep -q "method=yolo" "$LANELOG" 2>/dev/null || YOLO_OK=0
+grep -q "loaded .*lane_seg_synth_cpu.pt" "$LANELOG" 2>/dev/null || YOLO_OK=0
+grep -qi "falling back to 'adaptive'" "$LANELOG" 2>/dev/null && YOLO_OK=0
+echo "  yolo actually in use: $YOLO_OK"
+./demo.sh down >/dev/null 2>&1
+
+echo
+echo "=== 5. same world, adaptive, for the rate comparison ==="
+./demo.sh up --method adaptive --no-nav --no-rviz --no-build > /tmp/307_up_a.log 2>&1
+sleep 20
+for t in /scan_fused /lane_markers; do
+  R=$(timeout 25 ros2 topic hz "$t" --window 15 2>&1 | grep -m1 "average rate" || true)
+  echo "    $t  ${R:-NO MESSAGES}"
+done
+./demo.sh down >/dev/null 2>&1
+
+if [ "$YOLO_OK" != "1" ]; then
+  echo
+  echo "NOT PUSHING: the stack came up on the fallback, not on yolo."
+  [ -n "$LANELOG" ] && tail -30 "$LANELOG"
+  exit 1
+fi
+echo "  LIVE CHECK OK -- yolo loaded and /scan_fused is publishing"
+
+echo
+echo "=== 6. stage and push ==="
+git add src/$PKG/scripts/lane_detection_esda.py src/$PKG/scripts/ui_launch.py demo.sh
+git add --chmod=-x research/vision/vision_config.yaml
+git diff --cached --stat
+echo "--- left dirty ---"; git status --porcelain | grep -v '^[MARD]' | head
+git commit -F "$SWEEP/commitmsg_yolo_default.txt" || { echo "COMMIT FAILED"; exit 1; }
+git log --oneline -2
+git push origin yolo-adaptive 2>&1 | tail -3
+L=$(git rev-parse HEAD); R=$(git ls-remote origin yolo-adaptive | cut -f1)
+[ "$L" = "$R" ] && echo "  PUSHED OK $L" || { echo "  REMOTE MISMATCH"; exit 1; }
+echo DONE

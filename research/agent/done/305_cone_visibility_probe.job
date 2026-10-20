@@ -1,0 +1,153 @@
+# ============================================================================
+# 305 -- two loose ends from 304.
+#
+# A. The working tree is dirty with MODE flips, not content. Job 303 copied
+#    three files off the Windows drive, where everything is 0777, and
+#    committed them with `git add --chmod=-x`. The index says 100644 and the
+#    worktree says 100755, so they show as modified forever -- and the next
+#    `git commit -a` would quietly flip them back. chmod fixes it; $WS is on
+#    ext4 so it sticks.
+#
+# B. The live check in 304 proved the node runs, but /cone/points came back
+#    width=0 at the spawn pose, which says nothing: there may simply have
+#    been no barrel in frame. The node's REASON for existing is cones, so
+#    "does it see them" should not stay unmeasured.
+#
+#    Two instances on the SAME frames, so this is a paired comparison and
+#    not two drives through different scenery:
+#       /cone/points           lidar-gated  (what the costmap would get)
+#       /cone/points_ungated   raw vision   (what the model actually claims)
+#    The difference between them is the gate's doing, and separates "the
+#    model missed it" from "the lidar did not confirm it".
+#
+# No commit unless A actually changes the index, which it should not.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"; cd "$WS" || exit 1
+PKG=esda_simulation_2025
+set +u; source /opt/ros/humble/setup.bash; source "$WS/install/setup.bash"; set -u
+
+echo "=== A. mode flips ==="
+git status --porcelain
+echo "--- index vs worktree ---"
+for f in research/models/lane_seg_synth_cpu.pt research/vision/README_VISION.md \
+         research/vision/vision_config.yaml; do
+  printf "  %-45s index %s worktree %s\n" "$f" \
+    "$(git ls-files -s -- "$f" | cut -d' ' -f1)" \
+    "$(stat -c %a "$f")"
+done
+chmod 644 research/models/lane_seg_synth_cpu.pt research/vision/README_VISION.md \
+          research/vision/vision_config.yaml
+echo "--- after chmod 644 ---"
+git status --porcelain
+if [ -z "$(git status --porcelain)" ]; then
+  echo "  tree clean -- it was modes only, nothing to commit"
+else
+  echo "  NOTE: something real is still dirty, left alone"
+fi
+
+echo
+echo "=== B. does it actually see the barrels? ==="
+cat > /tmp/vc_ungated.yaml <<'PY2'
+PY2
+python3 - <<'PY'
+import yaml, os
+src = os.path.join(os.environ["HOME"], "esda_ws", "install",
+                   "esda_simulation_2025", "share", "esda_simulation_2025",
+                   "vision", "vision_config.yaml")
+c = yaml.safe_load(open(src))
+c["cone_gate"]["enabled"] = False
+c["routing"]["cone"]["cloud_topic"] = "/cone/points_ungated"
+c["routing"]["lane"]["cloud_topic"] = "/lane/points_ungated"
+c["linking"]["marker_topic"] = "/lane/lines_ungated"
+c["linking"]["raw_topic"] = "/lane/points_raw_ungated"
+c["topics"]["debug_image"] = "/lane/debug_image_ungated"
+c["topics"]["lane_mask"] = "/lane/mask_ungated"
+# the weight path is relative to the CONFIG dir, so make it absolute before
+# writing this copy somewhere else
+c["model"]["weights"] = os.path.normpath(os.path.join(
+    os.path.dirname(src), c["model"]["weights"]))
+yaml.safe_dump(c, open("/tmp/vc_ungated.yaml", "w"))
+print("  wrote /tmp/vc_ungated.yaml  (gate off, topics suffixed _ungated)")
+print("  weights:", c["model"]["weights"])
+PY
+
+./demo.sh down >/dev/null 2>&1
+./demo.sh up --no-lane --no-nav --no-rviz --no-build > /tmp/305_sim.log 2>&1
+echo "  sim rc=$?"
+
+GEOM="--cam-height 1.4625 --cam-x-offset -0.405016 --cam-pitch-deg 15.0 \
+--fx 528.4338 --cx 320 --cy 240 --image-topic /camera/left/image_raw \
+--scan-topic /scan --detector yolo --device cpu"
+
+nohup ros2 launch $PKG lane_seg.launch.py camera_mount:=pole_top device:=cpu \
+      > /tmp/305_gated.log 2>&1 &
+sleep 20
+nohup ros2 run $PKG lane_seg_node.py --config /tmp/vc_ungated.yaml $GEOM \
+      --ros-args -r __node:=lane_seg_ungated > /tmp/305_ungated.log 2>&1 &
+sleep 25
+echo "  --- both up? ---"
+grep -h "loaded\|subscribed" /tmp/305_gated.log /tmp/305_ungated.log | sed 's/^/    /' | head -6
+
+echo "  --- crawling forward 35 s, sampling ---"
+python3 - <<'PY'
+import time
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import PointCloud2
+from geometry_msgs.msg import Twist
+
+TOPICS = ["/lane/points", "/cone/points", "/cone/points_ungated"]
+DURATION = 35.0
+
+
+class Probe(Node):
+    def __init__(self):
+        super().__init__("cone_probe")
+        self.w = {t: [] for t in TOPICS}
+        for t in TOPICS:
+            self.create_subscription(
+                PointCloud2, t,
+                (lambda tt: (lambda m: self.w[tt].append(int(m.width))))(t), 10)
+        self.pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.t0 = time.time()
+        self.create_timer(0.1, self.tick)
+
+    def tick(self):
+        tw = Twist()
+        tw.linear.x = 0.35 if (time.time() - self.t0) < DURATION else 0.0
+        self.pub.publish(tw)
+
+
+rclpy.init()
+n = Probe()
+end = time.time() + DURATION + 3
+while time.time() < end:
+    rclpy.spin_once(n, timeout_sec=0.1)
+for _ in range(10):
+    n.pub.publish(Twist())
+    rclpy.spin_once(n, timeout_sec=0.05)
+
+print()
+for t in TOPICS:
+    v = n.w[t]
+    if not v:
+        print("    %-24s NO MESSAGES" % t); continue
+    nz = [x for x in v if x > 0]
+    print("    %-24s %3d msgs, %3d non-empty (%2d%%), max %5d pts, median-nonzero %s"
+          % (t, len(v), len(nz), round(100 * len(nz) / len(v)),
+             max(v), sorted(nz)[len(nz) // 2] if nz else "-"))
+n.destroy_node(); rclpy.shutdown()
+PY
+
+pkill -f lane_seg_node.py 2>/dev/null
+sleep 2
+./demo.sh down >/dev/null 2>&1
+echo "  torn down"
+
+echo
+echo "=== interpreting B ==="
+echo "  ungated > 0 and gated == 0  -> the model sees cones, the lidar gate rejects them"
+echo "  both 0                      -> the model does not see the barrels in this world"
+echo "  both > 0                    -> the cone path works end to end"
+echo "DONE"

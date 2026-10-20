@@ -1,0 +1,55 @@
+# ============================================================================
+# 302 -- take the runtime logs back out of the repo.
+#
+# Commit 402232d used `git add -A` in a workspace where demo.sh writes
+# .demo_logs/ at the root, so seven log files (~11k lines) went up with a
+# four-file change. They are not source and they will churn on every run.
+#
+# Removed with a follow-up commit rather than an amend + force push: 402232d
+# is already on the remote and rewriting published history is worse than one
+# extra commit.
+# ============================================================================
+set -uo pipefail
+cd "$HOME/esda_ws" || exit 1
+
+echo "=== what the last commit actually contained ==="
+git show --stat --oneline HEAD | head -20
+echo
+echo "=== verification run result (step 5 of job 301) ==="
+python3 -c "
+import json,glob
+g=glob.glob('/mnt/c/work/felix/mcav/sweep/results/verify_newdefault/lap_*.json')
+d=json.load(open(g[0]))
+print('  furthest %.1f m, path %.1f m, laneHz %.2f, stalled %.2f, odom %d, turn %.1f rad'%(
+ d['max_distance_from_start_m'],d['path_length_m'],d['lane_per_sim_s'],
+ d['stalled_fraction'],d['odom_samples'],d['turn_net_rad']))" 2>/dev/null || echo "  (report not readable)"
+
+echo
+echo "=== drop the logs, ignore them in future ==="
+git rm -r --cached --quiet .demo_logs 2>/dev/null && echo "  untracked .demo_logs/"
+grep -q "^.demo_logs/" .gitignore || printf '\n# demo.sh runtime logs\n.demo_logs/\n' >> .gitignore
+tail -4 .gitignore
+
+git add .gitignore
+git commit -q -F - <<'MSG'
+Stop tracking demo.sh runtime logs
+
+402232d swept .demo_logs/ into the repo via `git add -A`: seven log files and
+about 11k lines of runtime output alongside a four-file source change. They
+are regenerated on every run and would churn constantly.
+
+Removed from the index and added to .gitignore. Done as a follow-up rather
+than an amend because 402232d is already pushed, and rewriting published
+history costs more than an extra commit.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01ShdFy9VvBp9h4c9YzMjeH6
+MSG
+git log --oneline -3
+echo
+echo "=== push ==="
+git push origin yolo-adaptive 2>&1 | tail -3
+echo
+echo "=== what the branch now holds under src/ ==="
+git diff --stat 481cb69..HEAD -- src/ SETUP_AND_RUN.md demo.sh
+echo "DONE"

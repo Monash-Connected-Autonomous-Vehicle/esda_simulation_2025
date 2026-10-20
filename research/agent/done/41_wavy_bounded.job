@@ -1,0 +1,16 @@
+# Run 20 "succeeded" at 216.8 m, 0% stalled -- and was the worst result yet:
+# 214 consecutive blind-corridor carrots in a dead straight line, 195 m
+# OUTSIDE a 43 x 37 m arena. The goal heartbeat cured the parking and
+# uncovered what the parking had been hiding.
+#
+# Now bounded two ways: a startup grace that then becomes a real timeout
+# (previously "never sensed" meant "never stop"), and a hard cap on distance
+# travelled with no lane reading at all.
+#
+# Success here is NOT distance. It is stopping somewhere sensible, inside
+# the arena, with the log saying why.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_wavy_test --seconds 420 \
+  --note "bounded: startup grace + max-blind-dist 15 m" \
+  -- --lane-memory 3.0 --lidar-corridor

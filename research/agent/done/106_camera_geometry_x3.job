@@ -1,0 +1,65 @@
+# A camera that can see the lane it is following.
+#
+# HONEST LABEL: this measures a BUNDLE, not one variable. Three things
+# changed since job 100 and they all live in files a single --sync pushes,
+# so there is no way to separate them without three more hours:
+#
+#   1. camera geometry (below)
+#   2. the lane costmap layer no longer CLEARS -- it used to raytrace out
+#      to 5 m and erase lane cells, so a frame that missed the line deleted
+#      what earlier frames had drawn
+#   3. the lane layer's obstacle_max_range 4.0 -> 6.0
+#
+# All three point the same way and the expected effect is large, so a
+# bundle is the right trade here. Compare against job 100's 27.6 / 28.7 /
+# 54.7 m, median 28.7. If the median does not move, we unbundle and pay for
+# the separate runs.
+#
+# Three numbers changed together, all forced by one measurement: at the old
+# 62.4 deg field of view the visible ground strip is 2.42 m wide at 2 m
+# range, against a 3.0 m lane. The camera COULD NOT SEE BOTH LANE LINES
+# closer than 2.5 m, and the driver's carrots land at 1.75-2.75 m. Every
+# "1 band(s)" in the drive logs was that, not a detection failure.
+#
+#            field of view   height   pitch   width@2m  near   rows/m@4m
+#   before   62.4 deg        0.478 m   0 deg    2.42 m  1.05 m    15.8
+#   after    90.0 deg        1.100 m  20 deg    4.00 m  0.72 m    20.6
+#
+# Height is what buys range resolution: a ground point at range d sits at
+# atan(h/d) below the horizon, so pixel separation between ranges scales
+# with height. Pitch does almost nothing for resolution (20 deg moves 4 m
+# from 15.8 to 16.4 rows per metre); what it buys is the near field back,
+# which raising the camera would otherwise cost. Widening the FOV spends
+# angular resolution, which the extra height pays for.
+#
+# fx = fy = 320.0 now, mirrored into vision_config.yaml, and checked against
+# the URDF chain: base_link at wheel_radius 0.1625, chassis at the same
+# height, camera +0.9375 on top = 1.1 m. _project() trusts the config, not
+# TF, so a mount the config does not know about misprojects every point.
+#
+# Also: the lane layer's obstacle_max_range went 4.0 -> 6.0, matching the
+# projector's own max_range. Lane points between 4 and 6 m were being
+# computed, published, then dropped by the costmap.
+#
+# THE RISK, AND IT IS NOT SMALL: the YOLO weights were trained on synthetic
+# frames from the OLD viewpoint. A different height, pitch and field of view
+# change the appearance of everything in shot. Detection may get WORSE here
+# even though the geometry is better. If it does, the answer is to recapture
+# and retrain at this viewpoint (autolabel.py computes labels from world
+# geometry, so it costs one job), not to revert the geometry.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync106.log 2>&1 || { tail -20 /tmp/sync106.log; exit 1; }
+for i in 1 2 3; do
+  echo "====== igvc_oval_slow_test, new camera geometry, repeat $i of 3 ======"
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 \
+    --note "90deg FOV, 1.1 m, 20deg down $i/3" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done
+echo "=== band counts: 1 band means only one lane line in frame ==="
+for d in $(ls -dt logs/run_igvc_oval_slow_test_* | head -3); do
+  echo "-- $d"
+  grep -oP "\[\d+ band" "$d/drive.log" 2>/dev/null | sort | uniq -c
+done
+grep -H -E "path length|stalls|lane publishes|goals published" \
+  logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -40

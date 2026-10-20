@@ -1,0 +1,30 @@
+# Baseline: how far does it get round a course it has never been tuned on?
+#
+# igvc_oval_test is seed 20261012; every world the parameters were tuned
+# against came from seed 11. Nothing about this layout has been seen before,
+# so whatever number comes out is honest.
+#
+# 420 s is a guess at the wall-clock a ~85 m lap needs on this laptop at
+# software-GL real-time factors. If the report shows it was still driving
+# when time ran out, the next run gets longer, not different parameters.
+set -uo pipefail
+cd "$ESDA_HOME"
+
+# The new worlds, their meshes and their textures have to be in the INSTALLED
+# share/ directory: the launch file resolves worlds through FindPackageShare,
+# not from the source tree. Fail loudly here rather than running the whole
+# benchmark against a world Gazebo could not load.
+echo "--- syncing sources into the workspace -----------------------"
+if ! bash setup_wsl.sh --sync > /tmp/esda_sync.log 2>&1; then
+  echo "setup_wsl.sh --sync FAILED -- last 30 lines:"
+  tail -30 /tmp/esda_sync.log
+  exit 1
+fi
+tail -3 /tmp/esda_sync.log
+ls -1 "$HOME/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025/worlds/" \
+  | grep _test || { echo "held-out worlds did not reach the install tree"; exit 1; }
+
+echo
+echo "--- lap benchmark --------------------------------------------"
+./demo.sh lap igvc_oval_test --seconds 420 \
+  --note "baseline, parameters as committed 2026-10-12"

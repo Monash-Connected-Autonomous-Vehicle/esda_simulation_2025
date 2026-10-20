@@ -1,0 +1,17 @@
+# The spawn fix worked: 13 of 16 carrots came from REAL PAINT, against zero
+# on every previous run of this world. The detector is fine.
+#
+# The new binding constraint is arithmetic. Job 50 measured the camera: 587
+# frames containing only 43 DISTINCT images over 400 s -- about one new
+# frame every 9 s, not the 5 Hz the xacro asks for, because ogre2 is
+# rasterising on llvmpipe. The driver's --blind-timeout is 4 s. It therefore
+# gives up BETWEEN CONSECUTIVE CAMERA FRAMES, every time, and the log says
+# "no sensing for Ns" forty times.
+#
+# Raise the patience above the camera period. This is the workaround, not
+# the cure -- see 81.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_oval_test --seconds 420 \
+  --note "blind-timeout 15 s, longer than the ~9 s camera period" \
+  -- --lane-memory 12.0 --lidar-corridor --blind-timeout 15 --startup-grace 40

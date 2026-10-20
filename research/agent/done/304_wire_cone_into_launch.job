@@ -1,0 +1,193 @@
+# ============================================================================
+# 304 -- wire the lane+cone node into the package, the launch files and the UI.
+#
+# Today it is only reachable by hand: cd research/vision && python3
+# lane_seg_node.py. It is the ONLY detector that separates cones from lane
+# paint, and nothing in the normal flow can start it.
+#
+# The one thing that must not be asserted on faith is the camera geometry.
+# A wrong camera pose fails SILENTLY -- the debug window looks perfect while
+# the projected points land at the wrong ground range. So step 5 parses the
+# URDF the sim actually generates and compares it against the constants the
+# launch file uses, the same way job 301 checked the mount defaults.
+#
+# Step 7 then runs the real thing: sim up, node started the normal way,
+# topics measured. Nothing is pushed unless that passes -- the whole claim
+# of this change is that it works in the normal flow.
+#
+# apply_cone_wiring.py is idempotent and was dry-run against the pushed
+# branch (30fdf59) from the Windows side: every anchor matched exactly once.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"; SWEEP="/mnt/c/work/felix/mcav/sweep"
+cd "$WS" || { echo "no workspace at $WS"; exit 1; }
+PKG=esda_simulation_2025
+
+echo "=== 0. starting point ==="
+echo "  branch: $(git rev-parse --abbrev-ref HEAD)"
+echo "  head:   $(git log --oneline -1)"
+git status --porcelain | head -10
+
+echo
+echo "=== 1. apply ==="
+python3 "$SWEEP/apply_cone_wiring.py" "$WS" || { echo "APPLY FAILED"; exit 1; }
+
+echo
+echo "=== 2. build ==="
+set +u; source /opt/ros/humble/setup.bash; set -u
+colcon build --symlink-install --packages-select "$PKG" 2>&1 | tail -6
+set +u; source "$WS/install/setup.bash"; set -u
+
+echo
+echo "=== 3. everything landed where ros2 run and the config expect ==="
+I="$WS/install/$PKG"
+fail=0
+for f in "lib/$PKG/lane_seg_node.py" "lib/$PKG/lane_link.py" "lib/$PKG/lane_classic.py" \
+         "share/$PKG/vision/vision_config.yaml" "share/$PKG/models/lane_seg_synth_cpu.pt" \
+         "share/$PKG/launch/lane_seg.launch.py"; do
+  if [ -e "$I/$f" ]; then echo "  ok   $f"; else echo "  MISSING $f"; fail=1; fi
+done
+[ "$fail" = 0 ] || { echo "INSTALL LAYOUT WRONG"; exit 1; }
+python3 - "$I" <<'PY'
+import os, sys
+i = sys.argv[1]
+cfg = os.path.join(i, "share/esda_simulation_2025/vision/vision_config.yaml")
+rel = os.path.normpath(os.path.join(os.path.dirname(cfg),
+                                    "../models/lane_seg_synth_cpu.pt"))
+print("  config's ../models/ resolves to:", rel)
+assert os.path.isfile(rel), "the relative weight path does not resolve installed"
+print("  OK -- same relative path works installed and in-tree")
+PY
+[ $? -eq 0 ] || exit 1
+
+echo
+echo "=== 4. the launch file is loadable and declares what it should ==="
+timeout 60 ros2 launch "$PKG" lane_seg.launch.py --show-args 2>&1 | head -40
+timeout 60 ros2 launch "$PKG" lane_seg.launch.py --show-args 2>&1 | grep -q "camera_mount" \
+  || { echo "LAUNCH FILE DID NOT LOAD"; exit 1; }
+
+echo
+echo "=== 5. the launch geometry matches the URDF the sim really builds ==="
+XD="$I/share/$PKG/description"
+python3 - "$WS" "$XD" <<'PY'
+import math, os, subprocess, sys, xml.etree.ElementTree as ET
+ws, xd = sys.argv[1], sys.argv[2]
+sys.path.insert(0, os.path.join(ws, "src", "esda_simulation_2025", "launch"))
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "lsl", os.path.join(ws, "src", "esda_simulation_2025", "launch",
+                        "lane_seg.launch.py"))
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+
+bad = 0
+for mount, (cam_z, cam_x, pitch_deg) in sorted(m.MOUNTS.items()):
+    urdf = subprocess.run(
+        ["xacro", os.path.join(xd, "robot.urdf.xacro"),
+         "camera_mount:=%s" % mount, "lidar_mount:=low"],
+        capture_output=True, text=True)
+    if urdf.returncode:
+        print("  xacro failed for", mount, urdf.stderr[-300:]); bad = 1; continue
+    r = ET.fromstring(urdf.stdout)
+    j = next(j for j in r.iter("joint") if j.get("name") == "camera_joint")
+    o = j.find("origin")
+    xyz = [float(v) for v in (o.get("xyz") or "0 0 0").split()]
+    rpy = [float(v) for v in (o.get("rpy") or "0 0 0").split()]
+    print("  %-9s urdf parent=%-8s xyz=%s rpy_pitch=%.4f"
+          % (mount, j.find("parent").get("link"), xyz, rpy[1]))
+    print("  %-9s launch   z=%.6f x=%.6f pitch=%.4f rad"
+          % ("", cam_z, cam_x, math.radians(pitch_deg)))
+    if abs(xyz[2] - cam_z) > 1e-6:
+        print("    MISMATCH camera z"); bad = 1
+    if abs(xyz[0] - cam_x) > 1e-6:
+        print("    MISMATCH camera x"); bad = 1
+    if abs(rpy[1] - math.radians(pitch_deg)) > 1e-4:
+        print("    MISMATCH pitch"); bad = 1
+# and the chassis offset the launch file folds in
+urdf = subprocess.run(["xacro", os.path.join(xd, "robot.urdf.xacro"),
+                       "camera_mount:=pole_top", "lidar_mount:=low"],
+                      capture_output=True, text=True).stdout
+r = ET.fromstring(urdf)
+cj = next(j for j in r.iter("joint") if j.get("name") == "chassis_joint")
+cx = float((cj.find("origin").get("xyz") or "0 0 0").split()[0])
+print("  chassis_joint x: urdf %.6f, launch CHASSIS_X %.6f" % (cx, m.CHASSIS_X))
+if abs(cx - m.CHASSIS_X) > 1e-6:
+    print("    MISMATCH chassis offset"); bad = 1
+print("  fx from launch: %.4f" % m.FX)
+sys.exit(1 if bad else 0)
+PY
+[ $? -eq 0 ] || { echo "GEOMETRY DOES NOT MATCH THE ROBOT -- not pushing"; exit 1; }
+echo "  GEOMETRY OK"
+
+echo
+echo "=== 6. the UI edits are all three present and it still parses ==="
+U="src/$PKG/scripts/ui_launch.py"
+python3 -m py_compile "$U" || { echo "ui_launch.py does not compile"; exit 1; }
+grep -q 'YOLO seg (lane+cone)"\]' "$U" && echo "  dropdown entry ok"
+grep -q 'lane_seg.launch.py' "$U" && echo "  launch branch ok"
+grep -q 'startswith("YOLO seg")' "$U" && echo "  nav scan topic guarded ok"
+for pat in 'YOLO seg (lane+cone)"\]' 'lane_seg.launch.py' 'startswith("YOLO seg")'; do
+  grep -q "$pat" "$U" || { echo "  MISSING ui edit: $pat"; exit 1; }
+done
+
+echo
+echo "=== 7. LIVE: sim up, node started the normal way, topics measured ==="
+./demo.sh down >/dev/null 2>&1
+./demo.sh up --no-lane --no-nav --no-rviz --no-build > /tmp/304_sim.log 2>&1
+echo "  demo.sh up rc=$?  (tail)"; tail -5 /tmp/304_sim.log
+timeout 60 ros2 topic list | grep -E "camera/left/image_raw|^/scan$" | sed 's/^/  have /'
+
+nohup ros2 launch "$PKG" lane_seg.launch.py camera_mount:=pole_top device:=cpu \
+      > /tmp/304_node.log 2>&1 &
+NODEPID=$!
+sleep 45
+echo "  --- node log ---"
+grep -iE "loaded|subscribed|detector|error|Traceback|weights" /tmp/304_node.log | head -12
+
+echo "  --- topic rates over 20 s ---"
+for t in /lane/debug_image /lane/points /cone/points; do
+  R=$(timeout 25 ros2 topic hz "$t" --window 10 2>&1 | grep -m1 "average rate" || true)
+  echo "    $t  ${R:-NO MESSAGES}"
+done
+echo "  --- one cloud each, point counts ---"
+python3 - <<'PY'
+import subprocess
+for t in ("/lane/points", "/cone/points"):
+    try:
+        out = subprocess.run(["ros2", "topic", "echo", "--once", "--field", "width", t],
+                             capture_output=True, text=True, timeout=25).stdout.strip()
+        print("    %-14s width=%s" % (t, out or "(nothing in 25 s)"))
+    except subprocess.TimeoutExpired:
+        print("    %-14s (nothing in 25 s)" % t)
+PY
+
+kill $NODEPID 2>/dev/null; sleep 3; pkill -f lane_seg_node.py 2>/dev/null
+./demo.sh down >/dev/null 2>&1
+echo "  torn down"
+
+# The gate: the pipeline has to have actually run. Cone COUNT is world- and
+# pose-dependent, so it is reported, not required; the debug image and the
+# lane cloud publishing are what prove the node is alive and projecting.
+grep -q "subscribed" /tmp/304_node.log || { echo "NODE NEVER SUBSCRIBED -- not pushing"; tail -30 /tmp/304_node.log; exit 1; }
+grep -qiE "Traceback|weights not found" /tmp/304_node.log && { echo "NODE ERRORED -- not pushing"; tail -30 /tmp/304_node.log; exit 1; }
+echo "  LIVE CHECK OK"
+
+echo
+echo "=== 8. stage only what this job is about ==="
+git add src/$PKG/CMakeLists.txt \
+        src/$PKG/launch/lane_seg.launch.py \
+        src/$PKG/scripts/ui_launch.py \
+        research/vision/lane_seg_node.py
+git add --chmod=-x research/vision/RUN_YOLO.md research/vision/vision_config.yaml
+git diff --cached --stat
+echo "--- left dirty on purpose ---"
+git status --porcelain | grep -v '^[MARD]' | head -10
+echo "  (empty above = nothing else was dirty)"
+
+echo
+echo "=== 9. commit and push ==="
+git commit -F "$SWEEP/commitmsg_cone.txt" || { echo "COMMIT FAILED"; exit 1; }
+git log --oneline -2
+git push origin yolo-adaptive 2>&1 | tail -3
+LOCAL=$(git rev-parse HEAD); REMOTE=$(git ls-remote origin yolo-adaptive | cut -f1)
+[ "$LOCAL" = "$REMOTE" ] && echo "  PUSHED OK $LOCAL" || { echo "  REMOTE MISMATCH"; exit 1; }
+echo "DONE"

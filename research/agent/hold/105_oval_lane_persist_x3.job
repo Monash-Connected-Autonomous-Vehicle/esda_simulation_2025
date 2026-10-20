@@ -1,0 +1,36 @@
+# SUPERSEDED, AND THE HYPOTHESIS IT TESTED WAS WRONG.
+# clearing: false was tried live and produced a costmap so thick with
+# accumulated lane marks that the robot could not move. At 4.9 lane
+# publishes per second, projection error and map->odom drift deposit
+# the same line slightly offset every frame and nothing removes it.
+# Replaced by observation_persistence: 2.0, which bounds the memory
+# in time instead of letting it compound. Kept for the record.
+#
+# Stop unpainting the lane.
+#
+# The vision_lane obstacle layer had clearing: true, so every lane reading
+# raytraced out to 5 m and ERASED lane cells along the ray. A frame that
+# missed the line did not merely fail to add it -- it deleted what earlier
+# frames had drawn. What looked like a lane in the costmap was a flickering
+# 4 m patch in front of the camera, and the planner is entitled to route
+# straight through a hole that keeps reappearing in it.
+#
+# clearing: false means the line accumulates: the robot paints a continuous
+# corridor as it drives, and a detection gap leaves what is already marked
+# standing. Marking range stays at 4 m, where the ground-plane projection is
+# still accurate -- mark only what is measured well, but never erase it.
+#
+# Compare against job 104 (640x480, clearing still on). The thing to watch
+# for is the opposite failure: a false lane point is now permanent, so a run
+# that stops dead in the first few metres means the robot walled itself in.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync105.log 2>&1 || { tail -20 /tmp/sync105.log; exit 1; }
+for i in 1 2 3; do
+  echo "====== igvc_oval_slow_test, lane persists in costmap, repeat $i of 3 ======"
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 \
+    --note "lane clearing off $i/3: otherwise identical to job 104" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done
+grep -H -E "path length|stalls|lane publishes|goals published" \
+  logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -32

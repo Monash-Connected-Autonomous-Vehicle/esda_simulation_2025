@@ -1,0 +1,21 @@
+# ============================================================================
+# w2_c4_r3  --  world sim_world_bball_new.sdf | camera_mount=pole_top | lidar_mount=low
+#
+# World:  basketball court arena
+# Mount:  SWAPPED. Physically incoherent as built: camera.xacro places the pole_top camera relative to the lidar pole, and lidar_mount=low does not build that pole. Recorded as-is, on request.
+# Camera: height 1.30 m, pitch -0.2618 rad in the DETECTOR's convention
+#         (negative = tilted down; camera.xacro writes the same tilt positive)
+# Lane detection: adaptive threshold (ours), everything downstream theirs.
+#
+# Repeat 3 of 3. Repeats are interleaved across configs rather than
+# blocked, because run-to-run throughput on this machine has been measured
+# 2.3x apart with nothing changed (see the variance note). Blocking would
+# confound the mount with the hour of the day.
+# ============================================================================
+set -uo pipefail
+SIM_SECONDS=400 WALL_CAP=900 bash /mnt/c/work/felix/mcav/sweep/bench_run.sh \
+    w2_c4_r3 sim_world_bball_new.sdf pole_top low 1.30 -0.2618
+R="/mnt/c/work/felix/mcav/sweep/results/w2_c4_r3"
+[ -f "$R/FAILED" ] && { echo "RUN FAILED: $(cat "$R/FAILED")"; exit 1; }
+cat "$R/score.txt" 2>/dev/null | head -30
+exit 0

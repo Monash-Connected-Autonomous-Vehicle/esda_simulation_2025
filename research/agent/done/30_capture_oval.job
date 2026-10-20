@@ -1,0 +1,28 @@
+# Harvest real ogre2 frames WITH their poses, so autolabel.py can compute the
+# masks from the world's own geometry and the dataset needs no hand labelling.
+#
+# The frames contain the renderer's real shadows. The labels contain none of
+# them, because the ground texture says that patch is asphalt. That is exactly
+# the lesson the model is missing, and it arrives on thousands of frames free.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+src
+stop_all >/dev/null 2>&1; sleep 2
+start_sim "igvc_oval_test" 0.0 0.0 0.0 false
+wait_for "/clock" 90 has_data /clock || { echo "sim never started"; exit 1; }
+wait_for "/scan" 60 has_data /scan || true
+bg drive "python3 $ESDA_SRC/vision/auto_drive.py --lane-memory 3.0 --lidar-corridor"
+start_vision 2>/dev/null || true
+sleep 20
+python3 "$ESDA_SRC/vision/capture_labelled.py" --world igvc_oval_test \
+        --interval 0.5 --seconds 420 --out "$HOME/esda_capture/igvc_oval_test"
+stop_all >/dev/null 2>&1
+n=$(ls -1 "$HOME/esda_capture/igvc_oval_test"/*.jpg 2>/dev/null | wc -l)
+echo "captured $n frames"
+[ "$n" -gt 50 ] || { echo "too few frames to be useful"; exit 1; }
+python3 "$ESDA_SRC/vision/autolabel.py" \
+        --capture "$HOME/esda_capture/igvc_oval_test" \
+        --repo "$ESDA_SRC" --out "$HOME/esda_datasets/real_sim_oval" --overlay
+cp -r "$HOME/esda_datasets/real_sim_oval/overlay" "$SCRIPT_DIR/logs/overlay_oval" 2>/dev/null
+echo "overlays copied to logs/overlay_oval -- LOOK AT THEM before training"

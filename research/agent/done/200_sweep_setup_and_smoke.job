@@ -1,0 +1,57 @@
+# ============================================================================
+# 200 -- install the instrumented detector, then prove ONE run works before
+#        committing the machine to a 36-run sweep.
+#
+# WHY A SMOKE TEST FIRST
+#
+# The last three attempts to drive this stack failed in three different ways:
+# /map absent, then /scan absent, then the navigator sitting in recovery
+# reporting unknown-everywhere clearance. Queueing 36 runs against a stack
+# that cannot drive would burn the night and produce 36 identical zeros, and
+# the sweep would look like a result about sensor mounts.
+#
+# WHAT CHANGES IN THE WORKSPACE
+#
+# lane_detection_esda.py gains a debug-image publisher. The base class only
+# composites its four-pane view when show_visualization is true and then
+# shows it with cv2.imshow, which needs a display and cannot be recorded.
+# The patch intercepts that imshow call and publishes the same picture, so
+# the recorded video is by construction exactly what a human would see. The
+# lane-detection maths is untouched: its 35 self-tests run below and must
+# pass before anything else happens.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"
+SWEEP="/mnt/c/work/felix/mcav/sweep"
+
+echo "=== 0. the detector's own maths still passes ==="
+python3 "$SWEEP/lane_detection_esda.py" --selftest || { echo "SELFTEST FAILED"; exit 1; }
+
+echo
+echo "=== 1. install the instrumented detector and rebuild ==="
+cp "$SWEEP/lane_detection_esda.py" "$WS/src/esda_simulation_2025/scripts/lane_detection_esda.py"
+chmod +x "$WS/src/esda_simulation_2025/scripts/"*.py
+set +u; source /opt/ros/humble/setup.bash; set -u
+cd "$WS"
+colcon build --symlink-install --packages-select esda_simulation_2025 2>&1 | tail -5
+set +u; source "$WS/install/setup.bash"; set -u
+ros2 pkg prefix esda_simulation_2025
+
+echo
+echo "=== 2. one short scored run, default mounts ==="
+# 120 simulated seconds is enough to answer "does it come up and move at all".
+SIM_SECONDS=120 WALL_CAP=400 bash "$SWEEP/bench_run.sh" \
+    smoke_igvc_front_poletop igvc.sdf front pole_top 0.315 0.0
+
+echo
+echo "=== 3. verdict ==="
+R="$SWEEP/results/smoke_igvc_front_poletop"
+if [ -f "$R/FAILED" ]; then
+  echo "SMOKE FAILED: $(cat "$R/FAILED")"
+  echo "--- last 30 lines of each stage ---"
+  for f in "$R"/*.log; do echo "### $f"; tail -8 "$f"; done
+  exit 1
+fi
+echo "--- score ---"; cat "$R/score.txt" 2>/dev/null | head -40
+echo "--- video ---"; ls -la "$R"/*.mp4 "$R"/*.avi 2>/dev/null || echo "NO VIDEO WRITTEN"
+echo "SMOKE OK"

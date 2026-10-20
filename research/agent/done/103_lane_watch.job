@@ -1,0 +1,71 @@
+# LOOK AT THE PICTURES.
+#
+# The camera starvation is fixed. The vision node now publishes 1516 times a
+# run instead of 42, at the full 5 Hz the sensor is asked for, with 20 ms of
+# inference and the RTF pinned at its 0.25 cap. The robot drove 28.7 m of
+# clean arc at 0.38 m/s with the carrot out at the full 2.75 m lookahead --
+# and then, at about map (7.5, 15), stopped finding paint:
+#
+#     carrot (2.75,+0.00) base_link -> (7.53,14.91) map  [3 band(s), ...]
+#     carrot (2.75,+0.00) base_link -> (7.37,16.23) map  [blind corridor]
+#     not steering: no sensing for 8s ... 18s ... 994s
+#
+# Two readings fit the logs equally well and lead opposite ways:
+#
+#   (a) paint IS in frame and the model misses it   -> train the model
+#   (b) no paint is in frame, because the robot cut -> fix the geometry
+#       the corner or is aimed at blank ground
+#
+# The last time this project chose between those from logs alone it chose (a)
+# and was wrong: the robot was sitting in the oval's infield with nothing to
+# see at all, and the "shadow blindness" conclusion was an artefact. So this
+# time the frames get saved, named with the position they were taken at, and
+# somebody looks at them before anybody trains anything.
+#
+# /lane/debug_image already carries the model's own masks, so what lands in
+# logs/lane_watch/ is exactly what the detector decided, frame by frame.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync101.log 2>&1 || { tail -20 /tmp/sync101.log; exit 1; }
+
+bash demo.sh up --vision --no-rviz --world igvc_oval_slow_test
+# Retry once, the way demo.sh lap does. The first attempt at this job died
+# after 144s on a single failed bring-up and captured nothing, which is a
+# waste of a queue slot for a failure mode we already know is intermittent.
+if [ "$(cat "$LOGS/nav2_active.flag" 2>/dev/null)" != "yes" ]; then
+  echo "Nav2 did not activate -- tearing down and bringing the stack up once more"
+  stop_all >/dev/null 2>&1
+  sleep 5
+  bash demo.sh up --vision --no-rviz --world igvc_oval_slow_test
+fi
+if [ "$(cat "$LOGS/nav2_active.flag" 2>/dev/null)" != "yes" ]; then
+  echo "Nav2 did not activate twice -- nothing to watch"
+  grep -iE "ERROR|FATAL|Original error|Aborting" "$LOGS/nav2.log" | head -20
+  mkdir -p "$ESDA_HOME/logs/lane_watch"
+  cp "$LOGS"/nav2.log "$ESDA_HOME/logs/lane_watch/nav2_failed.log" 2>/dev/null
+  exit 1
+fi
+bash demo.sh drive --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+src
+
+OUT="$HOME/lane_watch_oval"
+rm -rf "$OUT"
+python3 "$ESDA_SRC/vision/watch_lane.py" --out "$OUT" --interval 2.0 --seconds 420
+
+stop_all >/dev/null 2>&1
+rm -rf "$ESDA_HOME/logs/lane_watch"
+mkdir -p "$ESDA_HOME/logs/lane_watch"
+cp "$OUT"/index.csv "$ESDA_HOME/logs/lane_watch/" 2>/dev/null
+# Every 3rd frame: enough to follow the drive, few enough to read through.
+i=0; for f in "$OUT"/f*.jpg; do
+  [ -e "$f" ] || break
+  if [ $((i % 3)) -eq 0 ]; then cp "$f" "$ESDA_HOME/logs/lane_watch/"; fi
+  i=$((i+1))
+done
+cp "$LOGS"/drive.log "$ESDA_HOME/logs/lane_watch/drive.log" 2>/dev/null
+cp "$LOGS"/vision.log "$ESDA_HOME/logs/lane_watch/vision.log" 2>/dev/null
+echo "saved $(ls -1 "$ESDA_HOME/logs/lane_watch"/*.jpg 2>/dev/null | wc -l) frames to logs/lane_watch/"
+echo "--- where the lane point count collapsed ---"
+awk -F, 'NR>1 && $5+0 < 20 {print; c++} END {print "frames with <20 lane points: " c+0}' \
+  "$ESDA_HOME/logs/lane_watch/index.csv" | head -20

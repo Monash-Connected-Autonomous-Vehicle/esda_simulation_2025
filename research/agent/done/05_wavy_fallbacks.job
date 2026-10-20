@@ -1,0 +1,18 @@
+# Same world, same everything, with the two blind-recovery fallbacks armed:
+#
+#   --lane-memory 3.0   keep following the last carrot that came from real
+#                       paint for 3 s after the paint is lost, so a shadow
+#                       mid-bend no longer straightens the robot out
+#   --lidar-corridor    with no paint at all, bound each band by the nearest
+#                       lidar return either side and aim at the middle of the
+#                       widest gap between them. The barrels line the course,
+#                       so this steers with no appearance model involved
+#
+# Paired with 0*_wavy_baseline so the ONLY difference is these two flags.
+# If the pair does not separate, the fallbacks are not the problem and the
+# next move is capturing real frames and fine-tuning the detector.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_wavy_test --seconds 420 \
+  --note "lane-memory 3.0 + lidar-corridor" \
+  -- --lane-memory 3.0 --lidar-corridor

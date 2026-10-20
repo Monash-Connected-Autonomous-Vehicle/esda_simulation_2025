@@ -1,0 +1,12 @@
+# THE FIRST FAIR TEST. Every earlier run on this world started the robot in
+# the infield, staring at blank asphalt. logs/spawn_check/igvc_oval_test.jpg
+# confirms the new spawn puts a painted line and two barrels in frame.
+#
+# Everything else is as it was: same model, same parameters, same held-out
+# world, same scorer. The only change is that the robot can now see the
+# course it is being asked to drive.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_oval_test --seconds 420 \
+  --note "FIRST RUN STARTING ON THE ACTUAL TRACK" \
+  -- --lane-memory 3.0 --lidar-corridor

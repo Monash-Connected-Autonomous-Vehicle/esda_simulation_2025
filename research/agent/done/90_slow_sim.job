@@ -1,0 +1,25 @@
+# The camera is the bottleneck and the GPU cannot help: --gpu resolves to a
+# real RTX 5060 Ti and then ogre2 dies with
+#   OGRE EXCEPTION(9:UnimplementedException): GL3PlusTextureGpu::copyTo
+# producing a run with 0.0 m and no sensors at all. Software GL it is.
+#
+# But "9 seconds per frame" is a WALL-CLOCK figure, and the robot does not
+# live in wall clock. The world asks for <real_time_factor>1.0</>, so Gazebo
+# tries to keep up with reality and drops camera frames it cannot render in
+# time. Tell it to run sim time at a quarter speed instead and the renderer
+# gets four times as long per simulated second -- the camera's 5 Hz schedule
+# is then 1.25 frames per wall second, and in the only frame that matters to
+# the robot it sees the course every 0.2 s, about every 10 cm travelled.
+#
+# The cost is purely our patience: 900 s of wall clock buys ~225 s of sim,
+# which at 0.5 m/s is ~110 m -- still more than a lap.
+set -uo pipefail
+cd "$ESDA_HOME"
+W=esda_simulation_2025/worlds
+sed 's|<real_time_factor>1.0</real_time_factor>|<real_time_factor>0.25</real_time_factor>|' \
+    "$W/igvc_oval_test.sdf" > "$W/igvc_oval_slow_test.sdf"
+grep -c 'real_time_factor>0.25' "$W/igvc_oval_slow_test.sdf"
+bash setup_wsl.sh --sync > /tmp/sync_slow.log 2>&1 || { tail -20 /tmp/sync_slow.log; exit 1; }
+./demo.sh lap igvc_oval_slow_test --seconds 900 \
+  --note "real_time_factor 0.25 -- trading wall clock for camera frames" \
+  -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8

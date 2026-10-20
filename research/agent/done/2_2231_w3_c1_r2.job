@@ -1,0 +1,21 @@
+# ============================================================================
+# w3_c1_r2  --  world sim_world_ic.sdf | camera_mount=front | lidar_mount=pole_top
+#
+# World:  IC world
+# Mount:  current default: camera low and forward, lidar up the pole
+# Camera: height 0.315 m, pitch 0.0 rad in the DETECTOR's convention
+#         (negative = tilted down; camera.xacro writes the same tilt positive)
+# Lane detection: adaptive threshold (ours), everything downstream theirs.
+#
+# Repeat 2 of 3. Repeats are interleaved across configs rather than
+# blocked, because run-to-run throughput on this machine has been measured
+# 2.3x apart with nothing changed (see the variance note). Blocking would
+# confound the mount with the hour of the day.
+# ============================================================================
+set -uo pipefail
+SIM_SECONDS=400 WALL_CAP=900 bash /mnt/c/work/felix/mcav/sweep/bench_run.sh \
+    w3_c1_r2 sim_world_ic.sdf front pole_top 0.315 0.0
+R="/mnt/c/work/felix/mcav/sweep/results/w3_c1_r2"
+[ -f "$R/FAILED" ] && { echo "RUN FAILED: $(cat "$R/FAILED")"; exit 1; }
+cat "$R/score.txt" 2>/dev/null | head -30
+exit 0

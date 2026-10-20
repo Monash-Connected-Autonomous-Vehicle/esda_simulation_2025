@@ -1,0 +1,93 @@
+# A FIXED BENCHMARK, WITH THE CAR STANDING STILL.
+#
+# This replaces the ground-truth-pose probe that used to sit here. That probe
+# was going to find a Gazebo pose topic to bridge, so the capture would stop
+# integrating wheel odometry. Teleporting makes the whole question moot: if we
+# place the robot, the pose is what we commanded, exactly, and there is no
+# odometry anywhere in the measurement.
+#
+# WHAT WAS WRONG WITH MEASURING WHILE DRIVING. Three things, none of them
+# about the model:
+#   * Odometry drift. By five minutes into job 109's capture the labels sat
+#     half a metre off the paint. A label half a metre off turns a correct
+#     detection into a false positive, so 0.174 is a floor of unknown depth.
+#   * A wedged robot. 216 of those 672 frames were byte-identical -- a third of
+#     the val set was one frozen pose.
+#   * Whatever the run happened to do. A run that circles one corner measures
+#     the model on that corner, so two runs are not comparable and neither are
+#     two models scored on them.
+#
+# Teleporting removes all three, and lets the benchmark be DESIGNED instead of
+# observed: poses are sampled across the whole arena and kept only when paint
+# is in view, stratified by how much, so the set spans thin distant lines and
+# near sweeping ones. The planner has been run already and the spread is real
+# -- 210 px to 15,299 px of visible paint, median 1,274. A lap never visits
+# that range of cases, and the thin ones are exactly where staying on course
+# is decided.
+#
+# NO NAV2, NO SLAM, NO AUTO_DRIVE. Only Gazebo, the bridge and the camera. The
+# stack that was eating the CPU is not running, so this should also be far
+# quicker per frame than the 0.23 real-time factor the lap runs manage.
+#
+# THIS DOES NOT REPLACE THE LAP RUNS. It measures perception. Whether
+# detections arriving at 5 Hz with gaps are enough to drive on is a different
+# question and 111a/111b still answer it.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync110b.log 2>&1 || { tail -20 /tmp/sync110b.log; exit 1; }
+
+echo "=== 0. geometry, spawn table, and the bench's own maths ==="
+python3 vision/test_camera_consistency.py || { echo "GEOMETRY DRIFTED"; exit 1; }
+python3 vision/test_spawn_table.py        || { echo "SPAWN TABLE DRIFTED"; exit 1; }
+python3 vision/pose_bench.py --selftest   || exit 1
+python3 vision/eval_recall.py --selftest  || exit 1
+
+WORLD=igvc_oval_slow_test
+BENCH="$HOME/esda_capture/bench_${WORLD}"
+
+echo
+echo "=== 1. sim only -- no Nav2, no SLAM, no driving ==="
+read -r SX SY SYAW <<<"$(world_spawn "$WORLD")"
+start_sim "$WORLD" "$SX" "$SY" "$SYAW" false
+wait_for "/clock (sim is ticking)" 90 has_data /clock || { stop_all; exit 1; }
+wait_for "/head_camera/images"     90 has_data /head_camera/images || { stop_all; exit 1; }
+
+echo
+echo "=== 2. teleport to 400 planned poses and grab a frame at each ==="
+rm -rf "$BENCH"; mkdir -p "$BENCH"
+python3 vision/pose_bench.py --world "$WORLD" --out "$BENCH" \
+        -n 400 --seed 11 --settle 0.4 || { stop_all; exit 1; }
+stop_all >/dev/null 2>&1 || true
+
+n=$(ls -1 "$BENCH"/frame_*.jpg 2>/dev/null | wc -l)
+u=$(md5sum "$BENCH"/frame_*.jpg 2>/dev/null | awk '{print $1}' | sort -u | wc -l)
+echo "captured $n frames, $u distinct"
+# Teleporting makes duplicates nearly impossible, so any at all means a frame
+# was reused across a move -- the one failure mode that would silently label a
+# new pose with the old view.
+[ "$u" -ge $(( n * 95 / 100 )) ] || { echo "only $u distinct of $n -- frames are being reused across teleports"; exit 1; }
+
+echo
+echo "=== 3. ground truth, from poses we commanded rather than integrated ==="
+DS="$HOME/esda_datasets/bench_$(date +%Y%m%d_%H%M%S)"
+python3 vision/autolabel.py --capture "$BENCH" --repo "$ESDA_HOME" \
+        --out "$DS" --val-frac 1.0 --overlay --overlay-every 10 || exit 1
+rm -rf "$ESDA_HOME/logs/bench_overlay"; mkdir -p "$ESDA_HOME/logs/bench_overlay"
+cp "$DS"/overlay/*.jpg "$ESDA_HOME/logs/bench_overlay/" 2>/dev/null || true
+echo "overlays -> logs/bench_overlay/ ($(ls -1 "$ESDA_HOME/logs/bench_overlay" 2>/dev/null | wc -l) files)"
+echo "LOOK AT THESE. With a commanded pose the magenta should sit on the paint"
+echo "in EVERY frame, not just the first -- that is the whole point of this job."
+
+echo
+echo "=== 4. score the current model on the fixed benchmark ==="
+python3 vision/eval_recall.py --data "$DS" --split val \
+        --weights "$HOME/esda_models/lane_seg.pt" --conf 0.35 \
+        2>&1 | grep -vE "^  [0-9]+/" | tee "$ESDA_HOME/logs/eval_bench_v1.txt"
+
+echo
+echo "This number and the 0.174 from the driven capture should DISAGREE. If the"
+echo "bench number is higher, the drift was eating recall and the gap measures"
+echo "how much. If they agree, the labels were not the problem and the model"
+echo "really is that far off at this camera -- which the retrain then has to fix."
+echo "Either way, from here on every model is scored on these same 400 frames."

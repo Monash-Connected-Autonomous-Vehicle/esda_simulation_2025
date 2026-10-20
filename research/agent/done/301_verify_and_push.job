@@ -1,0 +1,102 @@
+# ============================================================================
+# 301 -- re-verify the mount default correctly, then commit and push.
+#
+# Job 300 applied the patch and then failed its own verification, correctly
+# refusing to commit. The patch was fine; the CHECK was wrong. It ran `xacro
+# robot.urdf.xacro` with no arguments, which uses the xacro's own
+# <xacro:arg> defaults -- not the launch file defaults that were changed. It
+# was testing the one thing the patch did not touch.
+#
+# Scope confirmed since: every launch file passes camera_mount and
+# lidar_mount explicitly to xacro, and the REAL ROBOT launches
+# (launch_hardware.launch.py:355, launch_robot.launch.py:193) default to
+# front/pole_top, describing the robot as physically built. So only the
+# SIMULATION default moves. The xacro and hardware defaults are deliberately
+# left alone -- the physical robot has not been rebuilt.
+#
+# This job is idempotent: it skips the patch if already applied.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"; SWEEP="/mnt/c/work/felix/mcav/sweep"
+cd "$WS" || exit 1
+L="$WS/src/esda_simulation_2025/launch/launch_sim.launch.py"
+
+echo "=== 1. patch state ==="
+if grep -q "default='pole_top')" "$L" && grep -q "default='low')" "$L"; then
+  echo "  already applied (job 300 got this far)"
+else
+  python3 "$SWEEP/apply_mount_default.py" "$WS" || { echo "PATCH FAILED"; exit 1; }
+fi
+
+echo
+echo "=== 2. the launch file really says the new defaults ==="
+grep -n "camera_mount', default=\|lidar_mount', default=\|'camera_mount',    default_value\|'lidar_mount',     default_value" "$L"
+grep -q "LaunchConfiguration('camera_mount', default='pole_top')" "$L" || { echo "FAIL camera default"; exit 1; }
+grep -q "LaunchConfiguration('lidar_mount', default='low')"       "$L" || { echo "FAIL lidar default";  exit 1; }
+grep -q "default_value='pole_top'" "$L" || { echo "FAIL camera DeclareLaunchArgument"; exit 1; }
+grep -q "default_value='low'"      "$L" || { echo "FAIL lidar DeclareLaunchArgument";  exit 1; }
+echo "  OK both defaults present in both places"
+
+echo
+echo "=== 3. hardware launches untouched (physical robot not rebuilt) ==="
+grep -n "default_value='front'\|default_value=\"front\"" src/esda_simulation_2025/launch/launch_hardware.launch.py src/esda_simulation_2025/launch/launch_robot.launch.py | head -4
+echo "  (these must still say front / pole_top)"
+
+echo
+echo "=== 4. build, then check the geometry the launch now produces ==="
+set +u; source /opt/ros/humble/setup.bash; set -u
+colcon build --symlink-install --packages-select esda_simulation_2025 2>&1 | tail -3
+set +u; source "$WS/install/setup.bash"; set -u
+XD="$WS/install/esda_simulation_2025/share/esda_simulation_2025/description"
+xacro "$XD/robot.urdf.xacro" camera_mount:=pole_top lidar_mount:=low > /tmp/newdefault.urdf 2>/tmp/x.err \
+  || { echo "XACRO FAILED"; cat /tmp/x.err; exit 1; }
+python3 - <<'PY'
+import xml.etree.ElementTree as ET, sys
+r = ET.parse('/tmp/newdefault.urdf').getroot()
+def joint(n):
+    for j in r.iter('joint'):
+        if j.get('name') == n:
+            o = j.find('origin')
+            return (j.find('parent').get('link'),
+                    [float(v) for v in (o.get('xyz') or '0 0 0').split()],
+                    [float(v) for v in (o.get('rpy') or '0 0 0').split()])
+    return None
+cam, las = joint('camera_joint'), joint('laser_joint')
+pole = any(l.get('name') == 'lidar_pole' for l in r.iter('link'))
+print(f"  camera_joint: parent={cam[0]} xyz={cam[1]} rpy={cam[2]}")
+print(f"  laser_joint:  parent={las[0]} xyz={las[1]}")
+print(f"  lidar_pole link built: {pole}")
+ok = True
+if abs(cam[1][2] - 1.30) > 1e-6: print("  FAIL camera z is not 1.30"); ok = False
+if abs(cam[2][1] - 0.2618) > 1e-3: print("  FAIL camera pitch is not +0.2618 (xacro sign)"); ok = False
+if las[0] != 'chassis' or abs(las[1][2] - 0.385) > 1e-6:
+    print("  FAIL laser is not low on the chassis at 0.385"); ok = False
+if pole: print("  FAIL lidar_pole should not be built with lidar_mount:=low"); ok = False
+print("  GEOMETRY OK" if ok else "  GEOMETRY WRONG")
+sys.exit(0 if ok else 1)
+PY
+[ $? -eq 0 ] || { echo "not pushing"; exit 1; }
+
+echo
+echo "=== 5. one scored run on the new default ==="
+SIM_SECONDS=200 WALL_CAP=500 bash "$SWEEP/bench_run.sh" \
+    verify_newdefault igvc.sdf pole_top low 1.30 -0.2618
+R="$SWEEP/results/verify_newdefault"
+[ -f "$R/FAILED" ] && { echo "VERIFY RUN FAILED: $(cat "$R/FAILED")"; exit 1; }
+python3 -c "
+import json,glob
+d=json.load(open(glob.glob('$R/lap_*.json')[0]))
+print('  furthest %.1f m, path %.1f m, laneHz %.2f, stalled %.2f, odom %d'%(
+ d['max_distance_from_start_m'],d['path_length_m'],d['lane_per_sim_s'],d['stalled_fraction'],d['odom_samples']))
+assert d['odom_samples']>100, 'no odometry'
+assert d['lane_per_sim_s']>1.0, 'detector not publishing'
+print('  VERIFY OK')" || { echo "VERIFY FAILED - not pushing"; exit 1; }
+
+echo
+echo "=== 6. commit and push ==="
+git add -A
+git status --short
+git commit -F "$SWEEP/commitmsg_mount.txt" || { echo "COMMIT FAILED"; exit 1; }
+git log --oneline -2
+git push origin yolo-adaptive 2>&1 | tail -4
+echo "DONE"

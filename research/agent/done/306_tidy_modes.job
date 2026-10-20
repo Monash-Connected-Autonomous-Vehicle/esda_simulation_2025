@@ -1,0 +1,28 @@
+# ============================================================================
+# 306 -- the last mode flip, and confirm the tree is clean.
+#
+# Job 305 fixed three of them; RUN_YOLO.md picked up a fresh 0777 when job
+# 304 re-copied it off the Windows drive after 303 had committed it as
+# 100644. The copy scripts now chmod after copying, so this does not come
+# back -- but the file sitting in the tree still needs correcting once.
+# ============================================================================
+set -uo pipefail
+cd "$HOME/esda_ws" || exit 1
+echo "=== before ==="
+git status --porcelain
+printf "  RUN_YOLO.md index %s worktree %s\n" \
+  "$(git ls-files -s -- research/vision/RUN_YOLO.md | cut -d' ' -f1)" \
+  "$(stat -c %a research/vision/RUN_YOLO.md)"
+chmod 644 research/vision/RUN_YOLO.md
+echo "=== after ==="
+if [ -z "$(git status --porcelain)" ]; then
+  echo "  working tree CLEAN"
+else
+  git status --porcelain
+  echo "  still dirty -- left alone, nothing committed"
+fi
+echo "=== branch state ==="
+git log --oneline -3
+echo "  remote: $(git ls-remote origin yolo-adaptive | cut -f1)"
+echo "  local:  $(git rev-parse HEAD)"
+echo DONE

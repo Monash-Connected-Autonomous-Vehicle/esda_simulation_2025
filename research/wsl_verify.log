@@ -1,0 +1,57 @@
+ESDA readiness report      2026-10-12 19:13:27 AEDT
+host: Linux 6.18.40.1-microsoft-standard-WSL2 x86_64   user: felix   distro: Ubuntu 22.04.5 LTS
+
+--- ROS 2 + workspace ------------------------------------------
+  ROS Humble                     OK    /opt/ros/humble/setup.bash
+  workspace built                OK    /home/felix/esda_ws/install/setup.bash
+  package installed              OK    /home/felix/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025
+  headless launch                OK    /home/felix/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025/launch/launch_sim_headless.launch.py
+  rviz config                    OK    /home/felix/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025/config/view_bot.rviz
+  twist_mux params               OK    /home/felix/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025/config/twist_mux.yaml
+  arenas installed               OK    11 worlds
+  ground textures                OK    11
+  nav2 placeholders gone         OK    
+  nav2 vision variant            OK    /home/felix/esda_ws/install/esda_simulation_2025/share/esda_simulation_2025/config/nav2_params_vision.yaml
+
+--- ROS packages we depend on ------------------------------------------
+  ros_gz_sim                     OK    
+  ros_gz_bridge                  OK    
+  twist_mux                      OK    
+  slam_toolbox                   OK    
+  nav2_bringup                   OK    
+  controller_manager             OK    
+  diff_drive_controller          OK    
+  teleop_twist_keyboard          OK    
+  cv_bridge                      OK    
+  image_view                     OK    
+
+--- weights ------------------------------------------
+  lane_seg.pt                    OK    /home/felix/esda_models/lane_seg.pt
+  YOLO base weights              OK    2
+
+--- python / GPU ------------------------------------------
+WARNING ⚠️ user config directory '/home/felix/.config/Ultralytics' is not writable, using '/tmp/Ultralytics'. Set YOLO_CONFIG_DIR to override.
+Creating new Ultralytics Settings v0.0.8 file ✅ 
+View Ultralytics Settings with 'yolo settings' or at '/tmp/Ultralytics/settings.json'
+Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/usage/settings.
+  ultralytics                    OK    8.4.175
+  nvidia-smi                     OK    NVIDIA GeForce RTX 5060 Ti, 610.88, 16311 MiB
+  /dev/dxg (WSL GPU)             OK    /dev/dxg
+
+  --- torch / Blackwell kernel test ---
+  torch                          OK    2.11.0+cu128   cuda build: 12.8
+  torch sees GPU                 OK    NVIDIA GeForce RTX 5060 Ti   capability sm_120
+  KERNEL TEST                    PASS  matmul ran on the GPU, ~14.1 TFLOP/s fp32
+
+--- OpenGL (does --gpu buy anything?) ------------------------------------------
+  software GL                    llvmpipe (LLVM 15.0.7, 256 bits)
+  hardware GL                    D3D12 (NVIDIA GeForce RTX 5060 Ti)  <- --gpu is worth trying
+
+--- verdict ------------------------------------------
+  25 checks OK, 0 failed
+
+  Ready. Next, with NO vision and NO gpu:
+      ./demo.sh up
+      ./demo.sh goal 3 0        # in a second terminal
+
+  (this report was also written to /mnt/c/work/felix/mcav/for_server/wsl_verify.log)

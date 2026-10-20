@@ -1,0 +1,20 @@
+# The competition course, three times, with everything learned last night.
+#
+#   * spawn already correct for this world (0.45, 0.03) -- it was always the
+#     GENERATED arenas that started in the infield
+#   * camera 320x240: a quarter of the pixels. lane_seg_node upscales to the
+#     intrinsics' 640x480 so the model and every projection are untouched
+#   * MPPI 800,000 -> 100,000 rollouts/s, so it stops starving the renderer
+#   * real time, not slowed -- the point of the above is to make RTF 1.0 work
+#
+# igvc is not a closed loop, so a "lap" is not the measure here. Distance,
+# stall fraction and carrots-per-sim-second are.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync100.log 2>&1 || { tail -20 /tmp/sync100.log; exit 1; }
+for i in 1 2 3; do
+  echo "============ stock igvc, repeat $i of 3 ============"
+  ./demo.sh lap igvc --seconds 420 --min-turn 0 \
+    --note "stock IGVC, repeat $i/3: 320x240 camera + 8x lighter MPPI" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done

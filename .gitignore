@@ -5,3 +5,21 @@ log/
 lane-detection-on-rural-roads-master
 TwinLiteNetPlus
 image.png
+
+# research/ outputs, and the one tracked weight
+#
+# The evaluation tooling in research/ is source and is tracked. Its outputs
+# are not. Order matters: last matching pattern wins, so the negation for
+# the one weight that cannot be re-downloaded goes last. train.py re-fetches
+# the yolov8n/s-seg base weights from Ultralytics on demand.
+research/build/
+research/install/
+research/log/
+research/logs/
+research/recordings/
+research/runs/
+.demo_logs/
+*.mp4
+*.pt
+research/models/*
+!research/models/lane_seg_synth_cpu.pt

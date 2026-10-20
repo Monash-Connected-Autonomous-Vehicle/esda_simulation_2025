@@ -1,0 +1,22 @@
+# Camera back to 640x480. Everything else exactly as job 100 had it.
+#
+# The 320x240 camera was bought when the renderer was the bottleneck. It is
+# not any more: perception now runs at the full 5 Hz with 20 ms inference and
+# spare capacity. But upscaling a quarter-resolution frame does not recover
+# detail, and lane paint 4 m ahead is only a few pixels wide -- which is
+# exactly where job 100 lost the line, a third of the way round, after
+# driving fine while the paint was close.
+#
+# Compare against job 100: 27.6 / 28.7 / 54.7 m, median 28.7. Same world,
+# same wall-clock budget, same driver flags. Only the resolution differs.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync104.log 2>&1 || { tail -20 /tmp/sync104.log; exit 1; }
+for i in 1 2 3; do
+  echo "========= igvc_oval_slow_test, 640x480 camera, repeat $i of 3 ========="
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 \
+    --note "640x480 camera $i/3: otherwise identical to job 100" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done
+grep -H -E "path length|stalls|lane publishes|goals published" \
+  logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -24

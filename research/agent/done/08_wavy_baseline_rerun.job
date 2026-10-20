@@ -1,0 +1,5 @@
+# Re-run of 02, void for the same two reasons as 01. See 07.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_wavy_test --seconds 420 \
+  --note "baseline re-run after the odom-topic and blind-timeout fixes"

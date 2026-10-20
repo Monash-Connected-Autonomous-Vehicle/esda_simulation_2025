@@ -1,0 +1,149 @@
+# ============================================================================
+# 310 -- resume 309. Everything in it worked except my own check.
+#
+# 309 cut the branch, brought research/ and the weight across, applied the
+# integration, kept BOTH subtract_cones and the weight resolution, passed the
+# merged self-test, and built in 6 s. Then it failed on a path I wrote wrong:
+# it looked for install/lib/<pkg>/... instead of install/<pkg>/lib/<pkg>/...
+# Nothing is wrong with the port; the gate was.
+#
+# So this does not re-cut the branch -- it is already there with the changes
+# applied and uncommitted. Everything here is idempotent, so re-running the
+# port is a no-op and the copies just re-stat.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"; SWEEP="/mnt/c/work/felix/mcav/sweep"
+R="/mnt/c/work/felix/mcav/for_server"
+cd "$WS" || exit 1
+PKG=esda_simulation_2025
+NEW=yolo-lane-cone
+set +u; source /opt/ros/humble/setup.bash; set -u
+
+echo "=== 0. where 309 left us ==="
+B=$(git rev-parse --abbrev-ref HEAD)
+echo "  branch: $B at $(git log --oneline -1)"
+[ "$B" = "$NEW" ] || { echo "expected to be on $NEW; refusing to guess"; exit 1; }
+git status --porcelain | wc -l | sed 's/^/  changed paths: /'
+
+echo
+echo "=== 1. make sure the copies and the port are all in place (idempotent) ==="
+mkdir -p research research/models
+rsync -a \
+  --exclude build --exclude install --exclude log --exclude logs \
+  --exclude models --exclude recordings --exclude runs \
+  --exclude 'Claude outputs' --exclude esda_simulation_2025 \
+  --exclude __pycache__ --exclude research --exclude .tidytest \
+  --exclude backup_to_github.sh \
+  --exclude '*.pt' --exclude '*.mp4' --exclude '*.pgm' --exclude '*.posegraph' \
+  "$R/" research/ || exit 1
+cp -n "$R/models/lane_seg_synth_cpu.pt" research/models/ 2>/dev/null || true
+[ -f demo.sh ] || cp /mnt/c/work/felix/mcav/demo.sh demo.sh
+cp "$SWEEP/lane_seg.launch.py" "src/$PKG/launch/lane_seg.launch.py"
+find research -type f -exec chmod 644 {} +
+find research -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod 755 {} +
+chmod 755 demo.sh "src/$PKG/launch/lane_seg.launch.py"
+chmod 644 research/models/lane_seg_synth_cpu.pt
+python3 "$SWEEP/apply_port_to_nav2.py" "$WS" || exit 1
+
+echo
+echo "=== 2. both features still in the detector, and the tests pass ==="
+L="src/$PKG/scripts/lane_detection_esda.py"
+for pat in subtract_cones yolo_cone_dilate _resolve_yolo_weights SHIPPED_YOLO_WEIGHTS; do
+  c=$(grep -c "$pat" "$L"); printf "  %-24s %s\n" "$pat" "$c"
+  [ "$c" -gt 0 ] || { echo "LOST $pat"; exit 1; }
+done
+python3 "$L" --selftest > /tmp/st310.txt 2>&1 || { tail -20 /tmp/st310.txt; exit 1; }
+grep -c " ok$" /tmp/st310.txt | sed 's/^/  checks passing: /'
+python3 -m py_compile "src/$PKG/scripts/ui_launch.py" || exit 1
+
+echo
+echo "=== 3. build and check the install layout (correct prefix this time) ==="
+rm -rf "build/$PKG" "install/$PKG"
+colcon build --symlink-install --packages-select "$PKG" 2>&1 | tail -4
+set +u; source "$WS/install/setup.bash"; set -u
+I="$WS/install/$PKG"
+for f in "lib/$PKG/lane_seg_node.py" "lib/$PKG/lane_link.py" "lib/$PKG/lane_classic.py" \
+         "lib/$PKG/lane_detection_esda.py" \
+         "share/$PKG/vision/vision_config.yaml" \
+         "share/$PKG/models/lane_seg_synth_cpu.pt" \
+         "share/$PKG/launch/lane_seg.launch.py"; do
+  [ -e "$I/$f" ] && echo "  ok   $f" || { echo "  MISSING $f"; exit 1; }
+done
+timeout 60 ros2 launch "$PKG" lane_seg.launch.py --show-args 2>&1 | grep -q camera_mount \
+  && echo "  lane_seg.launch.py loads" || { echo "  LAUNCH FILE BROKEN"; exit 1; }
+
+echo
+echo "=== 4. commit, in two parts ==="
+git add .gitignore research demo.sh
+git commit -q -F - <<'MSG'
+Bring the vision evaluation tooling and the trained weight onto this branch
+
+research/ is the code behind the lane-detector numbers: the teleport bench
+(eval_recall.py), the synthetic data generator, the autolabeller, the lap
+scorer, the detector backtest, and the job queue that ran the 36-run sensor
+mount sweep, with its reports.
+
+research/models/lane_seg_synth_cpu.pt is the trained weight: yolov8n-seg
+fine-tuned on CPU over synth_gen.py renders, three classes (lane, cone,
+drivable). It is the one file here that cannot be got back any other way --
+train.py re-downloads the yolov8n/s-seg base weights from Ultralytics, and
+this one existed on a single laptop until now. Without it the yolo detector
+path on this branch could not run at all: it pointed at
+~/esda_models/lane_seg.pt.
+
+.gitignore keeps research/'s OUTPUTS out while tracking its source. Order
+matters -- last matching pattern wins -- so the negation for that one
+weight goes last.
+
+demo.sh brings the stack up with health gates and an RTF check.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01ShdFy9VvBp9h4c9YzMjeH6
+MSG
+git add -A "src/$PKG"
+git commit -q -F "$SWEEP/commitmsg_port.txt" || { echo "COMMIT 2 FAILED"; exit 1; }
+
+echo
+echo "=== 5. the default swap, on its own commit ==="
+python3 "$SWEEP/apply_port_to_nav2.py" "$WS" --yolo-default || exit 1
+python3 "$L" --selftest >/dev/null 2>&1 || { echo "SELFTEST FAILED"; exit 1; }
+colcon build --symlink-install --packages-select "$PKG" 2>&1 | tail -2
+git add "src/$PKG/scripts/lane_detection_esda.py" "src/$PKG/scripts/ui_launch.py"
+git commit -q -F "$SWEEP/commitmsg_default_nav2.txt" || { echo "COMMIT 3 FAILED"; exit 1; }
+git log --oneline -4
+
+echo
+echo "=== 6. LIVE: up on this branch, on yolo, with the shipped weight ==="
+set +u; source "$WS/install/setup.bash"; set -u
+./demo.sh down >/dev/null 2>&1
+./demo.sh up --no-nav --no-rviz --no-build > /tmp/310_up.log 2>&1
+echo "  rc=$?"; sleep 18
+LL="$WS/.demo_logs/LANE.log"
+[ -f "$LL" ] && grep -iE "method=|loaded |falling back|Traceback" "$LL" | head -5 | sed 's/^/    /'
+OK=1
+grep -q "method=yolo" "$LL" 2>/dev/null || OK=0
+grep -q "loaded .*lane_seg_synth_cpu.pt" "$LL" 2>/dev/null || OK=0
+grep -qi "falling back to 'adaptive'" "$LL" 2>/dev/null && OK=0
+for t in /scan_fused /lane_markers; do
+  Rt=$(timeout 22 ros2 topic hz "$t" --window 12 2>&1 | grep -m1 "average rate" || true)
+  echo "    $t  ${Rt:-NO MESSAGES}"
+done
+./demo.sh down >/dev/null 2>&1
+echo "  yolo in use with the shipped weight: $OK"
+[ "$OK" = 1 ] || { echo "NOT PUSHING -- fallback"; tail -25 "$LL"; exit 1; }
+
+echo
+echo "=== 7. nothing left dirty, then push ==="
+git status --porcelain | head
+git push -u origin "$NEW" 2>&1 | tail -4
+Lc=$(git rev-parse HEAD); Rc=$(git ls-remote origin "$NEW" | cut -f1)
+[ "$Lc" = "$Rc" ] && echo "  PUSHED OK $NEW $Lc" || { echo "  REMOTE MISMATCH"; exit 1; }
+
+echo
+echo "=== 8. what the new branch is, and what it is not ==="
+echo "  base:          $(git log --oneline -1 e02ba1d)"
+echo "  our commits:   $(git rev-list --count e02ba1d..HEAD)"
+git log --oneline e02ba1d..HEAD | sed 's/^/    /'
+echo "  yolo-adaptive still at: $(git ls-remote origin yolo-adaptive | cut -f1)"
+echo "    (expected a8d010a8079a09cfaf403bf8e16c5b5f90ec016a -- untouched)"
+echo DONE

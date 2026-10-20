@@ -1,0 +1,27 @@
+# The actual competition course, three times.
+#
+# igvc is not a closed loop, so "lap" is not the measure -- --min-turn 0
+# switches that term off and the numbers that matter are distance, stall
+# fraction and carrots per simulated second. The spawn (0.45, 0.03) is the
+# one confirmed start pose in the project: a marker sphere was dropped on the
+# start line in the Gazebo GUI and ign model reported the coordinates. It was
+# always the GENERATED arenas whose spawns were reverse-engineered from
+# textures, and one of them put the robot in the oval's infield where there
+# was no paint to see.
+#
+# This world is also the only one not slowed down: real_time_factor 1.0,
+# uncapped, so Gazebo spends every core it can get trying to keep up and the
+# renderer has to win its share on merit. That is the regime the real
+# competition run would be in, which is why it is worth a measurement of its
+# own rather than an inference from the oval.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync102.log 2>&1 || { tail -20 /tmp/sync102.log; exit 1; }
+for i in 1 2 3; do
+  echo "============ stock igvc, repeat $i of 3 ============"
+  ./demo.sh lap igvc --seconds 1200 --min-turn 0 \
+    --note "stock IGVC course $i/3: lighter MPPI + 320x240 camera + 360-ray lidar" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done
+echo "=== all stock-igvc runs ==="
+grep -H -E "path length|stalls|lane publishes|goals published|furthest" logs/run_igvc_2*/lap_*.txt 2>/dev/null | tail -20

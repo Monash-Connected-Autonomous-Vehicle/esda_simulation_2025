@@ -1,0 +1,33 @@
+# Ground truth about what the stack actually publishes, written to a file I
+# can read. Two runs were wasted guessing at the odometry topic name from the
+# xacro; thirty seconds of `ros2 topic list` settles it for good.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+src
+stop_all >/dev/null 2>&1; sleep 2
+start_sim "igvc_oval_test" 0.0 0.0 0.0 false
+wait_for "/clock" 90 has_data /clock || true
+sleep 15
+out="$SCRIPT_DIR/logs/topic_census.txt"
+{
+  echo "generated: $(date)"
+  echo "=== ros2 topic list -t ==="
+  timeout 20 ros2 topic list -t
+  echo
+  echo "=== anything with 'odom' in it ==="
+  timeout 20 ros2 topic list | grep -i odom
+  echo
+  for t in $(timeout 20 ros2 topic list | grep -i odom); do
+    echo "--- $t ---"
+    timeout 15 ros2 topic info "$t"
+    echo "  one message:"
+    timeout 15 ros2 topic echo --once "$t" 2>&1 | head -8
+  done
+  echo
+  echo "=== TF frames ==="
+  timeout 20 ros2 node list
+} > "$out" 2>&1
+stop_all >/dev/null 2>&1
+echo "written to $out"
+tail -40 "$out"

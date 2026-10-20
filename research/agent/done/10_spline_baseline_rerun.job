@@ -1,0 +1,5 @@
+# 03 ran before the odom fix. Re-run so the spline pair is complete.
+set -uo pipefail
+cd "$ESDA_HOME"
+./demo.sh lap igvc_spline_test --seconds 420 \
+  --note "baseline re-run after the odom fix"

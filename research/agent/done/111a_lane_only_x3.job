@@ -1,0 +1,64 @@
+# LANE-ONLY REPEATS, first half. Three per job, and that number is arithmetic.
+#
+# Job 108 asked for five repeats and got three and a bit: the runner kills a job
+# at JOB_TIMEOUT (5400s) and five repeats need about 6180s. Each repeat is
+# --seconds 1200 of WALL clock plus roughly 40s of bring-up and 15s of teardown,
+# so 1255s each; 108's four starts were 20.6 min apart, confirming it. Three
+# repeats is 3765s plus a minute of sync -- comfortable. Four would leave 400s
+# of slack, which one slow bring-up eats. So: two jobs of three.
+#
+# WHAT 108 ALREADY SHOWED, from its three complete runs
+#
+#   path     outcome        stalls        turning    goals/sim-s
+#   63.4 m   FAIL           18  (31%)     124.5 rad  1.19
+#  158.4 m   PASS, 2 laps    1  ( 2%)      33.4 rad  0.674
+#   15.5 m   FAIL            1  (90%)       5.5 rad  0.061
+#
+# Perception was identical in all three: 4.49 / 4.36 / 4.41 publishes per
+# simulated second, a spread of 1.5%. Seeing is no longer the variable. The
+# drive logs separate the two failures, and they fail in OPPOSITE directions:
+#
+#   63.4 m  saw MORE than the winner (355 carrots vs 205) and still failed,
+#           with 66 "not moved, re-sending the goal". The carrot was there and
+#           the robot would not track it -- a controller failure.
+#   15.5 m  went blind at t~40s and never recovered: 106 of 133 drive.log lines
+#           are "no sensing -- stopping rather than driving on blind", with one
+#           "steering again" all run. Fallbacks had nothing: memory expired or
+#           already passed, corridor found no gap.
+#  158.4 m  lost the paint SEVEN times and recovered all seven.
+#
+# That last line is the finding. The winner was not the run that saw best; it
+# was the run that recovered. So these repeats are measuring a FRACTION -- how
+# often the stack recovers -- and the tail below reports the blind counts that
+# tell the modes apart, so the next change is aimed at a mechanism rather than
+# at an average.
+#
+# NOTHING IS UNDER TEST HERE. Same config as 108, deliberately: 108 was cut
+# short, and three samples cannot tell "helps sometimes" from "got lucky once".
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync111a.log 2>&1 || { tail -20 /tmp/sync111a.log; exit 1; }
+python3 vision/test_spawn_table.py || { echo "SPAWN TABLE DRIFTED"; exit 1; }
+
+for i in 1 2 3; do
+  echo "========= igvc_oval_slow_test, LANE ONLY, repeat $i of 6 ========="
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 --lane-only \
+    --note "lane only, repeat $i of 6" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8 --fov-deg 90
+done
+
+echo
+echo "=== the three modes, per run: outcome, stalls, and how blind it went ==="
+for d in $(ls -1dt logs/run_igvc_oval_slow_test_* | head -3); do
+  echo "-- $d"
+  grep -hE "PASS|FAIL|path length|stalls |goals published" "$d"/lap_latest.txt 2>/dev/null | sed 's/^/   /'
+  printf "   blind warnings %s, carrots %s, goal re-sends %s, recoveries %s\n" \
+    "$(grep -c "no sensing" "$d"/drive.log 2>/dev/null)" \
+    "$(grep -c "carrot" "$d"/drive.log 2>/dev/null)" \
+    "$(grep -c "re-sending the goal" "$d"/drive.log 2>/dev/null)" \
+    "$(grep -c "steering again" "$d"/drive.log 2>/dev/null)"
+done
+echo
+echo "READ: how many of the three held the course, and whether the failures are"
+echo "blind (high blind warnings, few carrots) or untracked (many carrots, many"
+echo "re-sends). Those need different fixes."

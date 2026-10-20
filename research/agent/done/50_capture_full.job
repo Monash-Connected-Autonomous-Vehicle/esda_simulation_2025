@@ -1,0 +1,21 @@
+# Re-do the capture properly. Job 30 brought up ONLY Gazebo -- no SLAM, no
+# Nav2 -- so /goal_pose went nowhere, there was no map frame for the driver
+# to transform into, and the robot sat at spawn for the whole 420 s. All 645
+# frames were the same picture. Use the real stack, as the lap runs do.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash demo.sh up --vision --no-rviz --world igvc_oval_test
+bash demo.sh drive --lane-memory 3.0 --lidar-corridor
+src
+python3 "$ESDA_SRC/vision/capture_labelled.py" --world igvc_oval_test \
+        --interval 0.5 --seconds 400 --out "$HOME/esda_capture/oval_full"
+stop_all >/dev/null 2>&1
+n=$(ls -1 "$HOME/esda_capture/oval_full"/*.jpg 2>/dev/null | wc -l)
+u=$(md5sum "$HOME/esda_capture/oval_full"/*.jpg 2>/dev/null | awk '{print $1}' | sort -u | wc -l)
+echo "captured $n frames, $u DISTINCT images"
+[ "$u" -gt 20 ] || { echo "camera appears frozen or robot never moved"; exit 1; }
+python3 "$ESDA_SRC/vision/autolabel.py" --capture "$HOME/esda_capture/oval_full" \
+        --repo "$ESDA_SRC" --out "$HOME/esda_datasets/oval_full" --overlay
+rm -rf "$SCRIPT_DIR/logs/overlay_full" 2>/dev/null
+cp -r "$HOME/esda_datasets/oval_full/overlay" "$SCRIPT_DIR/logs/overlay_full"

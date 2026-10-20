@@ -1,0 +1,36 @@
+# YOLOv8-seg dataset config.
+#
+# THREE ways to get a dataset, in the order worth trying:
+#
+#   1. synth_gen.py  -- renders labelled frames from the sim's own textures
+#      using the exact camera model. No Gazebo, no labelling, no account:
+#          python3 synth_gen.py --out ~/esda_datasets/lane_seg --n-train 1600
+#      It writes its own data.yaml with an absolute path. Start here.
+#
+#   2. Real Gazebo frames -- capture_frames.py, then label them. Worth adding
+#      a few hundred on top of (1) to close the renderer-vs-ogre2 gap.
+#
+#   3. Roboflow export -- prefer ITS data.yaml. Note the team already found a
+#      Roboflow pretrained model scored 0 objects on this world, so treat an
+#      off-the-shelf real-world dataset as extra volume, not as the base.
+#
+# This template is only for laying a dataset out by hand.
+#
+# Layout expected:
+#   dataset/
+#     images/{train,val}/*.jpg
+#     labels/{train,val}/*.txt      # YOLO-seg polygon format
+#
+# IMPORTANT 1: class order here must match classes.names in vision_config.yaml.
+# IMPORTANT 2: `path` must be ABSOLUTE. Ultralytics resolves a relative or ~
+#   path against its own datasets dir, not your cwd, and then reports
+#   "no images found". train.py now auto-rewrites it, but set it properly here.
+
+path: /home/YOUR_USER/esda_datasets/lane_seg   # <- absolute, edit this
+train: images/train
+val: images/val
+
+names:
+  0: lane
+  1: cone
+  2: drivable

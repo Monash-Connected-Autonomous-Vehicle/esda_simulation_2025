@@ -1,0 +1,31 @@
+# demo.sh spawns the generated arenas at (0,0) on the assumption that
+# make_worlds keeps "a 3 m clear radius at the origin". That is true and
+# irrelevant: it means the origin is clear of BARRELS, not that the painted
+# track passes through it. The oval's track is a ring; the origin is in the
+# infield. The robot has been starting on blank asphalt, seeing no lines,
+# and every "the detector goes blind" conclusion followed from that.
+#
+# Spawn each world on its track instead, and photograph what the camera sees.
+# Two painted lines in frame = fixed.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+out="$SCRIPT_DIR/logs/spawn_check"; mkdir -p "$out"
+check() {  # world x y yaw
+  stop_all >/dev/null 2>&1; sleep 2
+  start_sim "$1" "$2" "$3" "$4" false
+  wait_for "/clock ($1)" 90 has_data /clock || { echo "$1 failed"; return; }
+  sleep 12
+  src
+  timeout 50 python3 "$ESDA_SRC/vision/capture_labelled.py" --world "$1" \
+      --interval 1.0 --seconds 6 --spawn "$2,$3,$4" \
+      --out "$HOME/esda_capture/sp_$1" || true
+  f=$(ls -1 "$HOME/esda_capture/sp_$1"/*.jpg 2>/dev/null | tail -1)
+  [ -n "$f" ] && cp "$f" "$out/$1.jpg" && echo "saved $out/$1.jpg"
+}
+check igvc_oval_test     11.86  -2.31  1.263
+check igvc_wavy_test     -5.19 -12.33  2.250
+check igvc_spline_test  -12.04   8.02  0.839
+check igvc_figure8_test  15.79   4.29  1.466
+stop_all >/dev/null 2>&1
+ls -la "$out"

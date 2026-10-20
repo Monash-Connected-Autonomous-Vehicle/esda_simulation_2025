@@ -1,0 +1,97 @@
+# THE ONE QUESTION THE BENCH COULD NOT ANSWER: WHAT HAPPENS IN SHADE.
+#
+# On the 395-frame teleport bench every threshold beat the network outright:
+#
+#   detector   recall  prec   IoU    1-2m recall  ms/frame
+#   yolo        0.492  0.362  0.263      0.592       8.4
+#   otsu        0.800  0.452  0.406      0.814       0.9
+#   value       0.789  0.454  0.405      0.806       1.1
+#   adaptive    0.795  0.263  0.247      0.816       2.4
+#   tophat      0.759  0.213  0.199      0.887       2.5
+#
+# So the lane path is classical. That part is settled and the config has been
+# switched. What is NOT settled is WHICH threshold, because the sim lights
+# every frame uniformly and the bench therefore cannot distinguish a method
+# that survives a shadow edge from one that does not. That distinction is the
+# whole reason to prefer a local method over a global one, and the IGVC course
+# has trees around it -- they are visible in the 2025 run's own footage.
+#
+# otsu currently leads and is a GLOBAL threshold: one level for the whole
+# frame. It is exactly the method that should fail when half the frame is in
+# shade, and it already showed the failure mode once -- zero pixels on a
+# low-contrast frame. tophat is invariant to the background level by
+# construction and should degrade least, at the cost of precision it is
+# already short of.
+#
+# Rather than re-render the world with different lighting, this bends the
+# light on the frames we already have: a global shift, a linear gradient, and
+# a hard shadow band across the lower-left. Geometry is untouched, so the same
+# ground truth applies and every number stays comparable to the clean run.
+#
+# READ: not who wins each row, but who DEGRADES least from their own clean
+# score. A method that starts at 0.80 and holds 0.70 through a shadow beats
+# one that starts at 0.80 and collapses to 0.20, because the course will have
+# shade on it and the robot does not get to retry.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync110d.log 2>&1 || { tail -20 /tmp/sync110d.log; exit 1; }
+
+python3 vision/test_camera_consistency.py || { echo "GEOMETRY DRIFTED"; exit 1; }
+python3 vision/eval_recall.py  --selftest || exit 1
+python3 vision/lane_classic.py --selftest || exit 1
+
+DS="$(ls -1dt "$HOME"/esda_datasets/bench_* 2>/dev/null | head -1)"
+[ -n "$DS" ] || { echo "no bench dataset -- 110b must run first"; exit 1; }
+echo "stressing $DS"
+
+for P in none bright dark gradient shadow; do
+  for M in otsu value adaptive tophat; do
+    python3 vision/eval_recall.py --data "$DS" --split val \
+            --detector classic --method "$M" --perturb "$P" \
+            2>&1 | grep -vE "^  [0-9]+/" > "$ESDA_HOME/logs/stress_${M}_${P}.txt"
+  done
+  # the network too, so the comparison stays honest under the same lighting
+  python3 vision/eval_recall.py --data "$DS" --split val \
+          --weights "$HOME/esda_models/lane_seg.pt" --conf 0.35 --perturb "$P" \
+          2>&1 | grep -vE "^  [0-9]+/" > "$ESDA_HOME/logs/stress_yolo_${P}.txt"
+done
+
+echo
+echo "=== recall, by method and lighting ==="
+printf "%-10s %8s %8s %8s %8s %8s\n" method none bright dark gradient shadow
+for M in yolo otsu value adaptive tophat; do
+  printf "%-10s" "$M"
+  for P in none bright dark gradient shadow; do
+    printf " %8s" "$(grep -oP 'recall \K[0-9.]+' "$ESDA_HOME/logs/stress_${M}_${P}.txt" 2>/dev/null | head -1)"
+  done
+  printf "\n"
+done
+
+echo
+echo "=== precision, same grid (false lane pixels become lethal cells) ==="
+printf "%-10s %8s %8s %8s %8s %8s\n" method none bright dark gradient shadow
+for M in yolo otsu value adaptive tophat; do
+  printf "%-10s" "$M"
+  for P in none bright dark gradient shadow; do
+    printf " %8s" "$(grep -oP 'precision \K[0-9.]+' "$ESDA_HOME/logs/stress_${M}_${P}.txt" 2>/dev/null | head -1)"
+  done
+  printf "\n"
+done
+
+echo
+echo "=== 1-2 m recall, the carrot band ==="
+printf "%-10s %8s %8s %8s %8s %8s\n" method none bright dark gradient shadow
+for M in yolo otsu value adaptive tophat; do
+  printf "%-10s" "$M"
+  for P in none bright dark gradient shadow; do
+    printf " %8s" "$(awk '/^  1-2 m/{print $3}' "$ESDA_HOME/logs/stress_${M}_${P}.txt" 2>/dev/null)"
+  done
+  printf "\n"
+done
+
+echo
+echo "READ: the WORST cell in each row is that method's real score, because"
+echo "the course picks the lighting, not us. If otsu holds up, keep it -- it is"
+echo "the fastest and the most precise. If it collapses under 'shadow' and"
+echo "tophat does not, switch detector.method to tophat and raise"
+echo "tophat_thresh until precision is back above 0.4."

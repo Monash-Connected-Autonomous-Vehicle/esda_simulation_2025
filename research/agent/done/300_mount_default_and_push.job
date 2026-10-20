@@ -1,0 +1,179 @@
+# ============================================================================
+# 300 -- adopt the measured-best sensor mount as the default, verify, push.
+#
+# EVIDENCE: 36 runs on 2026-10-20, 3 worlds x 4 mount combinations x 3
+# repeats, our adaptive detector with their navigator. camera pole_top +
+# lidar low ranked best in all three worlds (mean rank 1.33 of 4) and the
+# current default ranked third. Lowering the lidar roughly doubles path
+# length and cuts the stalled fraction from 72% to 35% in BOTH camera
+# positions; raising the camera is what makes lanes visible at all on
+# sim_world_ic, where six consecutive front-camera runs detected zero lane
+# segments while every pole-camera run tracked the line.
+#
+# WHAT IS NOT CHANGED: no mast geometry is added. camera.xacro's pole_top
+# joint parents to "chassis" with an absolute offset, so the camera POSE is
+# already correct without the pole link -- the runs this default rests on had
+# exactly this geometry. Inventing an untested mast would ship something
+# other than what was measured, and the mast would sit in the low lidar's
+# scan plane. Flagged in the xacro comment for whoever builds the real one.
+#
+# NOTHING IS PUSHED UNLESS THE VERIFICATION BELOW PASSES.
+# ============================================================================
+set -uo pipefail
+WS="$HOME/esda_ws"
+SWEEP="/mnt/c/work/felix/mcav/sweep"
+cd "$WS" || exit 1
+
+echo "=== 0. working tree before ==="
+git status --short | head
+git log --oneline -1
+
+echo
+echo "=== 1. apply the mount default ==="
+python3 "$SWEEP/apply_mount_default.py" "$WS" || { echo "PATCH FAILED"; exit 1; }
+
+echo
+echo "=== 2. document it ==="
+python3 - "$WS/SETUP_AND_RUN.md" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+anchor = "### Detector methods"
+add = """### Sensor mount (default changed 2026-10-20)
+
+The default is now **camera on the pole (1.30 m, 15 deg down), LiDAR low on
+the chassis (0.385 m)** - `camera_mount:=pole_top lidar_mount:=low`.
+
+Measured over 36 runs, 3 worlds x 4 mount combinations x 3 repeats:
+
+| configuration | igvc | ic | bball | mean rank |
+|---|---|---|---|---|
+| front cam + pole LiDAR (old default) | 10.5 | 0.0 | 2.3 | 3.00 |
+| pole cam + pole LiDAR | 10.1 | 4.6 | 0.0 | 3.33 |
+| front cam + low LiDAR | 15.5 | 0.0 | 9.0 | 2.33 |
+| **pole cam + low LiDAR (new default)** | 11.3 | **12.4** | **18.8** | **1.33** |
+
+Median furthest-from-start in metres. Two separate effects: LiDAR height
+governs whether the robot drives (path length roughly doubles, stalls fall
+from 72% to 35%, in both camera positions), camera height governs whether
+lanes are seen at all (six consecutive front-camera runs on ic detected zero
+segments).
+
+**If you change `camera_mount`, change the detector geometry with it:**
+
+```
+pole_top:  -p camera_mount_height:=1.30  -p camera_mount_pitch:=-0.2618
+front:     -p camera_mount_height:=0.315 -p camera_mount_pitch:=0.0
+```
+
+The pitch sign is **negative** in the detector and **positive** in
+`camera.xacro` for the same 15 degrees. The detector rotates rays in the
+optical frame (Y down) and solves `t = height / ray_y_rot`, so a downward
+tilt is negative there. Get it wrong and the mask still looks perfect in the
+preview while `/lane_obstacles` projects to the wrong ground range. The UI
+now derives these from its own mount dropdown, so this only bites a bare
+`ros2 run`.
+
+Not settled: *why* LiDAR height matters. The obvious explanation, that a
+pole-top LiDAR scans over the barrels, is disproved - `min_lidar_clearance_m`
+is 0.10-0.96 m for pole configurations and 0.35-0.59 m for low, so all of
+them get close returns. The stall pattern points at localisation instead.
+
+---
+
+### Detector methods"""
+assert anchor in s, "SETUP_AND_RUN.md anchor missing"
+open(p, "w").write(s.replace(anchor, add, 1))
+print("  SETUP_AND_RUN.md updated")
+PY
+
+echo
+echo "=== 3. the defaults must actually take effect ==="
+set +u; source /opt/ros/humble/setup.bash; set -u
+cd "$WS" && colcon build --symlink-install --packages-select esda_simulation_2025 2>&1 | tail -3
+set +u; source "$WS/install/setup.bash"; set -u
+XD="$WS/install/esda_simulation_2025/share/esda_simulation_2025/description"
+echo "--- robot description with NO mount args (i.e. the defaults) ---"
+xacro "$XD/robot.urdf.xacro" > /tmp/default_robot.urdf 2>/tmp/xacro.err || { echo "XACRO FAILED"; cat /tmp/xacro.err; exit 1; }
+echo "camera_joint origin: $(grep -A2 'name="camera_joint"' /tmp/default_robot.urdf | grep -oE '<origin[^/]*/>' | head -1)"
+echo "laser_joint  origin: $(grep -A3 'name="laser_joint"'  /tmp/default_robot.urdf | grep -oE '<origin[^/]*/>' | head -1)"
+echo "lidar_pole link present: $(grep -c 'name="lidar_pole"' /tmp/default_robot.urdf)"
+grep -q 'xyz="0.560407 0.1 1.3"\|xyz="0.560407 0.10 1.30"' /tmp/default_robot.urdf \
+  && echo "  OK camera is on the pole mount" \
+  || { echo "  FAIL camera is NOT at the pole position"; grep -oE '<origin xyz="[^"]*" rpy="[^"]*"/>' /tmp/default_robot.urdf | head -8; exit 1; }
+
+echo
+echo "=== 4. one scored run on the new default ==="
+SIM_SECONDS=200 WALL_CAP=500 bash "$SWEEP/bench_run.sh" \
+    verify_newdefault igvc.sdf pole_top low 1.30 -0.2618
+R="$SWEEP/results/verify_newdefault"
+if [ -f "$R/FAILED" ]; then echo "VERIFY RUN FAILED: $(cat "$R/FAILED")"; exit 1; fi
+python3 -c "
+import json,glob
+f=glob.glob('$R/lap_*.json')[0]; d=json.load(open(f))
+print('  furthest %.1f m, path %.1f m, laneHz %.2f, stalled %.2f, odom %d'%(
+  d['max_distance_from_start_m'],d['path_length_m'],d['lane_per_sim_s'],
+  d['stalled_fraction'],d['odom_samples']))
+assert d['odom_samples']>100, 'no odometry - not a valid verification'
+assert d['lane_per_sim_s']>1.0, 'detector not publishing - geometry or mount wrong'
+print('  VERIFY OK')
+" || { echo "VERIFY CHECKS FAILED - not pushing"; exit 1; }
+
+echo
+echo "=== 5. commit ==="
+git add -A
+git status --short
+git commit -F - <<'MSG'
+Default to camera on the pole, LiDAR low
+
+Measured over 36 runs: 3 worlds x 4 mount combinations x 3 repeats, with the
+adaptive lane detector and waypoint_navigator_recommendation.py. Median
+furthest-from-start, in metres:
+
+                                     igvc     ic  bball   mean rank
+  front cam + pole LiDAR (was)       10.5    0.0    2.3        3.00
+  pole cam + pole LiDAR              10.1    4.6    0.0        3.33
+  front cam + low LiDAR              15.5    0.0    9.0        2.33
+  pole cam + low LiDAR (now)         11.3   12.4   18.8        1.33
+
+Two separate effects. LiDAR height governs whether the robot drives: lowering
+it roughly doubles path length (18.6 -> 42.5 m on igvc) and cuts the stalled
+fraction from 72% to 35%, in both camera positions independently. Camera
+height governs whether lanes are seen at all: six consecutive front-camera
+runs on sim_world_ic detected zero lane segments and travelled 0.0 m, while
+every pole-camera run tracked the line from the same pose.
+
+The distance column alone would not carry this - with three repeats the
+ranges overlap (c1 7.0-10.7, c2 9.6-12.0, c3 9.1-20.7, c4 11.1-30.8). Path
+length and stalled fraction separate monotonically with LiDAR height and are
+what the conclusion rests on.
+
+No mast geometry is added. camera.xacro's pole_top joint parents to "chassis"
+with an absolute offset rather than to the pole, so the camera pose is
+correct whether or not the pole link exists, and that is exactly the geometry
+these runs used. The lidar.xacro comment that called this combination
+physically meaningless is corrected, and flags that a real mast wants to be
+its own column clear of the low LiDAR's scan plane.
+
+ui_launch.py now derives camera_mount_height and camera_mount_pitch from its
+own mount dropdown. The detector's defaults describe the front mount, and the
+pitch sign is opposite to the xacro's, so a mismatch leaves the preview
+looking perfect while /lane_obstacles projects to the wrong ground range.
+
+Also includes the debug-image publisher on lane_detection_esda.py: it
+intercepts the base class's cv2.imshow so the four-pane preview can be
+recorded headlessly, which is how the 36 runs were evidenced.
+
+Why LiDAR height matters is NOT established. "The pole-top LiDAR scans over
+the barrels" is disproved: min_lidar_clearance_m is 0.10-0.96 m for pole
+configurations against 0.35-0.59 m for low, so all of them get close returns.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01ShdFy9VvBp9h4c9YzMjeH6
+MSG
+[ $? -eq 0 ] || { echo "COMMIT FAILED"; exit 1; }
+git log --oneline -2
+
+echo
+echo "=== 6. push ==="
+git push origin yolo-adaptive 2>&1 | tail -5
+echo "DONE"

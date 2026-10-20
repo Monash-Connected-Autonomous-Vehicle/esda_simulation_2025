@@ -1,0 +1,27 @@
+nohup: ignoring input
+[1;36m==> ESDA job runner[0m
+    queue:   /mnt/c/work/felix/mcav/for_server/agent/queue
+    logs:    /mnt/c/work/felix/mcav/for_server/agent/logs
+    stop:    Ctrl-C here, or  touch /mnt/c/work/felix/mcav/for_server/agent/STOP
+    timeout: 5400s per job
+
+[1;36m==> JOB 108_lane_only_x5   (13:13:49)[0m
+    [1;33m!![0m  job 108_lane_only_x5 hit the 5400s timeout -- killing it
+    [1;33m!![0m  108_lane_only_x5 exited 143 (5400s) -- see /mnt/c/work/felix/mcav/for_server/agent/logs/108_lane_only_x5.log
+[1;36m==> JOB 109_accuracy_baseline   (14:36:51)[0m
+    [1;32mOK[0m  109_accuracy_baseline finished (692s)
+[1;36m==> JOB 110_recall_rescore   (15:46:39)[0m
+    [1;32mOK[0m  110_recall_rescore finished (18s)
+[1;36m==> JOB 111a_lane_only_x3   (15:47:08)[0m
+    [1;32mOK[0m  111a_lane_only_x3 finished (4058s)
+[1;36m==> JOB 110b_pose_bench   (16:48:45)[0m
+    [1;33m!![0m  110b_pose_bench exited 1 (102s) -- see /mnt/c/work/felix/mcav/for_server/agent/logs/110b_pose_bench.log
+[1;36m==> JOB 110bb_classic_vs_yolo   (16:50:19)[0m
+    [1;33m!![0m  110bb_classic_vs_yolo exited 1 (4s) -- see /mnt/c/work/felix/mcav/for_server/agent/logs/110bb_classic_vs_yolo.log
+[1;36m==> JOB 110b_pose_bench   (17:37:32)[0m
+    [1;32mOK[0m  110b_pose_bench finished (708s)
+[1;36m==> JOB 110bb_classic_vs_yolo   (17:48:20)[0m
+    [1;32mOK[0m  110bb_classic_vs_yolo finished (18s)
+[1;36m==> JOB 110d_shadow_stress   (17:52:31)[0m
+    [1;32mOK[0m  110d_shadow_stress finished (78s)
+[1;36m==> JOB 112_igvc_demo_recorded   (18:00:48)[0m

@@ -1,0 +1,26 @@
+# THE ENGINE. Identical to job 100 in every respect except --engine ogre.
+#
+# ogre2 is a physically-based renderer: shadow maps for the directional sun,
+# HDR, a compositor chain. Under WSL none of it touches the GPU -- the --gpu
+# path dies in GL3PlusTextureGpu::copyTo -- so all of it runs on llvmpipe, in
+# software, on the cores Nav2 wants. ogre1 draws the same arena with none of
+# that machinery.
+#
+# This is the largest single lever left, and possibly a much bigger one than
+# it looks: if ogre1 also sidesteps the copyTo path, --gpu becomes usable and
+# the camera stops being the budget at all. Either way, three repeats against
+# job 100 answers it with a spread rather than an anecdote.
+#
+# If this world will not render under ogre1 at all, the lap command now says
+# so in the first two minutes instead of scoring a dead stack for twenty.
+set -uo pipefail
+cd "$ESDA_HOME"
+bash setup_wsl.sh --sync > /tmp/sync101.log 2>&1 || { tail -20 /tmp/sync101.log; exit 1; }
+for i in 1 2 3; do
+  echo "============ igvc_oval_slow_test, ogre1, repeat $i of 3 ============"
+  ./demo.sh lap igvc_oval_slow_test --seconds 1200 --engine ogre \
+    --note "ogre1 render engine $i/3: otherwise identical to job 100" \
+    -- --lane-memory 6.0 --lidar-corridor --blind-timeout 8
+done
+echo "=== every oval_slow run, newest last -- compare the last six ==="
+grep -H -E "path length|stalls|lane publishes|goals published" logs/run_igvc_oval_slow_test_*/lap_*.txt | tail -24

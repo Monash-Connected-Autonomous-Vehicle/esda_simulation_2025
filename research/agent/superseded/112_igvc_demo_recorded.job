@@ -1,0 +1,93 @@
+# THE FIRST RUN OF THE CLASSIC DETECTOR, ON THE IGVC COURSE, ON VIDEO.
+#
+# Everything is in place and nothing has yet watched it drive: the detector
+# was chosen on still frames, and a still frame cannot tell you whether a
+# detection arriving at 5 Hz with gaps is enough to steer on. This runs it on
+# the IGVC arena and records what the camera sees, so there is something to
+# send to somebody rather than a table of numbers.
+#
+# WHAT IS NEW AND THEREFORE WHAT MIGHT BREAK. The node's classic branch has
+# never executed -- it was written and wired but could not be run from the
+# machine it was written on, which has no ROS. So this checks, early and
+# loudly, that /lane/points is actually being published before it bothers
+# recording anything. If the branch is broken, the first run says so in
+# thirty seconds instead of producing ten minutes of black video.
+#
+# TWO WORLDS, DELIBERATELY. igvc is the stock arena -- the one that looks
+# like the real course on film, and the one worth sending. igvc_oval_test is
+# the generated course every previous number was measured on, so if the stock
+# world misbehaves there is still a comparable run in the same job. The stock
+# world has never completed a scored run here (102 was killed, 107 held), so
+# treat it as the unknown of the two.
+#
+# BASELINE TO BEAT. Six lane-only runs on the OLD camera with the network:
+# 158.4 m (the only PASS), 69.9, 63.4, 15.5, 15.5, 15.3 -- one of six held the
+# course, and three failed identically at ~15.4 m with 106 blind warnings,
+# wedged because the robot stops when blind and a stopped robot never sees
+# anything new. The detector now reports 0.79 recall where the network managed
+# 0.49, so the question this answers is whether the blindness was the cause.
+# Watch the blind-warning count more than the distance.
+set -uo pipefail
+cd "$ESDA_HOME"
+source esda_lib.sh
+bash setup_wsl.sh --sync > /tmp/sync112.log 2>&1 || { tail -20 /tmp/sync112.log; exit 1; }
+
+python3 vision/test_camera_consistency.py || { echo "GEOMETRY DRIFTED"; exit 1; }
+python3 vision/lane_classic.py  --selftest || exit 1
+python3 vision/record_video.py  --selftest || exit 1
+echo "detector configured as:"
+grep -E "^  (kind|method):" vision/vision_config.yaml | sed 's/^/   /'
+
+OUT="$ESDA_HOME/recordings/$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$OUT"
+
+for W in igvc igvc_oval_test igvc; do
+  TS="$(date +%H%M%S)"
+  echo
+  echo "================= $W  ($TS) ================="
+  stop_all >/dev/null 2>&1 || true
+  read -r SX SY SYAW <<<"$(world_spawn "$W")"
+  bash demo.sh up --vision --no-rviz --world "$W" || { echo "bring-up failed"; continue; }
+
+  if [ "$(cat "$LOGS/nav2_active.flag" 2>/dev/null)" != "yes" ]; then
+    echo "Nav2 did not activate -- skipping $W"; stop_all >/dev/null 2>&1; continue
+  fi
+
+  # THE CHECK THAT MATTERS: is the classic branch actually producing points?
+  src
+  if ! timeout 30 ros2 topic echo /lane/points --once >/dev/null 2>&1; then
+    echo "NO /lane/points AFTER 30 s -- the classic detector is not producing"
+    echo "a mask. Look at $LOGS/vision.log before anything else; nothing below"
+    echo "is worth running."
+    tail -30 "$LOGS/vision.log" 2>/dev/null | sed 's/^/   /'
+    stop_all >/dev/null 2>&1; continue
+  fi
+  echo "   /lane/points is live -- the classic branch works"
+  grep -hE "detector:|mode=" "$LOGS/vision.log" 2>/dev/null | tail -2 | sed 's/^/   /'
+
+  bash demo.sh drive --lane-memory 6.0 --lidar-corridor --blind-timeout 8 --fov-deg 90
+  python3 vision/record_video.py --topic /lane/debug_image \
+          --out "$OUT/${W}_${TS}.mp4" --seconds 600 --fps 20 &
+  REC=$!
+  python3 vision/lap_test.py --world "$W" --seconds 600 \
+          --out "$ESDA_HOME/logs" --note "classic adaptive, recorded" \
+          2>&1 | tail -25
+  wait $REC 2>/dev/null || true
+  stop_all >/dev/null 2>&1 || true
+done
+
+echo
+echo "=== what came out ==="
+ls -la "$OUT" 2>/dev/null | sed 's/^/   /'
+echo
+echo "=== the runs ==="
+for d in $(ls -1dt logs/run_igvc* 2>/dev/null | head -3); do
+  echo "-- $d"
+  grep -hE "PASS|FAIL|path length|stalls |goals published" "$d"/lap_latest.txt 2>/dev/null | sed 's/^/   /'
+  printf "   blind warnings %s, carrots %s, recoveries %s\n" \
+    "$(grep -c "no sensing" "$d"/drive.log 2>/dev/null)" \
+    "$(grep -c "carrot" "$d"/drive.log 2>/dev/null)" \
+    "$(grep -c "steering again" "$d"/drive.log 2>/dev/null)"
+done
+echo
+echo "Videos are in recordings/ on the Windows side, ready to send."
