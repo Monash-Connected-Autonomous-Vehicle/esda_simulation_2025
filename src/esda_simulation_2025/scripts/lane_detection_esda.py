@@ -456,6 +456,8 @@ def _build_node_class():
             # Floor on the segment's own pixel. 0 disables it and restores
             # the pure transition test; 120 is the base class's old value.
             self.declare_parameter('profile_mid_min', 95)
+            # 'base' | 'edge'. See verify_line_profile for why base wins.
+            self.declare_parameter('profile_mode', 'base')
             self.declare_parameter('yolo_lane_class', 'lane')
             self.declare_parameter('yolo_cone_class', 'cone')
             self.declare_parameter('yolo_cone_dilate_px', 15)
@@ -696,11 +698,24 @@ def _build_node_class():
             return valid, white_mask, edges
 
         def verify_line_profile(self, gray, x1, y1, x2, y2, hsv=None):
-            """Edge-aware replacement for the base class's profile check.
+            """Base class's check by default; edge-aware on request.
 
-            Only the geometry of the sampling changes. The orange cone
-            rejection below is the base class's, called unchanged.
+            profile_mode:
+              base  the base class's own test, unchanged. DEFAULT, because
+                    it is the one with the better measured precision:
+                    0.784 against 0.653-0.658 on the 395-frame bench.
+              edge  sample across the segment instead of on it. Lets
+                    through 13% more segments, and on the bench most of
+                    the extra ones are false.
+
+            The live run that motivated `edge` showed both lane boundaries
+            present in 61% of frames against 46%. That is NOT independent
+            support: admitting more lines raises that number whether the
+            lines are real or not, so it is precisely what a precision
+            regression looks like from the navigator's side.
             """
+            if str(self.get_parameter('profile_mode').value) != 'edge':
+                return super().verify_line_profile(gray, x1, y1, x2, y2, hsv)
             if not edge_profile_ok(
                     gray, x1, y1, x2, y2,
                     near_px=int(self.get_parameter('profile_near_px').value),
