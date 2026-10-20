@@ -20,8 +20,8 @@ def generate_launch_description():
     spawn_x = LaunchConfiguration('spawn_x', default='0.0')
     spawn_y = LaunchConfiguration('spawn_y', default='0.0')
     robot_model = LaunchConfiguration('robot_model', default='robot.urdf.xacro')
-    camera_mount = LaunchConfiguration('camera_mount', default='front')
-    lidar_mount = LaunchConfiguration('lidar_mount', default='pole_top')
+    camera_mount = LaunchConfiguration('camera_mount', default='pole_top')
+    lidar_mount = LaunchConfiguration('lidar_mount', default='low')
     package_name = 'esda_simulation_2025'
     
     # ROS Controller Files:
@@ -195,10 +195,26 @@ def generate_launch_description():
           get_package_share_directory(package_name), 'worlds', 'igvc.sdf')),
       DeclareLaunchArgument('robot_model',     default_value='robot.urdf.xacro',
           description='xacro filename under description/ to load (e.g. robot_dual_camera.urdf.xacro)'),
-      DeclareLaunchArgument('camera_mount',    default_value='front',
-          description='ZED mount point: "front" (low, forward) or "pole_top" (on the LiDAR pole)'),
-      DeclareLaunchArgument('lidar_mount',     default_value='pole_top',
-          description='LiDAR mount point: "pole_top" (on the mounting pole) or "low" (original, directly on chassis)'),
+      # Defaults changed 2026-10-20 from front/pole_top on measured evidence:
+      # 36 runs, 3 worlds x 4 mount combinations x 3 repeats. pole_top camera
+      # with a low LiDAR ranked best in every world (mean rank 1.33 of 4).
+      # Lowering the LiDAR roughly doubles path length and drops the stalled
+      # fraction from 72% to 35%; raising the camera is what makes lanes
+      # visible at all on sim_world_ic, where six consecutive front-camera
+      # runs detected zero lane segments. See the sweep results doc.
+      #
+      # IF YOU CHANGE camera_mount, CHANGE THE DETECTOR GEOMETRY TOO:
+      #   pole_top -> -p camera_mount_height:=1.30  -p camera_mount_pitch:=-0.2618
+      #   front    -> -p camera_mount_height:=0.315 -p camera_mount_pitch:=0.0
+      # The pitch sign is NEGATIVE in the detector and POSITIVE here: the
+      # detector rotates rays in the optical frame (Y down) and solves
+      # t = height / ray_y_rot, so a downward tilt is negative there.
+      # Get it wrong and the mask still looks perfect while /lane_obstacles
+      # projects to the wrong ground range.
+      DeclareLaunchArgument('camera_mount',    default_value='pole_top',
+          description='ZED mount point: "pole_top" (default, 1.30 m, 15 deg down) or "front" (low, forward, 0.315 m level)'),
+      DeclareLaunchArgument('lidar_mount',     default_value='low',
+          description='LiDAR mount point: "low" (default, on the chassis at 0.385 m) or "pole_top" (on the pole at 1.385 m)'),
       rsp,
       ekf_launch,
       ign_resource_path,

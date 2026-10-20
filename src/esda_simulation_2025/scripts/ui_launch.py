@@ -528,6 +528,21 @@ class SimManager(ctk.CTk):
             else "false"
         )
 
+        # The detector projects lane pixels to the ground using its own
+        # camera_mount_height and camera_mount_pitch. Those defaults (0.315 m,
+        # 0 rad) describe the FRONT mount. If the sim was launched on the
+        # pole mount and these are not passed, the preview window still looks
+        # perfect while /lane_obstacles lands at the wrong ground range -- a
+        # failure invisible in the one place you would look. So they are
+        # derived from the same dropdown that launched the sim.
+        #
+        # Pitch is NEGATIVE for a downward tilt here and POSITIVE in
+        # camera.xacro for the same 15 degrees; see launch_sim.launch.py.
+        _mount = self.camera_mount_var.get()
+        lane_geom = (" -p camera_mount_height:=1.30 -p camera_mount_pitch:=-0.2618"
+                     if _mount == "pole_top" else
+                     " -p camera_mount_height:=0.315 -p camera_mount_pitch:=0.0")
+
         if mode == "Adaptive":
             # lane_detection_esda.py -- same base class, same Hough and
             # dark-white-dark filter, same depth projection. Only the mask
@@ -568,7 +583,7 @@ class SimManager(ctk.CTk):
                 f"-p show_visualization:={show_visualization}"
             )
 
-        self.run_in_terminal("LANE", lane_cmd)
+        self.run_in_terminal("LANE", lane_cmd + lane_geom)
 
         # Side cameras have no stereo pair - remap left/right/depth to the same
         # monocular feed and its depth sensor, and remap outputs so they don't

@@ -1,0 +1,9 @@
+[INFO] [launch]: All log files can be found below /home/felix/.ros/log/2026-10-19-15-57-56-135535-DESKTOP-D10PH6C-9065
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [async_slam_toolbox_node-1]: process started with pid [9105]
+[async_slam_toolbox_node-1] [INFO] [1792385876.216556750] [slam_toolbox]: Node using stack size 40000000
+[async_slam_toolbox_node-1] [INFO] [1792385876.256154643] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
+[async_slam_toolbox_node-1] [INFO] [1792385876.257367976] [slam_toolbox]: CeresSolver: Using SCHUR_JACOBI preconditioner.
+[async_slam_toolbox_node-1] [WARN] [1792385877.155724206] [slam_toolbox]: minimum laser range setting (0.0 m) exceeds the capabilities of the used Lidar (0.1 m)
+[async_slam_toolbox_node-1] [WARN] [1792385877.155926204] [slam_toolbox]: maximum laser range setting (20.0 m) exceeds the capabilities of the used Lidar (12.0 m)
+[async_slam_toolbox_node-1] Registering sensor: [Custom Described Lidar]

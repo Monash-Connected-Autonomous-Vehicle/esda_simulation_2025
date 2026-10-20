@@ -46,6 +46,48 @@ driving the robot off course. `lane_detection_esda.py` carries a guard that
 rejects any mask covering more than one sixth of the ROI, but adaptive is the
 safer default regardless.
 
+### Sensor mount (default changed 2026-10-20)
+
+The default is now **camera on the pole (1.30 m, 15 deg down), LiDAR low on
+the chassis (0.385 m)** - `camera_mount:=pole_top lidar_mount:=low`.
+
+Measured over 36 runs, 3 worlds x 4 mount combinations x 3 repeats:
+
+| configuration | igvc | ic | bball | mean rank |
+|---|---|---|---|---|
+| front cam + pole LiDAR (old default) | 10.5 | 0.0 | 2.3 | 3.00 |
+| pole cam + pole LiDAR | 10.1 | 4.6 | 0.0 | 3.33 |
+| front cam + low LiDAR | 15.5 | 0.0 | 9.0 | 2.33 |
+| **pole cam + low LiDAR (new default)** | 11.3 | **12.4** | **18.8** | **1.33** |
+
+Median furthest-from-start in metres. Two separate effects: LiDAR height
+governs whether the robot drives (path length roughly doubles, stalls fall
+from 72% to 35%, in both camera positions), camera height governs whether
+lanes are seen at all (six consecutive front-camera runs on ic detected zero
+segments).
+
+**If you change `camera_mount`, change the detector geometry with it:**
+
+```
+pole_top:  -p camera_mount_height:=1.30  -p camera_mount_pitch:=-0.2618
+front:     -p camera_mount_height:=0.315 -p camera_mount_pitch:=0.0
+```
+
+The pitch sign is **negative** in the detector and **positive** in
+`camera.xacro` for the same 15 degrees. The detector rotates rays in the
+optical frame (Y down) and solves `t = height / ray_y_rot`, so a downward
+tilt is negative there. Get it wrong and the mask still looks perfect in the
+preview while `/lane_obstacles` projects to the wrong ground range. The UI
+now derives these from its own mount dropdown, so this only bites a bare
+`ros2 run`.
+
+Not settled: *why* LiDAR height matters. The obvious explanation, that a
+pole-top LiDAR scans over the barrels, is disproved - `min_lidar_clearance_m`
+is 0.10-0.96 m for pole configurations and 0.35-0.59 m for low, so all of
+them get close returns. The stall pattern points at localisation instead.
+
+---
+
 ### Detector methods
 
 `-p detector_method:=` accepts `adaptive` (default), `otsu`, `tophat`,

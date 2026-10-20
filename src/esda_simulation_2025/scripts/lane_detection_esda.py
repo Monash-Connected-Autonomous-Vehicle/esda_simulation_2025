@@ -272,6 +272,80 @@ def _build_node_class():
                 f"lane_detection_esda: method={self.method} "
                 f"max_area_frac={self.max_area_frac}")
 
+            # --- debug image on a topic --------------------------------
+            # The base class composites its four-pane view and shows it with
+            # cv2.imshow, which needs a display and cannot be recorded. For
+            # unattended benchmark runs we want THE SAME PICTURE on a topic.
+            #
+            # Rather than re-implement the compositing here (which would
+            # drift from the base class the first time anyone edits it), we
+            # intercept the cv2.imshow call. Whatever a human would have seen
+            # is exactly what gets published, by construction.
+            #
+            # Note the base only builds the composite when show_visualization
+            # is true, so that must stay on; debug_window decides whether an
+            # actual window also appears.
+            self.declare_parameter('debug_image_topic', '')
+            self.declare_parameter('debug_window', True)
+            self._debug_pub = None
+            topic = str(self.get_parameter('debug_image_topic').value).strip()
+            if topic:
+                if not bool(self.get_parameter('show_visualization').value):
+                    self.get_logger().error(
+                        "debug_image_topic is set but show_visualization is "
+                        "false: the base class only builds the composite when "
+                        "visualization is on, so nothing would be published. "
+                        "Pass -p show_visualization:=true -p debug_window:=false")
+                else:
+                    self._install_debug_publisher(topic)
+
+        def _install_debug_publisher(self, topic):
+            """Publish the base class's preview composite instead of showing it.
+
+            This rebinds cv2.imshow/cv2.waitKey process-wide. That is
+            deliberate and it is why it is done here rather than in the base
+            class: the detector subclass is the only thing in this process
+            that draws, so nothing else can be surprised by it.
+            """
+            from sensor_msgs.msg import Image
+            try:
+                from cv_bridge import CvBridge
+            except ImportError as e:                      # noqa: BLE001
+                self.get_logger().error(f"no cv_bridge, debug image off: {e}")
+                return
+
+            window = bool(self.get_parameter('debug_window').value)
+            pub = self.create_publisher(Image, topic, 1)
+            bridge = CvBridge()
+            self._debug_pub = pub
+            logger, clock = self.get_logger(), self.get_clock()
+            orig_imshow, orig_waitkey = cv2.imshow, cv2.waitKey
+            state = {"n": 0}
+
+            def imshow(name, img):
+                try:
+                    msg = bridge.cv2_to_imgmsg(img, encoding='bgr8')
+                    msg.header.stamp = clock.now().to_msg()
+                    msg.header.frame_id = 'camera_link'
+                    pub.publish(msg)
+                    state["n"] += 1
+                    if state["n"] == 1:
+                        logger.info(f"first debug frame published to {topic}")
+                except Exception as e:                    # noqa: BLE001
+                    logger.warn(f"debug image publish failed: {e}",
+                                throttle_duration_sec=10.0)
+                if window:
+                    orig_imshow(name, img)
+
+            def waitkey(delay=1):
+                # Headless: never enter the GUI event loop, which blocks or
+                # throws with no display attached.
+                return orig_waitkey(delay) if window else -1
+
+            cv2.imshow = imshow
+            cv2.waitKey = waitkey
+            logger.info(f"debug image -> {topic} (window={window})")
+
         def _load_yolo(self):
             w = str(self.get_parameter('yolo_weights').value)
             if not w:

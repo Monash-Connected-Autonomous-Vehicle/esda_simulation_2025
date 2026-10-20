@@ -6,10 +6,25 @@
          "low" reverts to the original single mount, directly on the chassis,
          no pole. Select with e.g. `xacro robot.urdf.xacro lidar_mount:=low`.
 
-         camera.xacro's "pole_top" camera_mount option assumes this pole
-         exists (it reuses lidar_mount_x as its own x) - pairing
-         camera_mount:=pole_top with lidar_mount:=low doesn't make physical
-         sense (there is no pole to mount it on). -->
+         camera_mount:=pole_top with lidar_mount:=low IS NOW THE DEFAULT,
+         on measured evidence (36 runs, 2026-10-20: best of four mount
+         combinations in all three worlds).
+
+         An earlier version of this comment said that combination made no
+         physical sense. That was half right. camera.xacro's pole_top joint
+         has parent link "chassis" with an absolute offset, not the pole,
+         so the camera's POSE is correct whether or not the pole link is
+         built - the TF, and therefore every lane projection, is valid.
+         What is missing with lidar_mount:=low is only the pole's visual,
+         collision and inertia.
+
+         STILL OPEN, FOR WHOEVER BUILDS THE REAL MAST: the pole here sits at
+         y=0, which is exactly where the low LiDAR mounts, so a mast on this
+         axis would sit in the LiDAR's own scan plane. The camera is offset
+         to y=+0.10, so the physical mast wants to be its own column clear
+         of the sensor. Whatever gets built will appear in the LiDAR returns
+         and should be re-measured, because no mast geometry was present in
+         the runs this default is based on. -->
     <xacro:arg name="lidar_mount" default="pole_top" />
 
     <!-- Pole: square tube, sized to match the physical part
