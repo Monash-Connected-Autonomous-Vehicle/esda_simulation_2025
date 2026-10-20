@@ -220,6 +220,22 @@ def clean_mask(mask, roi, min_area=120, close_px=3, max_area_frac=0.15):
 # Self-test
 # ==========================================================================
 
+REF_IMAGE_H = 480        # the camera near_px/far_px were tuned against
+
+
+def scaled_offsets(image_h, near_px, far_px, ref_h=REF_IMAGE_H):
+    """Pixel offsets rescaled from the reference camera to this image.
+
+    A lane line's width in PIXELS depends on the camera, so an offset
+    measured in pixels does not transfer between them. Scaling by image
+    height keeps the offsets at the same fraction of the frame, which is
+    the closest thing to "the same physical distance" available without
+    the intrinsics. At least one pixel either way, always.
+    """
+    s = float(image_h) / float(ref_h)
+    return max(1, int(round(near_px * s))), max(2, int(round(far_px * s)))
+
+
 def edge_profile_ok(gray, x1, y1, x2, y2, near_px=3, far_px=12,
                     white_hi=120, dark_lo=110, mid_min=95):
     """Does this segment lie on a light-to-dark transition?
@@ -249,6 +265,7 @@ def edge_profile_ok(gray, x1, y1, x2, y2, near_px=3, far_px=12,
     nx, ny = -dy / mag, dx / mag
     mx, my = (x1 + x2) / 2.0, (y1 + y2) / 2.0
     h, w = gray.shape
+    near_px, far_px = scaled_offsets(h, near_px, far_px)
 
     def g(dist):
         xx, yy = int(mx + nx * dist), int(my + ny * dist)
@@ -383,6 +400,12 @@ def selftest():
        edge_profile_ok(blend, 94, 60, 94, 140, mid_min=95))
     ck("a segment on plain ground beside paint is REJECTED by mid_min",
        not edge_profile_ok(blend, 90, 60, 90, 140, mid_min=95))
+    ck("offsets are unchanged on the 480-row camera they were tuned on",
+       scaled_offsets(480, 3, 12) == (3, 12))
+    ck("a 360-row frame gets proportionally smaller offsets",
+       scaled_offsets(360, 3, 12) == (2, 9))
+    ck("offsets never collapse to zero on a tiny image",
+       scaled_offsets(40, 3, 12) == (1, 2))
     ck("mid_min=0 restores the pure transition test",
        edge_profile_ok(blend, 91, 60, 91, 140, mid_min=0)
        is edge_profile_ok(blend, 91, 60, 91, 140, mid_min=0))
