@@ -15,8 +15,22 @@ paints the ground ahead as an obstacle. At 0.385 m and 8.5 deg down the
 ground is 2.6 m away, which is well inside obstacle_max_range and lands in
 the costmap as a wall across the course.
 
-Logs at 5 Hz: pose, IMU pitch, and the nearest return ahead on /scan and
-on /scan_fused, which is what Nav2 consumes. Then the rows are grouped by
+PITCH: USE THE EKF, NOT THE RAW IMU. The first version of this read
+/imu/data directly and reported +19 deg on flat ground, pinned at +30.00
+everywhere. That IMU is the ZED's, on the pole mount behind a 15 deg tilt
+and the optical-frame rotations, so its quaternion is the sensor's
+attitude, not the robot's. /odometry/filtered comes out of robot_localization
+already in base_link, which is the frame the question is about. Both are
+logged so the difference stays visible rather than being quietly dropped.
+
+COMMANDED VERSUS ACTUAL. The thing that separates "cannot climb" from
+"was never told to climb": if cmd_vel asks for forward motion and the
+wheels report none, it is traction; if cmd_vel is near zero, the
+navigator stopped asking and the slope is not the problem.
+
+Logs at 5 Hz: pose, both pitches, commanded and actual speed, and the
+nearest return ahead on /scan and /scan_fused, which is what Nav2
+consumes. Then the rows are grouped by
 where the robot was, so "on the ramp" can be compared with "before it"
 without any guessing about timing.
 """
@@ -71,6 +85,16 @@ def selftest():
     ck("ignores non-finite and out-of-range",
        min_ahead([float("nan"), 0.0, 100.0], math.radians(-1),
                  math.radians(1.0), 15) == float("inf"))
+    # commanded-versus-actual, the distinction the whole run turns on
+    def verdict(cmd, act, eps_cmd=0.05, eps_act=0.03):
+        if abs(cmd) < eps_cmd:
+            return "not commanded"
+        return "traction" if abs(act) < eps_act else "moving"
+    ck("asked to move and not moving -> traction", verdict(0.4, 0.00) == "traction")
+    ck("asked to move and moving -> moving", verdict(0.4, 0.35) == "moving")
+    ck("not asked -> not commanded", verdict(0.0, 0.00) == "not commanded")
+    ck("a crawl still counts as moving", verdict(0.4, 0.10) == "moving")
+
     print()
     if fails:
         print("%d FAILED" % len(fails)); return 1
@@ -93,19 +117,28 @@ def main():
     from rclpy.qos import qos_profile_sensor_data
     from nav_msgs.msg import Odometry
     from sensor_msgs.msg import Imu, LaserScan
+    from geometry_msgs.msg import Twist
 
     class Probe(Node):
         def __init__(self):
             super().__init__("ramp_probe")
             self.x = self.y = 0.0
-            self.pitch = float("nan")
+            self.pitch_ekf = float("nan")
+            self.pitch_imu = float("nan")
+            self.cmd_vx = 0.0
+            self.act_vx = 0.0
             self.scan = {}
             self.n = 0
             self.f = open(a.out, "w")
-            self.f.write("t,x,y,pitch_deg,min_scan,min_fused\n")
+            self.f.write("t,x,y,pitch_ekf,pitch_imu,cmd_vx,act_vx,min_scan,min_fused\n")
             self.create_subscription(Odometry, a.odom, self._odom, 10)
+            self.create_subscription(Odometry, "/odometry/filtered",
+                                     self._ekf, 10)
             self.create_subscription(Imu, "/imu/data", self._imu,
                                      qos_profile_sensor_data)
+            for t in ("/cmd_vel", "/cmd_vel_nav"):
+                self.create_subscription(
+                    Twist, t, (lambda tt: lambda m: self._cmd(tt, m))(t), 10)
             for t in ("/scan", "/scan_fused"):
                 self.create_subscription(
                     LaserScan, t,
@@ -118,20 +151,33 @@ def main():
         def _odom(self, m):
             self.x = m.pose.pose.position.x
             self.y = m.pose.pose.position.y
+            self.act_vx = m.twist.twist.linear.x
+
+        def _ekf(self, m):
+            q = m.pose.pose.orientation
+            self.pitch_ekf = quat_pitch(q.x, q.y, q.z, q.w)
+
+        def _cmd(self, t, m):
+            # whichever is moving; twist_mux means only one is live
+            if abs(m.linear.x) > abs(self.cmd_vx) or t == "/cmd_vel":
+                self.cmd_vx = m.linear.x
 
         def _imu(self, m):
             q = m.orientation
-            self.pitch = quat_pitch(q.x, q.y, q.z, q.w)
+            self.pitch_imu = quat_pitch(q.x, q.y, q.z, q.w)
 
         def _scan(self, t, m):
             self.scan[t] = min_ahead(list(m.ranges), m.angle_min,
                                      m.angle_increment, 15.0)
 
         def _tick(self):
-            self.f.write("%.2f,%.3f,%.3f,%.2f,%.3f,%.3f\n" % (
-                time.time() - self.t0, self.x, self.y, self.pitch,
+            self.f.write("%.2f,%.3f,%.3f,%.2f,%.2f,%.3f,%.3f,%.3f,%.3f\n" % (
+                time.time() - self.t0, self.x, self.y,
+                self.pitch_ekf, self.pitch_imu, self.cmd_vx, self.act_vx,
                 self.scan.get("/scan", float("inf")),
                 self.scan.get("/scan_fused", float("inf"))))
+            self.cmd_vx = 0.0          # decay, so a stale command cannot
+                                       # look like a live one
             self.f.flush()
             self.n += 1
 
