@@ -5,7 +5,7 @@
 |---|---|---|---|
 | `main` | Stable, default branch | @sam | ✅ Stable |
 | `yolo-lane-cone` | YOLO detection for lanes and cones | @felix | 🚧 Active |
-| `feature/nav2-recovery` | Nav2 recovery behaviours | @sam | 🚧 Active |
+| `feature/nav2-recovery` | Nav2 recovery behaviours - waypoint navigator recommendation | @sam | 🚧 Active |
 | `yolo-adaptive` | Adaptive YOLO perception | @felix | 🚧 Active |
 | `feature/hardware-interface` | ros2_control hardware interface for the real vehicle | @xavier-marie | 🚧 Active |
 | `feature/new-maps` | New simulation maps/worlds | @ishaan | 🚧 Active |
