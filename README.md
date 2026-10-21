@@ -19,10 +19,6 @@ Legend: ✅ Stable · 🚧 Active · 🔍 In review · 💤 Paused
 `sam`, `victor`, `mattlab_pc`, `xavier`, `xavier_linux_asus_laptop` are archived as tags (`archive/<name>`).
 To restore one: `git fetch --tags && git checkout -b <name> archive/<name>`
 
-#### Archived branches
-`sam`, `victor`, `mattlab_pc`, `xavier`, `xavier_linux_asus_laptop` are archived as tags (`archive/<name>`).
-To restore one: `git fetch --tags && git checkout -b <name> archive/<name>`
-
 > To use a branch: `git checkout <branch>`, then rebuild from `workspace_name` and run `source install/setup.bash`.
 ### 1. Set up
 #### 1.1. Install Necessary Dependencies
