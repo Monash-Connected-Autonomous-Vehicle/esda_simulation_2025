@@ -202,6 +202,103 @@ def path_clearance(snapshot, start_x: float, start_y: float,
     return float(clearance.min())
 
 
+# ---------------------------------------------------------------------------
+# One visible lane boundary is enough
+#
+# Ported verbatim from for_server/vision/lane_side.py (23 checks in
+# vision/test_lane_side.py). Inlined rather than imported because that file
+# lives outside the ROS package; keep the two in step.
+#
+# The ambiguity it resolves: with a single line on the robot's left at y_L,
+# either it is the lane's LEFT edge (lane runs right from it) or its RIGHT
+# edge (lane runs left). Assuming the first is how a robot ends up tracking
+# half a lane width OUTSIDE the course, parallel to it, steering further out.
+# The trap is absorbing, so it looks like confident driving until the paint
+# runs out.
+# ---------------------------------------------------------------------------
+
+def view_half_at(x, fov_deg):
+    """Half-width of ground the camera covers at forward distance x."""
+    if fov_deg <= 0.0 or x <= 0.0:
+        return 0.0
+    return float(x) * math.tan(math.radians(fov_deg) / 2.0)
+
+
+def one_sided_lane(y_line, on_left, lane_w, view_half, margin=0.3):
+    """Lane interval (lo, hi) in base_link y, from a single visible line.
+
+    Each hypothesis predicts where the OTHER line should be. If one puts it
+    comfortably inside the camera's view and nothing was detected there, that
+    hypothesis is contradicted; if the other puts it outside the view it is
+    untestable and survives. Prefer the one that was not refuted. Only the
+    narrow case 0 < near < lane_w/2 is ambiguous - further out, the naive
+    reading already aims back toward the lane.
+
+    Returns ((lo, hi), flipped). view_half 0.0 restores the naive reading.
+    """
+    if on_left:
+        a = (y_line - lane_w, y_line)
+        b = (y_line, y_line + lane_w)
+        near = y_line
+        other_a, other_b = a[0], b[1]
+    else:
+        a = (y_line, y_line + lane_w)
+        b = (y_line - lane_w, y_line)
+        near = -y_line
+        other_a, other_b = a[1], b[0]
+
+    if view_half > 0.0 and 0.0 < near < lane_w / 2.0:
+        visible = view_half - margin
+        if abs(other_a) < visible and not abs(other_b) < visible:
+            return b, True
+    return a, False
+
+
+def one_sided_centreline(points, robot_x, robot_y, robot_yaw,
+                         lane_w, fov_deg, margin=0.3):
+    """Centreline from one boundary, in the same frame as `points`.
+
+    The boundary's nearest point is taken into base_link to get its signed
+    lateral offset and forward range; one_sided_lane decides which edge it is;
+    every point then shifts by the constant lateral offset from that line to
+    the lane centre. Which side the line is on is read from the geometry
+    (lat > 0), not from the detector's marker namespace, so a robot that has
+    crossed a line is handled correctly.
+
+    Returns (shifted_points, flipped). Empty list when there is nothing usable.
+    """
+    if len(points) < 2 or lane_w <= 0.0:
+        return [], False
+
+    cos_yaw, sin_yaw = math.cos(robot_yaw), math.sin(robot_yaw)
+
+    nearest = None
+    for px, py in points:
+        dx, dy = px - robot_x, py - robot_y
+        distance = math.hypot(dx, dy)
+        if nearest is None or distance < nearest[0]:
+            forward = dx * cos_yaw + dy * sin_yaw
+            lateral = -dx * sin_yaw + dy * cos_yaw
+            nearest = (distance, forward, lateral)
+
+    _, forward, lateral = nearest
+
+    (lo, hi), flipped = one_sided_lane(
+        lateral,
+        lateral > 0.0,
+        lane_w,
+        view_half_at(forward, fov_deg),
+        margin
+    )
+
+    shift = (lo + hi) / 2.0 - lateral
+
+    return (
+        [(px - shift * sin_yaw, py + shift * cos_yaw) for px, py in points],
+        flipped
+    )
+
+
 def scan_sector_clearance(scan, angle_min_deg: float, angle_max_deg: float) -> float:
     """
     Closest return within an angular sector, in metres.
@@ -464,6 +561,11 @@ class WaypointNavigator(Node):
         # max_unknown_distance in the Tier 3 raycast so the two agree.
         # Set very large to ignore unknown space entirely (the old behaviour).
         self.declare_parameter('unknown_clearance_allowance', 0.8)
+        # Defect A. Read live at use so they can be tuned on a running stack.
+        self.declare_parameter('enable_one_sided_lane', True)
+        self.declare_parameter('assumed_lane_width', 3.0)
+        self.declare_parameter('camera_fov_deg', 62.4)   # hfov 1.089 rad
+        self.declare_parameter('repeat_goal_tolerance', 0.30)
 
         # Lane centreline is discarded if lane detection stops publishing.
         # lane_detection.py runs at ~10 Hz, so 1.5 s is several missed frames.
@@ -786,6 +888,10 @@ class WaypointNavigator(Node):
 
         # How long to tolerate continuous failure to generate a normal waypoint before entering recovery mode
         self.no_candidate_timeout = 20.0 # Seconds
+        # Defect C: the goal that most recently failed, and where the robot
+        # was when it did, as (goal_x, goal_y, robot_x, robot_y).
+        self.last_normal_goal = None
+        self.failed_normal_goal = None
 
         # Whether the one relaxed retry (unknown space ignored) has been used
         # for the current recovery episode. See handle_no_candidate_timeout.
@@ -930,6 +1036,29 @@ class WaypointNavigator(Node):
             'gps_heading_no_lane_timeout').get_parameter_value().double_value
 
 
+    def repeat_goal_blocked(self, goal_pose) -> bool:
+        """True when this is the goal that just failed, from the same spot.
+
+        Both halves matter: a goal only counts as a repeat if the ROBOT has
+        not moved either. Once it has, the same coordinates are a different
+        proposition and are allowed through.
+        """
+        record = self.failed_normal_goal
+
+        if record is None:
+            return False
+
+        goal_x, goal_y, robot_x, robot_y = record
+        tolerance = self.get_parameter(
+            'repeat_goal_tolerance').get_parameter_value().double_value
+
+        return (
+            math.hypot(goal_pose.pose.position.x - goal_x,
+                       goal_pose.pose.position.y - goal_y) < tolerance
+            and math.hypot(self.robot_x - robot_x,
+                           self.robot_y - robot_y) < tolerance
+        )
+
     def send_goal(self, goal_pose: PoseStamped, mode="normal", preempt=False,
                   is_far=False, detour=False):
         """
@@ -952,6 +1081,26 @@ class WaypointNavigator(Node):
                 "Cannot send goal: another Nav2 goal is already active."
             )
             return False
+
+        if mode == "normal" and self.repeat_goal_blocked(goal_pose):
+            # See repeat_goal_blocked. Substitute the nudge rather than
+            # refusing outright: refusing just returns to the caller, which
+            # recomputes the same goal from the same unchanged pose.
+            self.failed_normal_goal = None
+            nudge_goal = self.find_stuck_nudge_goal()
+
+            if nudge_goal is None:
+                self.get_logger().warn(
+                    "Refusing to resend the goal that just failed from this "
+                    "spot, and no nudge is available."
+                )
+                return False
+
+            self.get_logger().warn(
+                "Goal unchanged since it failed and the robot has not moved; "
+                "nudging instead of repeating it."
+            )
+            goal_pose = nudge_goal
 
         goal_pose.header.frame_id = self.frame_id
         goal_pose.header.stamp = self.get_clock().now().to_msg()
@@ -981,6 +1130,19 @@ class WaypointNavigator(Node):
         self.force_replan = False
         self.last_sent_goal = goal_pose
         self.last_goal_dispatch_time = self.get_clock().now()
+
+        # Remembered so the failure handler can tell a repeat from a retry
+        # that the robot has at least moved for. Cleared on dispatch of
+        # anything else, so only the most recent normal goal is tracked.
+        if mode == "normal":
+            self.last_normal_goal = (
+                goal_pose.pose.position.x,
+                goal_pose.pose.position.y,
+                self.robot_x,
+                self.robot_y
+            )
+        else:
+            self.last_normal_goal = None
 
         return True
 
@@ -2015,12 +2177,62 @@ class WaypointNavigator(Node):
             f"Right points: {len(right_points)}"
         )
 
-        if len(left_points) < 2 or len(right_points) < 2:
-            self.get_logger().warn(
-                "Not enough left/right lane points."
-            )
+        if len(left_points) < 2 and len(right_points) < 2:
+            self.get_logger().warn("No lane points on either side.")
             self.lane_centreline = []
             self.last_lane_update_time = None
+            return
+
+        if len(left_points) < 2 or len(right_points) < 2:
+            # One boundary is enough - see one_sided_centreline. Requiring
+            # both discarded 49.6% of frames on igvc.sdf and 85.4% on
+            # igvc_carpark, where the discard sustained the very position
+            # that caused it.
+            if not self.get_parameter(
+                    'enable_one_sided_lane').get_parameter_value().bool_value:
+                self.get_logger().warn("Not enough left/right lane points.")
+                self.lane_centreline = []
+                self.last_lane_update_time = None
+                return
+
+            seen = left_points if len(left_points) >= 2 else right_points
+
+            shifted, flipped = one_sided_centreline(
+                seen,
+                self.robot_x,
+                self.robot_y,
+                self.robot_yaw,
+                self.get_parameter(
+                    'assumed_lane_width').get_parameter_value().double_value,
+                self.get_parameter(
+                    'camera_fov_deg').get_parameter_value().double_value
+            )
+
+            if not shifted:
+                self.get_logger().warn("One-sided lane: no usable centreline.")
+                self.lane_centreline = []
+                self.last_lane_update_time = None
+                return
+
+            shifted.sort(
+                key=lambda point: math.hypot(
+                    point[0] - self.robot_x,
+                    point[1] - self.robot_y
+                )
+            )
+
+            self.lane_centreline = self.smooth_centerline(
+                shifted,
+                window_size=3
+            )
+            self.last_lane_update_time = self.get_clock().now()
+
+            self.get_logger().info(
+                "Updated lane centreline with %d points "
+                "(ONE-SIDED from %d, edge %s)"
+                % (len(self.lane_centreline), len(seen),
+                   "FLIPPED" if flipped else "as read")
+            )
             return
 
         # Sort each boundary from near to far.
@@ -3878,6 +4090,8 @@ class WaypointNavigator(Node):
                 f"Normal navigation failed. Result: {result}. "
                 f"Entering recovery mode."
             )
+
+            self.failed_normal_goal = self.last_normal_goal
 
             self.enter_recovery_mode = True
             self.robot_recovery()

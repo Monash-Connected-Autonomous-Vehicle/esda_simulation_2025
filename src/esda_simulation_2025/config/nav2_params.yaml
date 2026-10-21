@@ -141,7 +141,10 @@ controller_server:
       vy_std: 0.0
       wz_std: 0.3
       vx_max: 1.0
-      vx_min: 0.0
+      # 0.0 forbids reverse entirely, so a robot boxed in can only
+      # rotate -- campus: clearance 0.37 m inside a 0.45 m radius,
+      # 1.14 rad/m of turning, 20 follow_path aborts. nav2 default.
+      vx_min: -0.35
       vy_max: 0.0
       wz_max: 1.2
       iteration_count: 1
@@ -243,6 +246,11 @@ local_costmap:
       width: 10
       height: 10
       resolution: 0.05
+      # A polygon footprint was tried (job 364) and reverted (369):
+      # its circumscribed radius of 1.07 m exceeds inflation_radius,
+      # which nav2 cannot represent -- 1462 planner aborts on campus
+      # against 36. See description/robot_core_ref.xacro: this circle
+      # still leaves 0.52 m of rear overhang unmodelled.
       robot_radius: 0.45
       plugins: ["voxel_layer", "inflation_layer"]
       # filters: ["keepout_filter"]
@@ -336,6 +344,11 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
 
+      # A polygon footprint was tried (job 364) and reverted (369):
+      # its circumscribed radius of 1.07 m exceeds inflation_radius,
+      # which nav2 cannot represent -- 1462 planner aborts on campus
+      # against 36. See description/robot_core_ref.xacro: this circle
+      # still leaves 0.52 m of rear overhang unmodelled.
       robot_radius: 0.45
       resolution: 0.05
 
@@ -522,6 +535,8 @@ planner_server:
     introspection_mode: "disabled"
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
+      # Tried at 0.5 with allow_partial_planning (job 362) and reverted
+      # (372): campus went from 36 planner aborts to 1462 and then 3355.
       tolerance: 0.1
       use_astar: true
       allow_unknown: true
