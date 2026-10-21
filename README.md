@@ -1,12 +1,23 @@
 ## 2025 ESDA Vehicle Simulation
 
 ### Branches
-| Branch | Purpose | Status | Owner |
-|---|---|---|---|
-| `main` | Stable simulation, builds and launches cleanly | ✅ Stable | @sam |
-| `dev` | Integration branch for new features before main | 🚧 Active | @sam |
-| `feature/nav2-tuning` | Tuning AMCL and Nav2 parameters | 🚧 Active | @name |
-| `exp/slam-test` | Experimenting with slam_toolbox settings | 🧪 Experimental | @name |
+| Branch | Purpose | Status |
+|---|---|---|
+| `main` | Stable, default branch | ✅ Stable |
+| `yolo-lane-cone` | YOLO detection for lanes and cones | 🚧 Active |
+| `feature/nav2-recovery` | Nav2 recovery behaviours | 🚧 Active |
+| `yolo-adaptive` | Adaptive YOLO perception | 🚧 Active |
+| `feature/hardware-interface` | ros2_control hardware interface for the real vehicle | 🚧 Active |
+| `feature/new-maps` | New simulation maps/worlds | 🚧 Active |
+| `esda-jetson-testing` | Testing on the Jetson Orin Nano | 🚧 Active |
+| `feature/reactive-local-navigation` | Reactive local planner / obstacle avoidance | 💤 Paused |
+| `feature/waypoint-recommender-revamp` | Waypoint recommender rework (PR #1) | 🔍 In review |
+
+Legend: ✅ Stable · 🚧 Active · 🔍 In review · 💤 Paused
+
+#### Archived branches
+`sam`, `victor`, `mattlab_pc`, `xavier`, `xavier_linux_asus_laptop` are archived as tags (`archive/<name>`).
+To restore one: `git fetch --tags && git checkout -b <name> archive/<name>`
 
 > To use a branch: `git checkout <branch>`, then rebuild from `workspace_name` and run `source install/setup.bash`.
 ### 1. Set up
