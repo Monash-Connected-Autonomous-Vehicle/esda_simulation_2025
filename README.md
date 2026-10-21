@@ -1,4 +1,14 @@
 ## 2025 ESDA Vehicle Simulation
+
+### Branches
+| Branch | Purpose | Status | Owner |
+|---|---|---|---|
+| `main` | Stable simulation, builds and launches cleanly | ✅ Stable | @sam |
+| `dev` | Integration branch for new features before main | 🚧 Active | @sam |
+| `feature/nav2-tuning` | Tuning AMCL and Nav2 parameters | 🚧 Active | @name |
+| `exp/slam-test` | Experimenting with slam_toolbox settings | 🧪 Experimental | @name |
+
+> To use a branch: `git checkout <branch>`, then rebuild from `workspace_name` and run `source install/setup.bash`.
 ### 1. Set up
 #### 1.1. Install Necessary Dependencies
 
