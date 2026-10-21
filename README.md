@@ -1,19 +1,23 @@
 ## 2025 ESDA Vehicle Simulation
 
 ### Branches
-| Branch | Purpose | Status |
-|---|---|---|
-| `main` | Stable, default branch | ✅ Stable |
-| `yolo-lane-cone` | YOLO detection for lanes and cones | 🚧 Active |
-| `feature/nav2-recovery` | Nav2 recovery behaviours | 🚧 Active |
-| `yolo-adaptive` | Adaptive YOLO perception | 🚧 Active |
-| `feature/hardware-interface` | ros2_control hardware interface for the real vehicle | 🚧 Active |
-| `feature/new-maps` | New simulation maps/worlds | 🚧 Active |
-| `esda-jetson-testing` | Testing on the Jetson Orin Nano | 🚧 Active |
-| `feature/reactive-local-navigation` | Reactive local planner / obstacle avoidance | 💤 Paused |
-| `feature/waypoint-recommender-revamp` | Waypoint recommender rework (PR #1) | 🔍 In review |
+| Branch | Purpose | Owner | Status |
+|---|---|---|---|
+| `main` | Stable, default branch | @sam | ✅ Stable |
+| `yolo-lane-cone` | YOLO detection for lanes and cones | @felix | 🚧 Active |
+| `feature/nav2-recovery` | Nav2 recovery behaviours | @sam | 🚧 Active |
+| `yolo-adaptive` | Adaptive YOLO perception | @felix | 🚧 Active |
+| `feature/hardware-interface` | ros2_control hardware interface for the real vehicle | @xavier-marie | 🚧 Active |
+| `feature/new-maps` | New simulation maps/worlds | @ishaan | 🚧 Active |
+| `esda-jetson-testing` | Testing on the Jetson Orin Nano | @jun-hau | 🚧 Active |
+| `feature/reactive-local-navigation` | Reactive local planner / obstacle avoidance | @ishaan | 💤 Paused |
+| `feature/waypoint-recommender-revamp` | Waypoint recommender rework (PR #1) | @ishaan | 🔍 In review |
 
 Legend: ✅ Stable · 🚧 Active · 🔍 In review · 💤 Paused
+
+#### Archived branches
+`sam`, `victor`, `mattlab_pc`, `xavier`, `xavier_linux_asus_laptop` are archived as tags (`archive/<name>`).
+To restore one: `git fetch --tags && git checkout -b <name> archive/<name>`
 
 #### Archived branches
 `sam`, `victor`, `mattlab_pc`, `xavier`, `xavier_linux_asus_laptop` are archived as tags (`archive/<name>`).
