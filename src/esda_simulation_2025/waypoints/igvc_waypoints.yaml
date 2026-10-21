@@ -1,4 +1,10 @@
 # IGVC waypoints: no-man's-land start/end and ramp start/end.
+#
+# latitude/longitude (when present) are what the navigator uses: they go
+# through navsat_transform_node's /fromLL, like real competition waypoints.
+# position x/y are the map-frame fallback when no GPS is running. For the sim
+# both describe the same points; tools/sim_gps.py derives one from the other.
+#
 # All poses are in the map frame, whose origin is the robot's starting pose
 # (as with a fresh SLAM map).
 #
@@ -22,6 +28,8 @@
 
 waypoints:
   - name: no_mans_land_start
+    latitude: 42.66835642     # tools/sim_gps.py; preferred over position
+    longitude: -83.21832122
     frame_id: map
     position:
       x: 4.23
@@ -41,6 +49,8 @@ waypoints:
       pitch: 0.0
       yaw: 175.9
   - name: ramp_start
+    latitude: 42.66836236     # tools/sim_gps.py; preferred over position
+    longitude: -83.21843381
     frame_id: map
     position:
       x: -5.00
@@ -60,6 +70,8 @@ waypoints:
       pitch: 0.0
       yaw: 180.0
   - name: ramp_end
+    latitude: 42.66836245     # tools/sim_gps.py; preferred over position
+    longitude: -83.21857421
     frame_id: map
     position:
       x: -16.51
@@ -79,6 +91,8 @@ waypoints:
       pitch: 0.0
       yaw: -177.4
   - name: no_mans_land_end
+    latitude: 42.66835849     # tools/sim_gps.py; preferred over position
+    longitude: -83.21869449
     frame_id: map
     position:
       x: -26.37

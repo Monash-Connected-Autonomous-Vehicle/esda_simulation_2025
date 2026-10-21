@@ -6,6 +6,10 @@ class GPSWaypoint:
         self.position = {"x": 0.0, "y": 0.0, "z": 0.0}
         self.quaternion = {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0}
         self.rotation_rads = {"roll": 0.0, "pitch": 0.0, "yaw": 0.0}
+        # Optional: when both are set the navigator converts these through
+        # navsat_transform_node's /fromLL and uses them instead of position.
+        self.latitude = None
+        self.longitude = None
 
 def read_gps_waypoints_func(file_path: str):
     gps_waypoints = []
@@ -18,6 +22,8 @@ def read_gps_waypoints_func(file_path: str):
         waypoint.position = waypoint_data.get("position", {"x": 0.0, "y": 0.0, "z": 0.0})
         waypoint.quaternion = waypoint_data.get("quaternion", {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0})
         waypoint.rotation_rads = waypoint_data.get("rotation_rads", {"roll": 0.0, "pitch": 0.0, "yaw": 0.0})
+        waypoint.latitude = waypoint_data.get("latitude")
+        waypoint.longitude = waypoint_data.get("longitude")
         gps_waypoints.append(waypoint)
     
     return gps_waypoints
@@ -35,3 +41,13 @@ def save_gps_waypoints_to_list(gps_waypoints):
     for waypoint in gps_waypoints:
         waypoint_list.append([waypoint.position['x'], waypoint.position['y'], waypoint.position['z']])
     return waypoint_list
+
+
+def save_gps_latlon_to_list(gps_waypoints):
+    """[(latitude, longitude) or None] per waypoint, same order as
+    save_gps_waypoints_to_list."""
+    return [
+        (float(w.latitude), float(w.longitude))
+        if w.latitude is not None and w.longitude is not None else None
+        for w in gps_waypoints
+    ]

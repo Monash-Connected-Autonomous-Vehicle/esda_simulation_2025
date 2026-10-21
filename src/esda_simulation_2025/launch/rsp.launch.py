@@ -17,6 +17,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_ros2_control = LaunchConfiguration('use_ros2_control')
     use_lidar = LaunchConfiguration('use_lidar')
+    use_gps = LaunchConfiguration('use_gps')
     robot_model = LaunchConfiguration('robot_model')
     camera_mount = LaunchConfiguration('camera_mount')
     lidar_mount = LaunchConfiguration('lidar_mount')
@@ -27,7 +28,7 @@ def generate_launch_description():
     # robot_description_config = xacro.process_file(xacro_file).toxml()
     robot_description_config = ParameterValue(
         Command(['xacro ', xacro_file, ' use_ros2_control:=', use_ros2_control, ' sim_mode:=', use_sim_time,
-                 ' use_lidar:=', use_lidar, ' camera_mount:=', camera_mount, ' lidar_mount:=', lidar_mount]),
+                 ' use_lidar:=', use_lidar, ' use_gps:=', use_gps, ' camera_mount:=', camera_mount, ' lidar_mount:=', lidar_mount]),
         value_type=str
     )
     # Create a robot_state_publisher node
@@ -54,6 +55,10 @@ def generate_launch_description():
             'use_lidar',
             default_value='true',
             description='Use lidar if true'),
+        DeclareLaunchArgument(
+            'use_gps',
+            default_value='true',
+            description='Add the simulated GPS (gps.xacro) if true'),
         DeclareLaunchArgument(
             'robot_model',
             default_value='robot.urdf.xacro',

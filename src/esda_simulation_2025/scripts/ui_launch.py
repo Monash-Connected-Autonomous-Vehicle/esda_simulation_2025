@@ -115,6 +115,12 @@ class SimManager(ctk.CTk):
         self.lidar_check = ctk.CTkCheckBox(self.sim_frame, text="Enable LIDAR", variable=self.lidar_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
         self.lidar_check.grid(row=0, column=0, padx=10, pady=6, sticky="w")
 
+        # Simulated GPS (gps.xacro) + navsat_transform. Off: no sensor, and
+        # the waypoint navigator uses the waypoints' map x/y instead.
+        self.gps_var = ctk.BooleanVar(value=True)
+        self.gps_check = ctk.CTkCheckBox(self.sim_frame, text="GPS", variable=self.gps_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
+        self.gps_check.grid(row=3, column=2, padx=10, pady=(0, 8), sticky="w")
+
         self.dual_camera_var = ctk.BooleanVar(value=False)
         self.dual_camera_check = ctk.CTkCheckBox(self.sim_frame, text="Dual Side Cameras (Test)", variable=self.dual_camera_var, font=("Orbitron", 14), text_color=self.accent_blue, bg_color=self.bg_panel)
         self.dual_camera_check.grid(row=2, column=0, padx=10, pady=(0, 8), sticky="w")
@@ -400,6 +406,7 @@ class SimManager(ctk.CTk):
 
     def toggle_sim(self):
         lidar = "true" if self.lidar_var.get() else "false"
+        gps = "true" if self.gps_var.get() else "false"
         robot_model = "robot_dual_camera.urdf.xacro" if self.dual_camera_var.get() else "robot.urdf.xacro"
         selected_world_name = self.selected_world.get()
         # Find full path of selected world
@@ -421,7 +428,7 @@ class SimManager(ctk.CTk):
 
         cmd = (f"cd {self.workspace_root} && "
                f"colcon build --packages-select esda_simulation_2025 && "
-               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y} robot_model:={robot_model} camera_mount:={camera_mount} lidar_mount:={lidar_mount}")
+               f"ros2 launch esda_simulation_2025 launch_sim.launch.py use_lidar:={lidar} use_gps:={gps} world_file:={world_file} spawn_x:={spawn_x} spawn_y:={spawn_y} robot_model:={robot_model} camera_mount:={camera_mount} lidar_mount:={lidar_mount}")
         self.run_in_terminal("SIM", cmd)
 
     def toggle_slam(self):

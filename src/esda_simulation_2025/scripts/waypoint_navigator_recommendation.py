@@ -1021,6 +1021,28 @@ class WaypointNavigator(Node):
         waypoints = read_gps_waypoints.read_gps_waypoints_func("src/esda_simulation_2025/waypoints/igvc_waypoints.yaml")
         self.gps_waypoints = read_gps_waypoints.save_gps_waypoints_to_list(waypoints)
 
+        # Waypoints with latitude/longitude are converted through
+        # navsat_transform_node's /fromLL (lat/lon -> its world frame, odom)
+        # and then into map through TF, refreshed every second so SLAM's
+        # map -> odom corrections are followed. Until a conversion arrives,
+        # or with no GPS running at all, the YAML x/y in self.gps_waypoints
+        # are used as before.
+        self.declare_parameter('use_gps_latlon', True)
+        self.declare_parameter('gps_world_frame', 'odom')
+        self.declare_parameter('fromll_service', '/fromLL')
+        self.gps_latlon = read_gps_waypoints.save_gps_latlon_to_list(waypoints)
+        self.gps_world_frame = self.get_parameter('gps_world_frame').value
+        self.gps_odom_points = [None] * len(self.gps_latlon)
+        self._gps_logged = set()
+        self.fromll_client = None
+        if (self.get_parameter('use_gps_latlon').value
+                and any(ll is not None for ll in self.gps_latlon)):
+            from robot_localization.srv import FromLL
+            self._FromLL = FromLL
+            self.fromll_client = self.create_client(
+                FromLL, self.get_parameter('fromll_service').value)
+            self.gps_convert_timer = self.create_timer(1.0, self.refresh_gps_waypoints)
+
         self.current_gps_waypoint_index = 0
         self.gps_waypoint_radius_threshold = self.get_parameter(
             'gps_waypoint_radius_threshold').get_parameter_value().double_value
@@ -1220,6 +1242,55 @@ class WaypointNavigator(Node):
         self.initial_forward_goal_sent = True
         self.initial_goal_timer.cancel()
         return True
+
+    def refresh_gps_waypoints(self):
+        """Re-convert lat/lon waypoints and move them into the map frame."""
+        if self.fromll_client is None or not self.fromll_client.service_is_ready():
+            return
+
+        for i, ll in enumerate(self.gps_latlon):
+            if ll is None:
+                continue
+            req = self._FromLL.Request()
+            req.ll_point.latitude, req.ll_point.longitude = ll
+            req.ll_point.altitude = 0.0
+            future = self.fromll_client.call_async(req)
+            future.add_done_callback(
+                lambda f, i=i: self._store_gps_point(i, f))
+
+        # Apply the latest conversions with the current map -> odom.
+        try:
+            t = self.tf_buffer.lookup_transform(
+                self.frame_id, self.gps_world_frame, rclpy.time.Time())
+        except TransformException:
+            return
+        q = t.transform.rotation
+        yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y),
+                         1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+        c, s = math.cos(yaw), math.sin(yaw)
+        tx, ty = t.transform.translation.x, t.transform.translation.y
+        for i, p in enumerate(self.gps_odom_points):
+            if p is None:
+                continue
+            mx, my = tx + c * p[0] - s * p[1], ty + s * p[0] + c * p[1]
+            old = self.gps_waypoints[i]
+            self.gps_waypoints[i] = [mx, my, old[2] if len(old) > 2 else 0.0]
+            if i not in self._gps_logged:
+                self._gps_logged.add(i)
+                lat, lon = self.gps_latlon[i]
+                self.get_logger().info(
+                    f"GPS waypoint {i}: ({lat:.7f}, {lon:.7f}) -> map "
+                    f"({mx:.2f}, {my:.2f}); YAML x/y was ({old[0]:.2f}, {old[1]:.2f}), "
+                    f"{math.hypot(mx - old[0], my - old[1]):.2f} m apart")
+
+    def _store_gps_point(self, index, future):
+        try:
+            p = future.result().map_point
+        except Exception as ex:                      # noqa: BLE001
+            self.get_logger().warn(f"fromLL failed for waypoint {index}: {ex}",
+                                   throttle_duration_sec=10.0)
+            return
+        self.gps_odom_points[index] = (p.x, p.y)
 
     def gps_target_bearing(self):
         """

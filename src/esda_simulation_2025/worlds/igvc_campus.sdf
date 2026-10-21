@@ -14,6 +14,19 @@
       <render_engine>ogre2</render_engine>
     </plugin>
     <plugin filename="libignition-gazebo-imu-system.so" name="ignition::gazebo::systems::Imu"></plugin>
+    <plugin filename="libignition-gazebo-navsat-system.so" name="ignition::gazebo::systems::NavSat"></plugin>
+
+    <!-- GPS origin for the navsat sensor (gps.xacro). World +x = east,
+         +y = north. Oakland University, Rochester MI (IGVC), approximate.
+         tools/sim_gps.py converts world x/y to lat/lon with these numbers. -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>42.668086</latitude_deg>
+      <longitude_deg>-83.218507</longitude_deg>
+      <elevation>290.0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
 
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>

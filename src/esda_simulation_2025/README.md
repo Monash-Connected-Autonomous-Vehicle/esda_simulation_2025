@@ -133,6 +133,7 @@ Each button opens its own `xterm` window, so `xterm` must be installed.
 | **World SDF** | `igvc.sdf`, `igvc_campus.sdf`, `igvc_carpark.sdf`, `sim_world_*.sdf` | Any world whose name starts with `igvc` spawns the robot at (11, 0), the track start. See [2.3](#23-worlds) |
 | **Costmap YAML** | `[New Costmap]` or a map in `maps/` | `[New Costmap]` means SLAM; a saved map means AMCL |
 | **Enable LIDAR** | on / off | |
+| **GPS** | on / off | Simulated GPS + `navsat_transform`. Off: no GPS sensor, and the waypoint navigator uses the waypoints' map x/y |
 | **ZED Mount** | `front`, `pole_top` | Camera position |
 | **LiDAR Mount** | `pole_top`, `low` | `pole_top` puts the VLP-16 on the 1 m pole |
 | **Dual Side Cameras (Test)** | on / off | Adds left and right cameras, each with its own lane detector |
@@ -279,6 +280,8 @@ Two guards apply throughout:
 `src/esda_simulation_2025/waypoints/igvc_waypoints.yaml`. Only the `waypoints:` list is used, in order. Positions are in the **`map` frame, whose origin is the robot's start pose** (as with a fresh SLAM map), so they only line up if the robot starts at the spawn point. The `competition_northbound` / `competition_southbound` lists are approximate real-course positions, kept for reference.
 
 The waypoint file is read when the node starts, so restart the node after editing it. No rebuild is needed.
+
+**GPS.** The `igvc*` worlds have a GPS origin (Oakland University, approximate), and the robot carries a simulated GPS (`description/gps.xacro`, 0.5 m noise) publishing `/gps/fix`. `navsat_transform_node` (started with the EKF, `config/navsat_sim.yaml`) converts it into the odom frame and serves `/fromLL`. Waypoints that have `latitude`/`longitude` are converted through `/fromLL` and then into `map` using the current SLAM correction, refreshed every second; the log shows each conversion and how far it lands from the YAML x/y. Without GPS (untick **GPS**, or `use_gps:=false` on `launch_sim.launch.py`, other worlds, or `-p use_gps_latlon:=false` on the navigator) it falls back to `position` x/y. `python3 tools/sim_gps.py` prints the latitude/longitude of any sim point and regenerates the datum and the waypoints' coordinates.
 
 ### 3.4. Parameters
 

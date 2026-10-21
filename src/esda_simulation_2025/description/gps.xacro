@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- Simulated GPS (NavSat). Publishes sensor_msgs/NavSatFix on /gps/fix
+         via the bridge in launch_sim.launch.py; robot_localization's
+         navsat_transform_node (config/navsat_sim.yaml) turns it into the
+         odom frame and serves /fromLL for the waypoint navigator.
+
+         Only worlds with <spherical_coordinates> and the NavSat system plugin
+         (the igvc*.sdf worlds) produce fixes. Mounted near the GPS fin;
+         set the real antenna offset here for the real robot. -->
+    <xacro:property name="gps_noise_std" value="0.5"/>   <!-- m, horizontal -->
+
+    <joint name="gps_joint" type="fixed">
+        <parent link="chassis"/>
+        <child link="gps_link"/>
+        <origin xyz="0.56 -0.15 0.45" rpy="0 0 0"/>
+    </joint>
+
+    <link name="gps_link">
+        <visual>
+            <geometry><cylinder radius="0.04" length="0.02"/></geometry>
+            <material name="grey"/>
+        </visual>
+        <xacro:inertial_cylinder mass="0.05" length="0.02" radius="0.04">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_cylinder>
+    </link>
+
+    <gazebo reference="gps_link">
+        <sensor name="gps" type="navsat">
+            <always_on>true</always_on>
+            <update_rate>5</update_rate>
+            <topic>gps/fix</topic>
+            <gz_frame_id>gps_link</gz_frame_id>
+            <navsat>
+                <position_sensing>
+                    <horizontal>
+                        <noise type="gaussian">
+                            <mean>0.0</mean>
+                            <stddev>${gps_noise_std}</stddev>
+                        </noise>
+                    </horizontal>
+                    <vertical>
+                        <noise type="gaussian">
+                            <mean>0.0</mean>
+                            <stddev>${2 * gps_noise_std}</stddev>
+                        </noise>
+                    </vertical>
+                </position_sensing>
+            </navsat>
+        </sensor>
+    </gazebo>
+
+</robot>

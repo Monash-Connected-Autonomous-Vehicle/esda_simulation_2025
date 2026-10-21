@@ -1,0 +1,25 @@
+# robot_localization navsat_transform_node for the igvc*.sdf sim worlds.
+#
+# Converts /gps/fix (gps.xacro) into the EKF's odom frame (/odometry/gps)
+# and serves /fromLL, which waypoint_navigator_recommendation.py uses to turn
+# the waypoints' latitude/longitude into map coordinates.
+#
+# The datum pins the GPS position of the odom origin (the robot's spawn pose,
+# world (11, 0), facing east = ENU yaw 0) instead of taking the first noisy
+# fix, which would shift every converted waypoint by that fix's error.
+# Regenerate with `python3 tools/sim_gps.py` if the world origin or spawn
+# changes. On the real robot, set the datum from an averaged fix at the start
+# line and the heading from the IMU/compass instead.
+navsat_transform:
+  ros__parameters:
+    use_sim_time: true
+    frequency: 10.0
+    delay: 1.0
+    magnetic_declination_radians: 0.0
+    yaw_offset: 0.0
+    zero_altitude: true
+    broadcast_cartesian_transform: false
+    publish_filtered_gps: true
+    use_odometry_yaw: false
+    wait_for_datum: true
+    datum: [42.66808600, -83.21837282, 0.0]

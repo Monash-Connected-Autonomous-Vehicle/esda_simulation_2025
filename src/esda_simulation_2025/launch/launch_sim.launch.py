@@ -16,6 +16,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     use_ros2_control = LaunchConfiguration('use_ros2_control', default='true')
     use_lidar = LaunchConfiguration('use_lidar', default='true')
+    use_gps = LaunchConfiguration('use_gps', default='true')
     world_file = LaunchConfiguration('world_file')
     spawn_x = LaunchConfiguration('spawn_x', default='0.0')
     spawn_y = LaunchConfiguration('spawn_y', default='0.0')
@@ -42,6 +43,7 @@ def generate_launch_description():
             'use_sim_time': 'true',
             'use_ros2_control': 'true',
             'use_lidar': use_lidar,
+            'use_gps': use_gps,
             'robot_model': robot_model,
             'camera_mount': camera_mount,
             'lidar_mount': lidar_mount
@@ -54,7 +56,8 @@ def generate_launch_description():
     ekf_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory(package_name), 'launch', 'robot_localization_ekf.launch.py')
-        )
+        ),
+        launch_arguments={'use_gps': use_gps}.items()
     )
 
     # --- 2) Launch Ignition sim server + client ---
@@ -148,6 +151,7 @@ def generate_launch_description():
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/cmd_vel@geometry_msgs/msg/Twist[gz.msgs.Twist',
             '/imu/data@sensor_msgs/msg/Imu[gz.msgs.IMU',
+            '/gps/fix@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat',
             '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
             '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
             '/camera/left@sensor_msgs/msg/Image[gz.msgs.Image',
@@ -190,6 +194,8 @@ def generate_launch_description():
       DeclareLaunchArgument('use_sim_time',    default_value='true'),
       DeclareLaunchArgument('use_ros2_control',default_value='true'),
       DeclareLaunchArgument('use_lidar',       default_value='true'),
+      DeclareLaunchArgument('use_gps',         default_value='true',
+          description='Simulated GPS + navsat_transform; false = waypoints use their map x/y'),
       DeclareLaunchArgument('spawn_x',         default_value='0.0'),
       DeclareLaunchArgument('spawn_y',         default_value='0.0'),
       DeclareLaunchArgument('world_file',      default_value=os.path.join(
