@@ -20,6 +20,7 @@
 
 #include "esda_hardware_2025/stm_comms.hpp"
 #include "esda_hardware_2025/wheels.hpp"
+#include "esda_hardware_2025/odrive_comms.hpp"
 
 
 namespace esda_hardware_2025 {
@@ -28,6 +29,12 @@ namespace esda_hardware_2025 {
         struct Config {
             std::string left_wheel_name = "";
             std::string right_wheel_name = "";
+            std::string can_interface = "can0";
+            int left_node_id = 0;
+            int right_node_id = 1;
+            int feedback_timeout_ms = 100;
+            int heartbeat_timeout_ms = 500;
+            double gear_ratio = 6.0
             float loop_rate = 0.0;
             std::string device = "";
             int baud_rate = 0;
@@ -38,6 +45,7 @@ namespace esda_hardware_2025 {
             int pid_i = 0;
             int pid_o = 0;
             bool fake_odom = false;
+            
         };
 
         public:

@@ -50,10 +50,14 @@ namespace esda_hardware_2025 {
 
         cfg_.left_wheel_name = info_.hardware_parameters["left_wheel_name"];
         cfg_.right_wheel_name = info_.hardware_parameters["right_wheel_name"];
-        cfg_.loop_rate = std::stof(info_.hardware_parameters["loop_rate"]);
-        cfg_.device = info_.hardware_parameters["device"];
-        cfg_.baud_rate = std::stoi(info_.hardware_parameters["baud_rate"]);
-        cfg_.timeout_ms = std::stoi(info_.hardware_parameters["timeout_ms"]);
+        cfg_.can_interface = info_.hardware_parameters["can_interface"];
+        if (info_.hardware_parameters.count("feedback_timeout_ms") > 0) {
+            cfg_.feedback_timeout_ms = std::stoi(info_.hardware_parameters["feedback_timeout_ms"]);
+        }
+        cfg_.gear_ratio = std::stod(info_.hardware_parameters["gear_ratio"]);
+        cfg_.heartbeat_timeout_ms = std::stoi(info_.hardware_parameters["heartbeat_timeout_ms"]);
+        cfg_.left_node_id = std::stoi(info_.hardware_parameters["left_node_id"]);
+        cfg_.right_node_id = std::stoi(info_.hardware_parameters["right_node_id"]);
         cfg_.enc_counts_per_rev = std::stoi(info_.hardware_parameters["enc_counts_per_rev"]);
 
         auto to_bool = [](const std::string &s) {
@@ -216,10 +220,42 @@ namespace esda_hardware_2025 {
     }
       
     hardware_interface::return_type EsdaHardware2025::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & period) {
-        if (!comms_.connected()) {
+        //Check for fake_odom before checking whether can0 port is open
+        if (!cfg_.fake_odom && !comms_.connected()) {
             return hardware_interface::return_type::ERROR;
         }
         
+        //Clear can0 socket queue of CAN frames, take the most recent frame for both wheels and store
+        comms_.poll();
+        //Check whether can frames are fresh
+        if (!comms_.encoder_fresh(cfg_.left_node_id, cfg_.feedback_timeout_ms) ||
+            !comms_.encoder_fresh(cfg_.right_node_id, cfg_.feedback_timeout_ms) ||
+            !comms_.heartbeat_fresh(cfg_.left_node_id, cfg_.heartbeat_timeout_ms) ||
+            !comms_.heartbeat_fresh(cfg_.right_node_id, cfg_.heartbeat_timeout_ms)) {
+            return hardware_interface::return_type::ERROR;
+        }
+
+        // Retrieve the latest data for the left and right wheel from the object table, copy them into wheel variables
+        const auto * fb_l = comms_.feedback(cfg_.left_node_id);
+        const auto * fb_r = comms_.feedback(cfg_.right_node_id);
+
+        //Some error checks
+        if (fb_l == nullptr || fb_r == nullptr) {
+            return hardware_interface::return_type::ERROR;
+        }
+
+        if (fb_l->axis_error != 0 || fb_r->axis_error != 0) {
+            return hardware_interface::return_type::ERROR;
+        }
+
+        // Convert from turns (as used in the Odrive), to rads (as used in controller)
+        wheel_l_.pos = odrive::turnsToRad(fb_l->pos_turns) / cfg_.gear_ratio;
+        wheel_l_.vel = odrive::turnsToRad(fb_l->vel_turns_per_s) / cfg_.gear_ratio;
+
+
+
+
+        //Fake odometry mode stuff (for testing software purely)
         double delta_seconds = period.seconds();
         if (cfg_.fake_odom) {
             // Fake: measured vel = commanded vel, integrate to position
@@ -232,15 +268,10 @@ namespace esda_hardware_2025 {
             return hardware_interface::return_type::OK;
         }   
         
-        comms_.read_encoder_values(wheel_l_.enc, wheel_r_.enc);
         
         
-        double pos_prev = wheel_l_.pos;
-        wheel_l_.pos = wheel_l_.calc_enc_angle();
         wheel_l_.vel = (wheel_l_.pos - pos_prev) / delta_seconds;
         
-        pos_prev = wheel_r_.pos;
-        wheel_r_.pos = wheel_r_.calc_enc_angle();
         wheel_r_.vel = (wheel_r_.pos - pos_prev) / delta_seconds;
 
         
@@ -257,11 +288,18 @@ namespace esda_hardware_2025 {
             return hardware_interface::return_type::ERROR;
         }
 
+        // Converting rads to motor turns for each wheel
+        double motor_turns_per_s_l = odrive::radToTurns(wheel_l_.cmd) * cfg_.gear_ratio;
+        double motor_turns_per_s_r = odrive::radToTurns(wheel_r_.cmd) * cfg_.gear_ratio;
+
+        //Checking whether velocity commands sent to O-drive
+        bool left_sent = comms_.set_velocity(cfg_.left_node_id, motor_turns_per_s_l);
+        bool right_sent = comms_.set_velocity(cfg_.right_node_id, motor_turns_per_s_r);
+
+        if (!left_ok || !right_ok) {
+            return hardware_interface::return_type::ERROR;
+        }
         
-        
-        int motor_l_counts_per_loop = wheel_l_.cmd / wheel_l_.rads_per_count / cfg_.loop_rate;
-        int motor_r_counts_per_loop = wheel_r_.cmd / wheel_r_.rads_per_count / cfg_.loop_rate;
-        comms_.set_motor_values(motor_l_counts_per_loop, motor_r_counts_per_loop);
         return hardware_interface::return_type::OK;
     }
       
