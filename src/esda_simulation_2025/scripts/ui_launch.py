@@ -131,7 +131,7 @@ class SimManager(ctk.CTk):
         self.camera_mount_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.camera_mount_var,
-            values=["front", "pole_top"],
+            values=["front", "pole_top", "top_front"],
             width=110,
             fg_color=self.bg_dark,
             button_color=self.accent_purple,

@@ -3,8 +3,11 @@
 
     <!-- camera_mount: "front" (default) is the original low, forward-facing
          mount. "pole_top" mounts the camera on the LiDAR pole (lidar.xacro),
-         just below the LiDAR itself. Select with e.g.
-         `xacro robot.urdf.xacro camera_mount:=pole_top`.
+         just below the LiDAR itself. "top_front" is the real robot as
+         photographed: the ZED on a short bracket above the red beacon, on
+         the top deck just in front of the Velodyne (pair it with
+         lidar_mount:=low, which is how that robot carries its LiDAR).
+         Select with e.g. `xacro robot.urdf.xacro camera_mount:=top_front`.
 
          x below MUST match lidar_mount_x in lidar.xacro - that's the pole's
          actual x station on our chassis. (The raw xyz from
@@ -35,7 +38,20 @@
             <origin xyz="0.560407 0.10 1.30" rpy="0 0.2618 0"/>
         </joint>
     </xacro:if>
-    <xacro:unless value="${'$(arg camera_mount)' == 'pole_top'}">
+    <xacro:if value="${'$(arg camera_mount)' == 'top_front'}">
+        <joint name="camera_joint" type="fixed">
+            <parent link="chassis"/>
+            <child link="camera_link"/>
+            <!-- Estimated from photos of the real robot, NOT measured:
+                 x = 0.76, ~20 cm in front of the low LiDAR (lidar_mount_x
+                 0.560407); y = 0, on the centreline; z = 0.41, ~11 cm above
+                 the top deck (chassis_height 0.30) on the bracket over the
+                 beacon; level (no visible tilt). Replace with tape-measure
+                 values from the chassis origin when available. -->
+            <origin xyz="0.76 0 0.41" rpy="0 0 0"/>
+        </joint>
+    </xacro:if>
+    <xacro:unless value="${'$(arg camera_mount)' in ('pole_top', 'top_front')}">
         <joint name="camera_joint" type="fixed">
             <parent link="chassis"/>
             <child link="camera_link"/>

@@ -134,7 +134,7 @@ Each button opens its own `xterm` window, so `xterm` must be installed.
 | **Costmap YAML** | `[New Costmap]` or a map in `maps/` | `[New Costmap]` means SLAM; a saved map means AMCL |
 | **Enable LIDAR** | on / off | |
 | **GPS** | on / off | Simulated GPS + `navsat_transform`. Off: no GPS sensor, and the waypoint navigator uses the waypoints' map x/y |
-| **ZED Mount** | `front`, `pole_top` | Camera position |
+| **ZED Mount** | `front`, `pole_top`, `top_front` | Camera position. `top_front` is the real robot (bracket in front of the Velodyne); pair it with LiDAR Mount `low` |
 | **LiDAR Mount** | `pole_top`, `low` | `pole_top` puts the VLP-16 on the 1 m pole |
 | **Dual Side Cameras (Test)** | on / off | Adds left and right cameras, each with its own lane detector |
 | **Enable Lane Detection** | on / off | Switches Nav2, SLAM and AMCL between `/scan_fused` and `/scan`. Turn it on whenever a lane detector runs |

@@ -203,7 +203,7 @@ def generate_launch_description():
       DeclareLaunchArgument('robot_model',     default_value='robot.urdf.xacro',
           description='xacro filename under description/ to load (e.g. robot_dual_camera.urdf.xacro)'),
       DeclareLaunchArgument('camera_mount',    default_value='front',
-          description='ZED mount point: "front" (low, forward) or "pole_top" (on the LiDAR pole)'),
+          description='ZED mount point: "front" (low, forward), "pole_top" (on the LiDAR pole) or "top_front" (real robot: bracket in front of the low LiDAR)'),
       DeclareLaunchArgument('lidar_mount',     default_value='pole_top',
           description='LiDAR mount point: "pole_top" (on the mounting pole) or "low" (original, directly on chassis)'),
       rsp,
