@@ -172,10 +172,23 @@ def generate_launch_description():
             ('/camera/left_camera/depth', '/camera/left_camera/depth/image_raw'),
             ('/camera/right_camera/depth', '/camera/right_camera/depth/image_raw'),
             ('/velodyne_points/points', '/velodyne_points'),
+            # Raw lidar goes to the tilt filter below, which publishes /scan.
+            ('/scan', '/scan_raw'),
         ],
         output='screen'
     )
     
+    # Drops lidar returns that are the ground seen by a tilted robot (the
+    # ramp): /scan_raw -> /scan. Without it the 2D slice meets the ground
+    # ~10 m ahead on the ramp and draws a wall across the costmap and map.
+    scan_tilt_filter = Node(
+        package=package_name,
+        executable='scan_tilt_filter.py',
+        name='scan_tilt_filter',
+        output='screen',
+        parameters=[{'use_sim_time': use_sim_time}],
+    )
+
     # Camera frame fixer - remap Gazebo's frame_id to proper TF frame
     camera_frame_fixer = Node(
         package='tf2_ros',
@@ -211,6 +224,7 @@ def generate_launch_description():
       ign_resource_path,
       ign_resource_path_legacy,
       bridge,
+      scan_tilt_filter,
       camera_frame_fixer,
       ign_launch,
       spawn_entity,

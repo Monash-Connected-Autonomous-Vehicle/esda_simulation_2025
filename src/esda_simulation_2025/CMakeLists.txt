@@ -54,6 +54,7 @@ install(PROGRAMS
   scripts/lane_detection_FCN.py
   scripts/lane_detection_twinlite.py
   scripts/lane_detection_esda.py
+  scripts/scan_tilt_filter.py
   scripts/teleop_wasd.py
   scripts/ui_launch.py
   scripts/waypoint_navigator.py
