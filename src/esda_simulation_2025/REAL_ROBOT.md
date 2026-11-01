@@ -22,6 +22,8 @@ Lane detection and the ZED are not started, so the robot only avoids what the Li
 - The robot is pointing where you want it. Its starting pose becomes the map origin.
 
 ## Launch via UI (Recommended)
+![The UI launcher. The green button near the bottom starts the autonomous real robot.](assets/real_robot_ui.png)
+
 1. Run the UI launcher:
    ```bash
    python3 ~/Mk3/esda_simulation_2025/src/esda_simulation_2025/scripts/ui_launch.py
