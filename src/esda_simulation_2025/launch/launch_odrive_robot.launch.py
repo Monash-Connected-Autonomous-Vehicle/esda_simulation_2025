@@ -66,6 +66,9 @@ def generate_launch_description():
     viz_cloud_rate = LaunchConfiguration('viz_cloud_rate')
     launch_virtual_lanes = LaunchConfiguration('launch_virtual_lanes')
     lane_half_width = LaunchConfiguration('lane_half_width')
+    camera_name = LaunchConfiguration('camera_name')
+    launch_zed_camera = LaunchConfiguration('launch_zed_cam')
+    camera_model = LaunchConfiguration('camera_model')
 
     # ------------------------------------------------------------
     # Robot State Publisher
@@ -219,6 +222,55 @@ def generate_launch_description():
         cloud_to_scan = LogInfo(
             msg='No cloud->scan converter installed - no /scan, so SLAM/Nav2 have no '
                 'LiDAR. Install with: sudo apt install ros-humble-pointcloud-to-laserscan'
+        )
+
+    # ------------------------------------------------------------
+    # ZED camera (optional)
+    #
+    # Scoped like SLAM/Nav2 so the wrapper's launch configurations don't leak.
+    # zed_nodepth.yaml turns depth off, because the SDK install here has no
+    # TensorRT and neural depth crashes the camera on open.
+    # ------------------------------------------------------------
+
+    if package_exists('zed_wrapper'):
+        zed_launch = GroupAction(
+            scoped=True,
+            condition=IfCondition(launch_zed_camera),
+            actions=[
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        os.path.join(
+                            get_package_share_directory('zed_wrapper'),
+                            'launch', 'zed_camera.launch.py',
+                        )
+                    ),
+                    launch_arguments={
+                        'camera_name': camera_name,
+                        'camera_model': camera_model,
+                        # odrive_bridge.py and SLAM own odom and map; don't
+                        # let the ZED node publish its own odom/map TF.
+                        'publish_tf': 'false',
+                        'publish_map_tf': 'false',
+                        'ros_params_override_path': os.path.expanduser('~/zed_ws/zed_nodepth.yaml'),
+                    }.items(),
+                ),
+                # Hang the wrapper's own frames off the URDF's camera_link.
+                Node(
+                    package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='zed_frame_link',
+                    arguments=[
+                        '--frame-id', 'camera_link',
+                        '--child-frame-id', [camera_name, '_camera_link'],
+                    ],
+                    output='screen',
+                ),
+            ],
+        )
+    else:
+        zed_launch = LogInfo(
+            msg='zed_wrapper not found - no ZED camera. '
+                'Run: source ~/zed_ws/install/setup.bash'
         )
 
     # Viewer-only copy of the cloud for Foxglove over Tailscale: the full
@@ -404,6 +456,15 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'launch_nav2', default_value='false',
             description='Run Nav2 on /scan + /odom (needs SLAM or AMCL for map -> odom)'),
+        DeclareLaunchArgument(
+            'launch_zed_cam', default_value='false',
+            description='Run the ZED camera driver (needs ~/zed_ws sourced)'),
+        DeclareLaunchArgument(
+            'camera_model', default_value='zed2i',
+            description='ZED camera model'),
+        DeclareLaunchArgument(
+            'camera_name', default_value='zed',
+            description='ZED camera name; sets the /<name>/... topics and <name>_camera_link'),
 
         rsp,
         odrive_bridge,
@@ -422,4 +483,5 @@ def generate_launch_description():
         teleop,
         joy_node,
         teleop_joy,
+        zed_launch,
     ])
