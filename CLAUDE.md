@@ -42,7 +42,9 @@ It validates the waypoint navigator's clearance maths against the original brute
 python3 src/esda_simulation_2025/scripts/ui_launch.py
 ```
 
-`ui_launch_real_robot.py` is the hardware equivalent. Both shell out to `ros2 launch` / `ros2 run`, so their bodies are the authoritative reference for correct launch arguments.
+To run the real robot (ODrive + VLP-16 + SLAM + Nav2), follow `src/esda_simulation_2025/REAL_ROBOT.md`.
+
+`ui_launch_real_robot.py` is the hardware equivalent for the older ESP32/ZED stack. Both shell out to `ros2 launch` / `ros2 run`, so their bodies are the authoritative reference for correct launch arguments.
 
 Manual sequence (sim): `launch_sim.launch.py` → SLAM (`online_async_launch.py`) *or* AMCL (`localization_launch.py`) → `navigation_launch.py` → `rviz2 -d src/esda_simulation_2025/config/view_bot.rviz`. See `src/esda_simulation_2025/TO RUN.txt` for the exact argument sets, and `src/esda_simulation_2025/README.md` for the full manual (the root `README.md` is a stale short version — prefer the package one).
 

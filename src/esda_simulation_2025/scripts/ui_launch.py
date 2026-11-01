@@ -267,6 +267,13 @@ class SimManager(ctk.CTk):
                          fg_color=self.accent_orange, hover_color="#CC7000", font=("Orbitron", 12), text_color=self.bg_dark)
         self.reset_odom_button.grid(row=4, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
 
+        # One-shot real robot + SLAM + Nav2, with that launch file's own mounts
+        # (ignores the LIDAR, joystick and mount options above). Teleop stays
+        # off so it can't fight Nav2 on /cmd_vel; WASD Teleop still opens it.
+        self.real_robot_auto_button = ctk.CTkButton(self.teleop_frame, text="Launch Autonomous Real Robot (SLAM + Nav2)", command=self.toggle_real_robot_auto,
+                         fg_color=self.accent_green, hover_color="#00B37A", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
+        self.real_robot_auto_button.grid(row=5, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
+
         # Diagnostics Section
         self.diag_button = ctk.CTkButton(self, text="Check /clock Topic (Diagnostics)", command=self.check_clock,
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 11), text_color=self.bg_dark)
@@ -293,6 +300,7 @@ class SimManager(ctk.CTk):
             "TELEOP": self.teleop_button.cget("fg_color"),
             "LANE": self.lane_detection_button.cget("fg_color"),
             "ROBOT": self.real_robot_button.cget("fg_color"),
+            "ROBOT_AUTO": self.real_robot_auto_button.cget("fg_color"),
             "MONITOR": self.monitor_button.cget("fg_color"),
         }
 
@@ -409,6 +417,7 @@ class SimManager(ctk.CTk):
         elif name == "TELEOP": self.teleop_button.configure(fg_color=color)
         elif name == "LANE": self.lane_detection_button.configure(fg_color=color)
         elif name == "ROBOT": self.real_robot_button.configure(fg_color=color)
+        elif name == "ROBOT_AUTO": self.real_robot_auto_button.configure(fg_color=color)
         elif name == "MONITOR": self.monitor_button.configure(fg_color=color)
 
     def check_xterm(self):
@@ -431,7 +440,7 @@ class SimManager(ctk.CTk):
         self.status_label.configure(text="Build attempt finished", text_color="#BDC3C7")
 
     def toggle_sim(self):
-        if self.is_robot_running():
+        if self.is_robot_running() or self.is_robot_auto_running():
             self.status_label.configure(text="Error: Stop the real robot first - both own /cmd_vel and /odom", text_color="#E74C3C")
             return
         lidar ="true" if self.lidar_var.get() else "false"
@@ -793,6 +802,9 @@ class SimManager(ctk.CTk):
         if self.is_sim_running():
             self.status_label.configure(text="Error: Stop the simulation first - both own /cmd_vel and /odom", text_color="#E74C3C")
             return
+        if self.is_robot_auto_running():
+            self.status_label.configure(text="Error: Stop the autonomous real robot first - both use the ODrive", text_color="#E74C3C")
+            return
         lidar = "true" if self.lidar_var.get() else "false"
         joy = "true" if self.joy_var.get() else "false"
         rviz = "true" if self.robot_rviz_var.get() else "false"
@@ -800,6 +812,26 @@ class SimManager(ctk.CTk):
                f"launch_lidar:={lidar} launch_teleop:=false launch_joy:={joy} launch_rviz:={rviz} "
                f"camera_mount:={self.camera_mount_var.get()} lidar_mount:={self.lidar_mount_var.get()}")
         self.run_in_terminal("ROBOT", cmd)
+
+    def toggle_real_robot_auto(self):
+        if self.is_sim_running():
+            self.status_label.configure(text="Error: Stop the simulation first - both own /cmd_vel and /odom", text_color="#E74C3C")
+            return
+        if self.is_robot_running():
+            self.status_label.configure(text="Error: Stop the real robot first - both use the ODrive", text_color="#E74C3C")
+            return
+        # nav2_params_real_robot.yaml finds its behaviour tree by a path
+        # relative to the workspace root, so launch from there.
+        # The kernel drops the VLP-16's UDP packets unless the Jetson has an
+        # address on its subnet. Skipped if already set; sudo may prompt in the xterm.
+        lidar_addr = "192.168.1.100/24"
+        lidar_iface = "enP8p1s0"
+        cmd = (f"sudo ip link set {lidar_iface} up && "
+               f"(ip -4 addr show dev {lidar_iface} | grep -q {lidar_addr} || "
+               f"sudo ip addr add {lidar_addr} dev {lidar_iface}) && "
+               f"cd {self.workspace_root} && "
+               f"ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py launch_teleop:=false")
+        self.run_in_terminal("ROBOT_AUTO", cmd)
 
     def kill_all(self):
         self.status_label.configure(text="Cleaning up Gazebo and processes...", text_color="#E74C3C")
@@ -832,6 +864,10 @@ class SimManager(ctk.CTk):
     def is_robot_running(self):
         """Check if the real robot (launch_odrive_robot.launch.py) is running"""
         return "ROBOT" in self.processes and self.processes["ROBOT"].poll() is None
+
+    def is_robot_auto_running(self):
+        """Check if the one-shot real robot (real_robot_slam_nav.launch.py) is running"""
+        return "ROBOT_AUTO" in self.processes and self.processes["ROBOT_AUTO"].poll() is None
 
     def require_robot_or_sim(self):
         if self.is_sim_running() or self.is_robot_running():
