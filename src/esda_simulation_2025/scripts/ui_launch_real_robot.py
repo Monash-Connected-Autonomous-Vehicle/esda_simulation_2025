@@ -346,7 +346,7 @@ class SimManager(ctk.CTk):
         # Prepare the command to source ROS and our workspace
         # We also disable SHM transport to avoid FastDDS errors in Docker
         full_command = (f'xterm -T "{name}" -geometry 100x30 -e "bash -c \\"'
-                        f'export FASTRTPS_DEFAULT_PROFILES_FILE={self.workspace_root}/src/esda_simulation_2025/config/fastdds_noshm.xml && '
+                        f'export FASTRTPS_DEFAULT_PROFILES_FILE={self.workspace_root}/src/esda_simulation_2025/config/fastdds_jetson.xml && '
                         f'{ros_setup_cmd} && '
                         f'{local_setup_cmd} && '
                         f'echo Starting {name}... && '

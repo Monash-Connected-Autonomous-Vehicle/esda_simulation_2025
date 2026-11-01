@@ -64,6 +64,8 @@ def generate_launch_description():
     launch_slam = LaunchConfiguration('launch_slam')
     launch_nav2 = LaunchConfiguration('launch_nav2')
     viz_cloud_rate = LaunchConfiguration('viz_cloud_rate')
+    launch_virtual_lanes = LaunchConfiguration('launch_virtual_lanes')
+    lane_half_width = LaunchConfiguration('lane_half_width')
 
     # ------------------------------------------------------------
     # Robot State Publisher
@@ -285,6 +287,21 @@ def generate_launch_description():
     delayed_nav2 = TimerAction(period=8.0, actions=[nav2])
 
     # ------------------------------------------------------------
+    # Virtual lane walls: two endless lines lane_half_width either side of
+    # where the robot starts, fed to Nav2's keepout filter. Needs SLAM's
+    # map frame, so it only makes sense with launch_slam.
+    # ------------------------------------------------------------
+
+    virtual_lanes = Node(
+        package=package_name,
+        executable='virtual_lane_walls.py',
+        name='virtual_lane_walls',
+        output='screen',
+        parameters=[{'lane_half_width': ParameterValue(lane_half_width, value_type=float)}],
+        condition=IfCondition(launch_virtual_lanes),
+    )
+
+    # ------------------------------------------------------------
     # RViz
     # ------------------------------------------------------------
 
@@ -376,6 +393,12 @@ def generate_launch_description():
             'launch_joy', default_value='false',
             description='Run joy_node + teleop_twist_joy on /cmd_vel'),
         DeclareLaunchArgument(
+            'launch_virtual_lanes', default_value='false',
+            description='Two virtual walls lane_half_width either side of the start pose (needs SLAM)'),
+        DeclareLaunchArgument(
+            'lane_half_width', default_value='2.0',
+            description='Metres from the start pose to each virtual lane wall'),
+        DeclareLaunchArgument(
             'launch_slam', default_value='false',
             description='Run slam_toolbox (map -> odom) on /scan'),
         DeclareLaunchArgument(
@@ -393,6 +416,7 @@ def generate_launch_description():
 
         slam,
         delayed_nav2,
+        virtual_lanes,
 
         delayed_rviz,
         teleop,

@@ -9,6 +9,8 @@
 #   VLP-16 + ODrive bridge + throttled /velodyne_points_viz for Foxglove
 #   slam_toolbox on /scan (map -> odom)
 #   Nav2 on /scan + /odom (starts 8 s after the rest)
+#   virtual lane walls off (launch_virtual_lanes:=true for walls 2 m left and
+#   right of the start pose, via Nav2 keepout)
 #   WASD teleop in its own xterm
 #   no RViz (use Foxglove, or pass launch_rviz:=true)
 #
@@ -45,6 +47,8 @@ def generate_launch_description():
         'launch_teleop': 'true',
         'launch_joy': 'false',
         'launch_rviz': 'false',
+        'launch_virtual_lanes': 'false',  # walls 2 m left/right of the start pose
+        'lane_half_width': '2.0',
     }
 
     robot = IncludeLaunchDescription(
@@ -54,12 +58,14 @@ def generate_launch_description():
         launch_arguments={name: LaunchConfiguration(name) for name in defaults}.items(),
     )
 
-    # Same UDP-only DDS profile as the GUI and the Foxglove bridge service, so
-    # every node is visible to Foxglove and to ros2 CLI tools no matter which
-    # shell this is launched from.
+    # UDP-only DDS profile (like fastdds_noshm.xml used by the GUI and the
+    # Foxglove bridge service), so every node is visible to Foxglove and to
+    # ros2 CLI tools no matter which shell this is launched from. It also
+    # announces to the laptop over Tailscale, which has no multicast; the
+    # laptop uses fastdds_remote_jetson.xml.
     dds_profile = SetEnvironmentVariable(
         'FASTRTPS_DEFAULT_PROFILES_FILE',
-        os.path.join(pkg_share, 'config', 'fastdds_noshm.xml'))
+        os.path.join(pkg_share, 'config', 'fastdds_jetson.xml'))
 
     return LaunchDescription(
         [dds_profile]

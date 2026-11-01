@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+    Jetson-side counterpart of fastdds_remote_jetson.xml. Same UDP-only
+    transport as fastdds_noshm.xml, but every participant also announces
+    itself by unicast to the laptop over Tailscale (which doesn't carry
+    multicast), so discovery works in both directions instead of relying on
+    the laptop's announcements alone.
+
+    239.255.0.1:7400 is Fast DDS's default multicast peer. Setting
+    initialPeersList replaces the default, so it is listed explicitly to keep
+    local discovery between the Jetson's own nodes working.
+
+    100.72.211.34 is samuel-xps-15-9520 on the tailnet, domain 0. Participant
+    ids 0-19 (ports 7410 + 2*id) cover RViz, the ros2 daemon and CLI tools.
+    If the laptop is offline these announcements are just dropped.
+-->
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastrtps_profiles">
+    <transport_descriptors>
+        <transport_descriptor>
+            <transport_id>udp_transport</transport_id>
+            <type>UDPv4</type>
+        </transport_descriptor>
+    </transport_descriptors>
+
+    <participant profile_name="jetson_profile" is_default_profile="true">
+        <rtps>
+            <userTransports>
+                <transport_id>udp_transport</transport_id>
+            </userTransports>
+            <useBuiltinTransports>false</useBuiltinTransports>
+            <builtin>
+                <initialPeersList>
+                    <locator><udpv4><address>239.255.0.1</address><port>7400</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7410</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7412</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7414</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7416</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7418</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7420</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7422</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7424</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7426</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7428</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7430</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7432</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7434</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7436</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7438</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7440</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7442</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7444</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7446</port></udpv4></locator>
+                    <locator><udpv4><address>100.72.211.34</address><port>7448</port></udpv4></locator>
+                </initialPeersList>
+            </builtin>
+        </rtps>
+    </participant>
+</profiles>

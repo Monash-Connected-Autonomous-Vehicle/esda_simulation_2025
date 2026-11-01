@@ -68,6 +68,7 @@ install(PROGRAMS
   scripts/odrive_bridge.py
   scripts/odrive_monitor.py
   scripts/topic_throttle.py
+  scripts/virtual_lane_walls.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
