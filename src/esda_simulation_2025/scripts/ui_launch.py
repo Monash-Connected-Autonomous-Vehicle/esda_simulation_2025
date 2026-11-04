@@ -14,7 +14,7 @@ class SimManager(ctk.CTk):
         super().__init__()
 
         self.title("ESDA SIMULATION SUITE")
-        self.geometry("700x750")
+        self.geometry("700x800")
 
         # Futuristic Appearance
         ctk.set_appearance_mode("dark")
@@ -267,12 +267,18 @@ class SimManager(ctk.CTk):
                          fg_color=self.accent_orange, hover_color="#CC7000", font=("Orbitron", 12), text_color=self.bg_dark)
         self.reset_odom_button.grid(row=4, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
 
-        # One-shot real robot + SLAM + Nav2, with that launch file's own mounts
-        # (ignores the LIDAR, joystick and mount options above). Teleop stays
-        # off so it can't fight Nav2 on /cmd_vel; WASD Teleop still opens it.
-        self.real_robot_auto_button = ctk.CTkButton(self.teleop_frame, text="Launch Autonomous Real Robot (SLAM + Nav2)", command=self.toggle_real_robot_auto,
+        # One-shot LiDAR + ZED + SLAM + Nav2 without the ODrive, with that launch
+        # file's own mounts (ignores the LIDAR, joystick and mount options
+        # above, but honours "RViz (Real Robot)"). Nothing drives the wheels,
+        # so the robot sits at the odom origin.
+        self.real_robot_auto_button = ctk.CTkButton(self.teleop_frame, text="Launch Autonomous Stack (LiDAR + ZED + SLAM + Nav2, no ODrive)", command=self.toggle_real_robot_auto,
                          fg_color=self.accent_green, hover_color="#00B37A", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.real_robot_auto_button.grid(row=5, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
+
+        # Same stack plus odrive_bridge.py, so Nav2's /cmd_vel drives the wheels.
+        self.real_robot_drive_button = ctk.CTkButton(self.teleop_frame, text="Launch Autonomous Robot (ODrive + LiDAR + ZED + SLAM + Nav2)", command=self.toggle_real_robot_drive,
+                         fg_color="#FF5E3A", hover_color="#CC4A2E", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
+        self.real_robot_drive_button.grid(row=6, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
 
         # Diagnostics Section
         self.diag_button = ctk.CTkButton(self, text="Check /clock Topic (Diagnostics)", command=self.check_clock,
@@ -301,6 +307,7 @@ class SimManager(ctk.CTk):
             "LANE": self.lane_detection_button.cget("fg_color"),
             "ROBOT": self.real_robot_button.cget("fg_color"),
             "ROBOT_AUTO": self.real_robot_auto_button.cget("fg_color"),
+            "ROBOT_DRIVE": self.real_robot_drive_button.cget("fg_color"),
             "MONITOR": self.monitor_button.cget("fg_color"),
         }
 
@@ -418,6 +425,7 @@ class SimManager(ctk.CTk):
         elif name == "LANE": self.lane_detection_button.configure(fg_color=color)
         elif name == "ROBOT": self.real_robot_button.configure(fg_color=color)
         elif name == "ROBOT_AUTO": self.real_robot_auto_button.configure(fg_color=color)
+        elif name == "ROBOT_DRIVE": self.real_robot_drive_button.configure(fg_color=color)
         elif name == "MONITOR": self.monitor_button.configure(fg_color=color)
 
     def check_xterm(self):
@@ -803,7 +811,7 @@ class SimManager(ctk.CTk):
             self.status_label.configure(text="Error: Stop the simulation first - both own /cmd_vel and /odom", text_color="#E74C3C")
             return
         if self.is_robot_auto_running():
-            self.status_label.configure(text="Error: Stop the autonomous real robot first - both use the ODrive", text_color="#E74C3C")
+            self.status_label.configure(text="Error: Stop the autonomous stack first - both run the LiDAR", text_color="#E74C3C")
             return
         lidar = "true" if self.lidar_var.get() else "false"
         joy = "true" if self.joy_var.get() else "false"
@@ -814,24 +822,44 @@ class SimManager(ctk.CTk):
         self.run_in_terminal("ROBOT", cmd)
 
     def toggle_real_robot_auto(self):
+        self.launch_autonomous("ROBOT_AUTO", odrive=False)
+
+    def toggle_real_robot_drive(self):
+        self.launch_autonomous("ROBOT_DRIVE", odrive=True)
+
+    def launch_autonomous(self, name, odrive):
+        """real_robot_slam_nav.launch.py with LiDAR + ZED + SLAM + Nav2, and the
+        ODrive bridge only when odrive is true. Clicking the same button again stops it."""
+        other = "ROBOT_AUTO" if name == "ROBOT_DRIVE" else "ROBOT_DRIVE"
         if self.is_sim_running():
             self.status_label.configure(text="Error: Stop the simulation first - both own /cmd_vel and /odom", text_color="#E74C3C")
             return
         if self.is_robot_running():
-            self.status_label.configure(text="Error: Stop the real robot first - both use the ODrive", text_color="#E74C3C")
+            self.status_label.configure(text="Error: Stop the real robot first - both run the LiDAR", text_color="#E74C3C")
+            return
+        if other in self.processes and self.processes[other].poll() is None:
+            self.status_label.configure(text="Error: Stop the other autonomous launch first - both run the LiDAR", text_color="#E74C3C")
             return
         # nav2_params_real_robot.yaml finds its behaviour tree by a path
         # relative to the workspace root, so launch from there.
         # The kernel drops the VLP-16's UDP packets unless the Jetson has an
         # address on its subnet. Skipped if already set; sudo may prompt in the xterm.
-        lidar_addr = "192.168.1.100/24"
+        lidar_addr = "192.168.10.100/24"  # our VLP-16 is at 192.168.10.201
         lidar_iface = "enP8p1s0"
+        # zed_wrapper lives in its own workspace; without it the launch just
+        # logs that there's no ZED and carries on.
+        zed_setup = os.path.expanduser("~/zed_ws/install/setup.bash")
+        rviz = "true" if self.robot_rviz_var.get() else "false"
         cmd = (f"sudo ip link set {lidar_iface} up && "
                f"(ip -4 addr show dev {lidar_iface} | grep -q {lidar_addr} || "
                f"sudo ip addr add {lidar_addr} dev {lidar_iface}) && "
+               f"{{ test -f {zed_setup} && source {zed_setup} || true; }} && "
+               f"source {self.workspace_root}/install/setup.bash && "
                f"cd {self.workspace_root} && "
-               f"ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py launch_teleop:=false")
-        self.run_in_terminal("ROBOT_AUTO", cmd)
+               f"ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py "
+               f"launch_teleop:=false launch_odrive:={'true' if odrive else 'false'} "
+               f"launch_zed_cam:=true launch_rviz:={rviz}")
+        self.run_in_terminal(name, cmd)
 
     def kill_all(self):
         self.status_label.configure(text="Cleaning up Gazebo and processes...", text_color="#E74C3C")
@@ -866,8 +894,9 @@ class SimManager(ctk.CTk):
         return "ROBOT" in self.processes and self.processes["ROBOT"].poll() is None
 
     def is_robot_auto_running(self):
-        """Check if the one-shot real robot (real_robot_slam_nav.launch.py) is running"""
-        return "ROBOT_AUTO" in self.processes and self.processes["ROBOT_AUTO"].poll() is None
+        """Check if either autonomous launch (real_robot_slam_nav.launch.py) is running"""
+        return any(n in self.processes and self.processes[n].poll() is None
+                   for n in ("ROBOT_AUTO", "ROBOT_DRIVE"))
 
     def require_robot_or_sim(self):
         if self.is_sim_running() or self.is_robot_running():

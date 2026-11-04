@@ -10,8 +10,8 @@
 #   /scan -> slam_toolbox -> map -> odom;  /scan + /odom -> Nav2 -> /cmd_vel
 #
 # The Jetson must have an IPv4 address on the LiDAR's subnet or the kernel
-# drops the VLP-16's UDP packets, e.g. for a factory-default sensor:
-#     sudo ip addr add 192.168.1.100/24 dev enP8p1s0
+# drops the VLP-16's UDP packets. Our sensor is at 192.168.10.201:
+#     sudo ip addr add 192.168.10.100/24 dev enP8p1s0
 #
 # Example:
 #     ros2 launch esda_simulation_2025 launch_odrive_robot.launch.py
@@ -251,6 +251,10 @@ def generate_launch_description():
                         # let the ZED node publish its own odom/map TF.
                         'publish_tf': 'false',
                         'publish_map_tf': 'false',
+                        # The wrapper's launch defaults this to false, which
+                        # leaves /zed/zed_node/imu/data's zed_imu_link frame
+                        # with no TF.
+                        'publish_imu_tf': 'true',
                         'ros_params_override_path': os.path.expanduser('~/zed_ws/zed_nodepth.yaml'),
                     }.items(),
                 ),

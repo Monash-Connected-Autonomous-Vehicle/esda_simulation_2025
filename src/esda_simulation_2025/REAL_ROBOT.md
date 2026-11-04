@@ -22,33 +22,41 @@ Lane detection and the ZED are not started, so the robot only avoids what the Li
 - The robot is pointing where you want it. Its starting pose becomes the map origin.
 
 ## Launch via UI (Recommended)
-![The UI launcher. The green button near the bottom starts the autonomous real robot.](assets/real_robot_ui.png)
+![The UI launcher. The green button near the bottom starts the autonomous stack. This screenshot shows its older label.](assets/real_robot_ui.png)
 
 1. Run the UI launcher:
    ```bash
    python3 ~/Mk3/esda_simulation_2025/src/esda_simulation_2025/scripts/ui_launch.py
    ```
 2. If the code has changed, click **1. Colcon Build**.
-3. Click **Launch Autonomous Real Robot (SLAM + Nav2)**. Enter the `sudo` password in the xterm if asked.
+3. Click one of the two autonomous buttons. Enter the `sudo` password in the xterm if asked.
+   - **Launch Autonomous Robot (ODrive + LiDAR + ZED + SLAM + Nav2)** (red): drives the wheels. Use this to send it to waypoints.
+   - **Launch Autonomous Stack (LiDAR + ZED + SLAM + Nav2, no ODrive)** (green): the same stack without the ODrive, for testing on the bench.
 4. Wait until the xterm shows Nav2's nodes are active. Nav2 starts about 8 seconds after everything else.
 5. Click **Launch RViz2**, then change **Global Options > Fixed Frame** to `map`.
 6. Send a waypoint (see below).
 
-The button also brings up `enP8p1s0` and gives it `192.168.1.100/24`, which the Jetson needs to receive LiDAR packets.
+Both buttons also bring up `enP8p1s0` and gives it `192.168.10.100/24`, which the Jetson needs to receive LiDAR packets.
+
+The red button starts `odrive_bridge.py`, so the wheels follow Nav2 as soon as a goal is sent. Keep the wheels off the ground for a first test.
+
+The green button does not start the ODrive, so the wheels never move. Nav2 still plans and publishes `/cmd_vel`, but nothing drives the motors. With no wheel odometry the robot is pinned at the `odom` origin, so keep it still: moving it by hand confuses SLAM.
+
+The ZED starts with depth off. It needs `~/zed_ws` (the ZED ROS 2 wrapper) and `~/zed_ws/zed_nodepth.yaml`; without the wrapper the launch logs that there is no ZED and carries on.
 
 Do not click these while the autonomous launch is running:
 - **Launch SLAM** and **Launch Nav2**: the launch already runs both, so they just report an error.
-- **Launch Real Robot (ODrive + LiDAR)**: it is blocked because both launches use the ODrive.
+- **Launch Real Robot (ODrive + LiDAR)** or the other autonomous button: they are blocked because they all run the LiDAR.
 - **Waypoint Nav**: this is the older `waypoint_navigator.py`, which follows fixed waypoints from `igvc_waypoints.yaml`.
 
-The button ignores the **Enable LIDAR** and joystick checkboxes, the mount dropdowns and **RViz (Real Robot)**. It always uses the LiDAR low on the chassis and the ZED on the pole, and it does not open WASD teleop.
+Both buttons ignore the **Enable LIDAR** and joystick checkboxes and the mount dropdowns. Tick **RViz (Real Robot)** before clicking one to open RViz with the launch (Fixed Frame `odom`; change it to `map` to see SLAM's map). It always uses the LiDAR low on the chassis and the ZED on the pole, and they do not open WASD teleop.
 
 ## Launch from a Terminal
 ```bash
 cd ~/Mk3/esda_simulation_2025
 source install/setup.bash
 sudo ip link set enP8p1s0 up
-sudo ip addr add 192.168.1.100/24 dev enP8p1s0   # once per boot
+sudo ip addr add 192.168.10.100/24 dev enP8p1s0  # once per boot
 ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py launch_teleop:=false
 ```
 
@@ -100,7 +108,7 @@ The addresses are hardcoded, so update them if they change:
 The UI button also works with a laptop, because `real_robot_slam_nav.launch.py` sets `fastdds_jetson.xml` for its own nodes.
 
 ## Stopping
-- Click the green button again, or **KILL ALL PROCESSES**.
+- Click the same autonomous button again, or **KILL ALL PROCESSES**.
 - From a terminal, press Ctrl+C on the launch. `odrive_bridge.py` sets the axes to idle on shutdown.
 - Keep a physical way to cut power, because these all stop the robot through software.
 
@@ -117,7 +125,7 @@ The wheels stop if `/cmd_vel` is missing for 0.5 s. Do not use WASD to stop the 
 
 | Symptom | Check |
 |---|---|
-| No `/scan`, or the map stays empty | Is the LiDAR powered and plugged in? `cat /sys/class/net/enP8p1s0/carrier` should print `1`. The address assumes the LiDAR's factory subnet, `192.168.1.x`. |
+| No `/scan`, or the map stays empty | Is the LiDAR powered and plugged in? `cat /sys/class/net/enP8p1s0/carrier` should print `1`. The LiDAR is at `192.168.10.201`; if it has been given a different address, change `lidar_addr` in `ui_launch.py`. |
 | Nav2 cannot load its behaviour tree | The launch was started outside the workspace root. |
 | Goal accepted but the wheels do not move | Run `ros2 topic echo /cmd_vel`. If Nav2 is sending commands, look for errors from `odrive_bridge` in the launch xterm. |
 | Laptop RViz shows nothing | Check the hardcoded Tailscale addresses above. |
