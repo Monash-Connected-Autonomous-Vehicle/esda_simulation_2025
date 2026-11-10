@@ -8,7 +8,7 @@ Detects white lane markings from camera feed and publishes them as obstacles to 
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
-from sensor_msgs.msg import Image, PointCloud2, PointField, LaserScan
+from sensor_msgs.msg import Image, PointCloud2, PointField, LaserScan, CameraInfo
 from geometry_msgs.msg import PoseStamped, PointStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from cv_bridge import CvBridge
@@ -20,6 +20,37 @@ from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from tf2_geometry_msgs import do_transform_point
+
+# encoding -> (dtype, channels)
+_IMAGE_ENCODINGS = {
+    'bgr8': (np.uint8, 3), 'rgb8': (np.uint8, 3), '8UC3': (np.uint8, 3),
+    'bgra8': (np.uint8, 4), 'rgba8': (np.uint8, 4), '8UC4': (np.uint8, 4),
+    'mono8': (np.uint8, 1), '8UC1': (np.uint8, 1),
+    'mono16': (np.uint16, 1), '16UC1': (np.uint16, 1),
+    '32FC1': (np.float32, 1),
+}
+_TO_BGR = {'rgb8': cv2.COLOR_RGB2BGR, 'bgra8': cv2.COLOR_BGRA2BGR, '8UC4': cv2.COLOR_BGRA2BGR,
+           'rgba8': cv2.COLOR_RGBA2BGR, 'mono8': cv2.COLOR_GRAY2BGR, '8UC1': cv2.COLOR_GRAY2BGR}
+
+
+def image_msg_to_cv(msg, desired_encoding='passthrough'):
+    """sensor_msgs/Image -> numpy array, without cv_bridge.
+
+    Humble's cv_bridge is built against NumPy 1.x and segfaults on real
+    images under the NumPy 2 in ~/.local, so convert by hand. Handles the
+    simulator's bgr8/32FC1 and the ZED's bgra8.
+    """
+    dtype, channels = _IMAGE_ENCODINGS[msg.encoding]
+    itemsize = np.dtype(dtype).itemsize
+    rows = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.step)
+    img = rows[:, :msg.width * channels * itemsize].copy().view(dtype)
+    if msg.is_bigendian and itemsize > 1:
+        img = img.byteswap()
+    img = img.reshape(msg.height, msg.width, channels) if channels > 1 else img.reshape(msg.height, msg.width)
+    if desired_encoding == 'bgr8' and msg.encoding not in ('bgr8', '8UC3'):
+        img = cv2.cvtColor(img, _TO_BGR[msg.encoding])
+    return img
+
 
 class LaneDetectionNode(Node):
     def __init__(self):
@@ -61,6 +92,15 @@ class LaneDetectionNode(Node):
         # range, so a tighter value here biases output toward closer, more
         # trustworthy detections instead of noisy far ones.
         self.declare_parameter('max_lane_range', 8.0)
+        # Real cameras. camera_info_topic: take intrinsics and image size from
+        # CameraInfo instead of the simulator's fixed 640x480 model.
+        # ground_frame/ground_z: where depth is missing, intersect each pixel's
+        # ray with the plane z = ground_z in ground_frame (looked up through
+        # TF), instead of using camera_mount_height/pitch. Left empty, the
+        # simulator behaviour is unchanged.
+        self.declare_parameter('camera_info_topic', '')
+        self.declare_parameter('ground_frame', '')
+        self.declare_parameter('ground_z', 0.0)
 
         # Get parameters
         self.show_viz = self.get_parameter('show_visualization').value
@@ -76,6 +116,16 @@ class LaneDetectionNode(Node):
         self.camera_mount_height = self.get_parameter('camera_mount_height').value
         self.camera_mount_pitch = self.get_parameter('camera_mount_pitch').value
         self.max_lane_range = self.get_parameter('max_lane_range').value
+        self.ground_frame = self.get_parameter('ground_frame').value
+        self.ground_z = float(self.get_parameter('ground_z').value)
+        self.ground_tf = None  # (R, t): camera frame -> ground_frame, refreshed per image
+
+        # Simulator intrinsics (640x480, FOV ~1.089 rad) until CameraInfo says otherwise
+        self.fx = 640 / (2 * np.tan(1.089 / 2))
+        self.fy = self.fx
+        self.cx = 320.0
+        self.cy = 240.0
+        self.img_w, self.img_h = 640, 480
         self.reject_orange_cones = self.get_parameter('reject_orange_cones').value
         self.orange_hue_low = self.get_parameter('orange_hue_low').value
         self.orange_hue_high = self.get_parameter('orange_hue_high').value
@@ -146,6 +196,10 @@ class LaneDetectionNode(Node):
         # Lidar Interaction (scan also uses RELIABLE from gz_bridge)
         self.scan_sub = self.create_subscription(LaserScan, '/scan', self.scan_callback, reliable_qos)
         self.scan_pub = self.create_publisher(LaserScan, '/scan_fused', reliable_qos)
+
+        info_topic = self.get_parameter('camera_info_topic').value
+        if info_topic:
+            self.create_subscription(CameraInfo, info_topic, self.camera_info_callback, reliable_qos)
         
         # Store latest processed image for visualization
         self.latest_viz_image = None
@@ -159,10 +213,53 @@ class LaneDetectionNode(Node):
         self.get_logger().info(f'Publishing to: /lane_markers, /lane_obstacles, /scan_fused')
         self.get_logger().info(f'Show visualization: {self.show_viz}')
     
+    def camera_info_callback(self, msg):
+        """Use the real camera's intrinsics and image size."""
+        if msg.k[0] <= 0.0:
+            return
+        self.fx, self.fy, self.cx, self.cy = msg.k[0], msg.k[4], msg.k[2], msg.k[5]
+        self.img_w, self.img_h = msg.width, msg.height
+
+    def update_ground_tf(self):
+        """Cache the camera -> ground_frame transform for ground_point()."""
+        self.ground_tf = None
+        if not self.ground_frame:
+            return
+        try:
+            tf = self.tf_buffer.lookup_transform(
+                self.ground_frame, self.camera_frame_id, rclpy.time.Time())
+        except TransformException as ex:
+            self.get_logger().warn(
+                f'No transform {self.camera_frame_id} -> {self.ground_frame}: {ex}',
+                throttle_duration_sec=5.0)
+            return
+        q = tf.transform.rotation
+        x, y, z, w = q.x, q.y, q.z, q.w
+        R = np.array([
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ])
+        t = tf.transform.translation
+        self.ground_tf = (R, np.array([t.x, t.y, t.z]))
+
+    def ground_point(self, u, v):
+        """Camera-frame (x, y, z) where pixel (u, v)'s ray meets the ground, or None."""
+        R, t = self.ground_tf
+        ray = np.array([(u - self.cx) / self.fx, (v - self.cy) / self.fy, 1.0])
+        d = R @ ray
+        if d[2] > -1e-3:  # at or above the horizon
+            return None
+        s = (self.ground_z - t[2]) / d[2]
+        x, y, z = (float(c) for c in s * ray)
+        if not (0.2 < z < 8.0 and abs(x) < 5.0):
+            return None
+        return x, y, z
+
     def right_image_callback(self, msg):
         """Store the latest right image for stereo visualization"""
         try:
-            self.latest_right_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            self.latest_right_image = image_msg_to_cv(msg, desired_encoding='bgr8')
         except Exception as e:
             self.get_logger().error(f'Right Image Error: {e}')
 
@@ -181,7 +278,7 @@ class LaneDetectionNode(Node):
         
         # Transform cached 3D points to Laser Frame
         # Points are currently in 'camera_link_optical'
-        camera_frame = 'camera_link_optical'
+        camera_frame = self.camera_frame_id
         laser_frame = msg.header.frame_id
         
         injected_count = 0
@@ -255,7 +352,7 @@ class LaneDetectionNode(Node):
         try:
             # Depth image is usually 16UC1 (uint16 in mm) or 32FC1 (float in meters)
             # The libgazebo_ros_camera plugin usually sends 32FC1
-            self.latest_depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+            self.latest_depth_image = image_msg_to_cv(msg)
             self.get_logger().info(f'Depth image received: shape={self.latest_depth_image.shape}, '
                                    f'min={np.nanmin(self.latest_depth_image):.2f}, '
                                    f'max={np.nanmax(self.latest_depth_image):.2f}', 
@@ -321,8 +418,9 @@ class LaneDetectionNode(Node):
         if lines is None:
             return []
 
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
+        # OpenCV 4 returns (N, 1, 4) and OpenCV 5 (N, 4); flatten to one line per row.
+        for line in np.asarray(lines).reshape(-1, 4):
+            x1, y1, x2, y2 = line
 
             # Calculate line length
             length = np.sqrt((x2-x1)**2 + (y2-y1)**2)
@@ -336,7 +434,7 @@ class LaneDetectionNode(Node):
 
             # Verify Profile: Dark - White - Dark
             if self.verify_line_profile(gray, x1, y1, x2, y2, hsv):
-                valid_lines.append(line[0])
+                valid_lines.append(line)
 
         return valid_lines
 
@@ -432,7 +530,9 @@ class LaneDetectionNode(Node):
         self.get_logger().info('Image callback received', throttle_duration_sec=5.0)
         try:
             # Convert ROS Image to OpenCV format
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            cv_image = image_msg_to_cv(msg, desired_encoding='bgr8')
+            self.img_h, self.img_w = cv_image.shape[:2]
+            self.update_ground_tf()
             
             # Detect lanes
             lines, white_mask, edges = self.detect_white_lanes(cv_image)
@@ -504,7 +604,7 @@ class LaneDetectionNode(Node):
                 self.publish_lane_markers(lines_array, header)
                 
                 # Also publish to PointCloud for Nav2 costmap
-                if self.latest_depth_image is not None:
+                if self.latest_depth_image is not None or self.ground_tf is not None:
                     self.publish_obstacle_cloud(self.latest_lines, self.latest_depth_image, header)
                 else:
                     self.latest_3d_points = []
@@ -520,12 +620,7 @@ class LaneDetectionNode(Node):
         points = []
         self.latest_3d_points = []
         
-        # Camera Intrinsics (Approximate for 640x480, FOV ~1.089 rad)
-        # fx = width / (2 * tan(fov/2))
-        fx = 640 / (2 * np.tan(1.089 / 2))
-        fy = fx
-        cx = 320
-        cy = 240
+        fx, fy, cx, cy = self.fx, self.fy, self.cx, self.cy
         
         # Camera height and tilt for ground plane fallback
         camera_height = self.camera_mount_height  # meters above ground
@@ -569,10 +664,10 @@ class LaneDetectionNode(Node):
                     u = int(center_u + t_across * perp_x)
                     v = int(center_v + t_across * perp_y)
                     
-                    if not (0 <= u < 640 and 0 <= v < 480):
+                    if not (0 <= u < self.img_w and 0 <= v < self.img_h):
                         continue
                         
-                    d = depth_img[v, u]
+                    d = depth_img[v, u] if depth_img is not None else float('nan')
                     
                     # Convert to native Python float to handle numpy types
                     d = float(d)
@@ -583,7 +678,13 @@ class LaneDetectionNode(Node):
                         use_fallback = True
                     
                     # If depth is invalid, estimate using ground plane assumption
-                    if use_fallback:
+                    if use_fallback and self.ground_tf is not None:
+                        p = self.ground_point(u, v)
+                        if p is None:
+                            continue
+                        x, y, z = p
+                        fallback_count += 1
+                    elif use_fallback:
                         # Ray direction in camera frame (optical: +Z forward, +X right, +Y down)
                         ray_x = (u - cx) / fx
                         ray_y = (v - cy) / fy
@@ -684,11 +785,7 @@ class LaneDetectionNode(Node):
         self.left_lane_points = []
         self.right_lane_points = []
 
-        # Camera intrinsics
-        fx = 640 / (2 * np.tan(1.089 / 2))
-        fy = fx
-        cx = 320
-        cy = 240
+        fx, fy, cx, cy = self.fx, self.fy, self.cx, self.cy
         camera_height = self.camera_mount_height
         camera_pitch = self.camera_mount_pitch
 
@@ -716,7 +813,7 @@ class LaneDetectionNode(Node):
                 u = int(x1 + t * dx)
                 v = int(y1 + t * dy)
 
-                if not (0 <= u < 640 and 0 <= v < 480):
+                if not (0 <= u < self.img_w and 0 <= v < self.img_h):
                     continue
 
                 x_3d, y_3d, z_3d = None, None, None
@@ -728,7 +825,11 @@ class LaneDetectionNode(Node):
                         x_3d = float((u - cx) * z_3d / fx)
                         y_3d = float((v - cy) * z_3d / fy)
 
-                if x_3d is None:
+                if x_3d is None and self.ground_tf is not None:
+                    p = self.ground_point(u, v)
+                    if p is not None:
+                        x_3d, y_3d, z_3d = p
+                elif x_3d is None:
                     ray_x = (u - cx) / fx
                     ray_y = (v - cy) / fy
                     ray_z = 1.0

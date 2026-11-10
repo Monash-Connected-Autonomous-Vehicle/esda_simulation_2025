@@ -68,6 +68,7 @@ def generate_launch_description():
     lane_half_width = LaunchConfiguration('lane_half_width')
     camera_name = LaunchConfiguration('camera_name')
     launch_zed_camera = LaunchConfiguration('launch_zed_cam')
+    launch_lane_detection = LaunchConfiguration('launch_lane_detection')
     camera_model = LaunchConfiguration('camera_model')
 
     # ------------------------------------------------------------
@@ -256,6 +257,10 @@ def generate_launch_description():
                         # with no TF.
                         'publish_imu_tf': 'true',
                         'ros_params_override_path': os.path.expanduser('~/zed_ws/zed_nodepth.yaml'),
+                        # Publish at half size (640x360): the lane detector's
+                        # pixel thresholds were tuned on a 640-wide image, and
+                        # it is much cheaper on the Jetson.
+                        'param_overrides': 'general.pub_resolution:=CUSTOM;general.pub_downscale_factor:=2.0',
                     }.items(),
                 ),
                 # Hang the wrapper's own frames off the URDF's camera_link.
@@ -276,6 +281,41 @@ def generate_launch_description():
             msg='zed_wrapper not found - no ZED camera. '
                 'Run: source ~/zed_ws/install/setup.bash'
         )
+
+    # ------------------------------------------------------------
+    # Lane detection on the ZED (optional, needs launch_zed_cam)
+    #
+    # The adaptive detector from lane_detection_esda.py, pointed at the ZED's
+    # left image. Depth is off, so each lane pixel is placed where its ray
+    # meets the ground (z = -0.1625 in base_link, axle height above the
+    # ground), using the camera's real intrinsics from CameraInfo. Output
+    # goes to /lane_obstacles, which nav2_params_real_robot.yaml's costmaps
+    # already mark as obstacles.
+    # ------------------------------------------------------------
+
+    zed_image = ['/', camera_name, '/zed_node/rgb/color/rect/image']
+    lane_detection = Node(
+        package=package_name,
+        executable='lane_detection_esda.py',
+        name='lane_detection',
+        output='screen',
+        remappings=[
+            ('/camera/left/image_raw', zed_image),
+            ('/camera/right/image_raw', zed_image),  # only used for the debug view
+            ('/camera/depth/image_raw', ['/', camera_name, '/zed_node/depth/depth_registered']),
+        ],
+        parameters=[{
+            'detector_method': 'adaptive',
+            'camera_info_topic': ['/', camera_name, '/zed_node/rgb/color/rect/camera_info'],
+            'camera_frame_id': [camera_name, '_left_camera_frame_optical'],
+            'ground_frame': 'base_link',
+            'ground_z': -0.1625,
+            'max_lane_range': 6.0,
+            'show_visualization': False,
+            'debug_window': False,
+        }],
+        condition=IfCondition(launch_lane_detection),
+    )
 
     # Viewer-only copy of the cloud for Foxglove over Tailscale: the full
     # /velodyne_points is ~6.7 MB/s and backs up the link (odom/TF then
@@ -469,6 +509,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'camera_name', default_value='zed',
             description='ZED camera name; sets the /<name>/... topics and <name>_camera_link'),
+        DeclareLaunchArgument(
+            'launch_lane_detection', default_value='false',
+            description='Lane detection on the ZED image into /lane_obstacles (needs launch_zed_cam)'),
 
         rsp,
         odrive_bridge,
@@ -488,4 +531,5 @@ def generate_launch_description():
         joy_node,
         teleop_joy,
         zed_launch,
+        lane_detection,
     ])

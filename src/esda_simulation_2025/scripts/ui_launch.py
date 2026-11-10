@@ -10,11 +10,14 @@ import threading
 from tkinter import filedialog
 
 class SimManager(ctk.CTk):
+    # The three real_robot_slam_nav.launch.py buttons; only one runs at a time.
+    AUTONOMOUS_LAUNCHES = ("ROBOT_AUTO", "ROBOT_DRIVE", "ROBOT_LANES")
+
     def __init__(self):
         super().__init__()
 
         self.title("ESDA SIMULATION SUITE")
-        self.geometry("700x800")
+        self.geometry("700x850")
 
         # Futuristic Appearance
         ctk.set_appearance_mode("dark")
@@ -155,7 +158,7 @@ class SimManager(ctk.CTk):
         self.lane_mode_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lane_detector_mode,
-            values=["Regular", "FCN", "TwinLiteNet+"],
+            values=["Adaptive", "YOLO", "Regular", "FCN", "TwinLiteNet+"],
             width=130,
             fg_color=self.bg_dark,
             button_color=self.accent_purple,
@@ -280,6 +283,11 @@ class SimManager(ctk.CTk):
                          fg_color="#FF5E3A", hover_color="#CC4A2E", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
         self.real_robot_drive_button.grid(row=6, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
 
+        # Same as above plus lane detection on the ZED into /lane_obstacles.
+        self.real_robot_lanes_button = ctk.CTkButton(self.teleop_frame, text="Launch Autonomous Robot + Lanes (ODrive + LiDAR + ZED + SLAM + Nav2)", command=self.toggle_real_robot_lanes,
+                         fg_color="#C026D3", hover_color="#9D1FAC", font=("Orbitron", 14, "bold"), text_color=self.bg_dark)
+        self.real_robot_lanes_button.grid(row=7, column=0, columnspan=2, pady=6, padx=6, sticky="ew")
+
         # Diagnostics Section
         self.diag_button = ctk.CTkButton(self, text="Check /clock Topic (Diagnostics)", command=self.check_clock,
                          fg_color=self.accent_purple, hover_color="#5F27CD", font=("Orbitron", 11), text_color=self.bg_dark)
@@ -308,6 +316,7 @@ class SimManager(ctk.CTk):
             "ROBOT": self.real_robot_button.cget("fg_color"),
             "ROBOT_AUTO": self.real_robot_auto_button.cget("fg_color"),
             "ROBOT_DRIVE": self.real_robot_drive_button.cget("fg_color"),
+            "ROBOT_LANES": self.real_robot_lanes_button.cget("fg_color"),
             "MONITOR": self.monitor_button.cget("fg_color"),
         }
 
@@ -426,6 +435,7 @@ class SimManager(ctk.CTk):
         elif name == "ROBOT": self.real_robot_button.configure(fg_color=color)
         elif name == "ROBOT_AUTO": self.real_robot_auto_button.configure(fg_color=color)
         elif name == "ROBOT_DRIVE": self.real_robot_drive_button.configure(fg_color=color)
+        elif name == "ROBOT_LANES": self.real_robot_lanes_button.configure(fg_color=color)
         elif name == "MONITOR": self.monitor_button.configure(fg_color=color)
 
     def check_xterm(self):
@@ -544,7 +554,38 @@ class SimManager(ctk.CTk):
             else "false"
         )
 
-        if mode == "FCN":
+        if mode == "Adaptive":
+            # lane_detection_esda.py: same base class, Hough, profile check and
+            # depth projection; only the mask differs - a local threshold
+            # instead of the fixed grayscale 130, plus a guard that refuses a
+            # mask covering over 15% of the ROI. Holds up under shade and
+            # gradients where the fixed level does not.
+            lane_cmd = (
+                f"ros2 run esda_simulation_2025 lane_detection_esda.py "
+                f"--ros-args "
+                f"-p detector_method:=adaptive "
+                f"-p show_visualization:={show_visualization}"
+            )
+        elif mode == "YOLO":
+            # YOLOv8-seg with separate lane and cone classes; cone pixels are
+            # cut out of the lane mask. Needs ultralytics and trained weights
+            # (research/vision on the yolo-adaptive branch); falls back to
+            # adaptive if either is missing.
+            weights = os.path.expanduser("~/esda_models/lane_seg.pt")
+            # ultralytics and a CUDA torch live in their own venv (it sees the
+            # system ROS packages), so the system torch the other detectors
+            # use is left alone. Without the venv, fall back to plain python.
+            venv_python = os.path.expanduser("~/esda_venvs/yolo/bin/python3")
+            prefix = (f"--prefix {venv_python} "
+                      if os.path.exists(venv_python) else "")
+            lane_cmd = (
+                f"ros2 run {prefix}esda_simulation_2025 lane_detection_esda.py "
+                f"--ros-args "
+                f"-p detector_method:=yolo "
+                f"-p yolo_weights:={weights} "
+                f"-p show_visualization:={show_visualization}"
+            )
+        elif mode == "FCN":
             model_path = f"{self.workspace_root}/lane-detection-on-rural-roads-master/CS542_Project/Code/FCN_model.h5"
             lane_cmd = (
                 f"ros2 run esda_simulation_2025 lane_detection_FCN.py "
@@ -575,10 +616,18 @@ class SimManager(ctk.CTk):
         # monocular feed and its depth sensor, and remap outputs so they don't
         # collide with the front camera's /lane_markers, /lane_obstacles, /scan_fused.
         if self.dual_camera_var.get():
+            # Side cameras use the adaptive detector when the front one uses
+            # Adaptive or YOLO (one model instance is enough), otherwise the
+            # base detector.
+            side_script = ("lane_detection_esda.py" if mode in ("Adaptive", "YOLO")
+                           else "lane_detection.py")
+            side_extra = ("-p detector_method:=adaptive "
+                          if mode in ("Adaptive", "YOLO") else "")
             for side in ("left_camera", "right_camera"):
                 side_lane_cmd = (
-                    f"ros2 run esda_simulation_2025 lane_detection.py "
+                    f"ros2 run esda_simulation_2025 {side_script} "
                     f"--ros-args "
+                    f"{side_extra}"
                     f"-r __node:=lane_detection_{side} "
                     f"-r /camera/left/image_raw:=/camera/{side}/image_raw "
                     f"-r /camera/right/image_raw:=/camera/{side}/image_raw "
@@ -827,17 +876,21 @@ class SimManager(ctk.CTk):
     def toggle_real_robot_drive(self):
         self.launch_autonomous("ROBOT_DRIVE", odrive=True)
 
-    def launch_autonomous(self, name, odrive):
+    def toggle_real_robot_lanes(self):
+        self.launch_autonomous("ROBOT_LANES", odrive=True, lanes=True)
+
+    def launch_autonomous(self, name, odrive, lanes=False):
         """real_robot_slam_nav.launch.py with LiDAR + ZED + SLAM + Nav2, and the
-        ODrive bridge only when odrive is true. Clicking the same button again stops it."""
-        other = "ROBOT_AUTO" if name == "ROBOT_DRIVE" else "ROBOT_DRIVE"
+        ODrive bridge when odrive is true and ZED lane detection when lanes is
+        true. Clicking the same button again stops it."""
+        others = [n for n in self.AUTONOMOUS_LAUNCHES if n != name]
         if self.is_sim_running():
             self.status_label.configure(text="Error: Stop the simulation first - both own /cmd_vel and /odom", text_color="#E74C3C")
             return
         if self.is_robot_running():
             self.status_label.configure(text="Error: Stop the real robot first - both run the LiDAR", text_color="#E74C3C")
             return
-        if other in self.processes and self.processes[other].poll() is None:
+        if any(n in self.processes and self.processes[n].poll() is None for n in others):
             self.status_label.configure(text="Error: Stop the other autonomous launch first - both run the LiDAR", text_color="#E74C3C")
             return
         # nav2_params_real_robot.yaml finds its behaviour tree by a path
@@ -858,7 +911,8 @@ class SimManager(ctk.CTk):
                f"cd {self.workspace_root} && "
                f"ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py "
                f"launch_teleop:=false launch_odrive:={'true' if odrive else 'false'} "
-               f"launch_zed_cam:=true launch_rviz:={rviz}")
+               f"launch_zed_cam:=true launch_rviz:={rviz} "
+               f"launch_lane_detection:={'true' if lanes else 'false'}")
         self.run_in_terminal(name, cmd)
 
     def kill_all(self):
@@ -877,6 +931,7 @@ class SimManager(ctk.CTk):
         subprocess.run("pkill -9 -f lane_detection.py 2>/dev/null", shell=True)
         subprocess.run("pkill -9 -f lane_detection_FCN.py 2>/dev/null", shell=True)
         subprocess.run("pkill -9 -f lane_detection_twinlite.py 2>/dev/null", shell=True)
+        subprocess.run("pkill -9 -f lane_detection_esda.py 2>/dev/null", shell=True)
         # Clean up shared memory segments that often cause FastDDS errors
         subprocess.run("rm -rf /dev/shm/fastrtps_* /dev/shm/sem.* 2>/dev/null", shell=True)
         # Kill our managed processes
@@ -896,7 +951,7 @@ class SimManager(ctk.CTk):
     def is_robot_auto_running(self):
         """Check if either autonomous launch (real_robot_slam_nav.launch.py) is running"""
         return any(n in self.processes and self.processes[n].poll() is None
-                   for n in ("ROBOT_AUTO", "ROBOT_DRIVE"))
+                   for n in self.AUTONOMOUS_LAUNCHES)
 
     def require_robot_or_sim(self):
         if self.is_sim_running() or self.is_robot_running():

@@ -13,7 +13,7 @@ Mapping:  /scan -> slam_toolbox -> map->odom
 Driving:  /scan + /odom -> Nav2 -> /cmd_vel
 ```
 
-Lane detection and the ZED are not started, so the robot only avoids what the LiDAR sees. It will not follow painted lanes.
+Lane detection only runs from the purple button (see [Lane Detection](#lane-detection)). Otherwise the robot only avoids what the LiDAR sees and will not follow painted lanes.
 
 ## Before You Start
 - The LiDAR is powered and its ethernet cable is plugged in.
@@ -29,16 +29,17 @@ Lane detection and the ZED are not started, so the robot only avoids what the Li
    python3 ~/Mk3/esda_simulation_2025/src/esda_simulation_2025/scripts/ui_launch.py
    ```
 2. If the code has changed, click **1. Colcon Build**.
-3. Click one of the two autonomous buttons. Enter the `sudo` password in the xterm if asked.
+3. Click one of the three autonomous buttons. Enter the `sudo` password in the xterm if asked.
    - **Launch Autonomous Robot (ODrive + LiDAR + ZED + SLAM + Nav2)** (red): drives the wheels. Use this to send it to waypoints.
+   - **Launch Autonomous Robot + Lanes (ODrive + LiDAR + ZED + SLAM + Nav2)** (purple): the red button plus lane detection, so Nav2 also keeps off painted lane lines.
    - **Launch Autonomous Stack (LiDAR + ZED + SLAM + Nav2, no ODrive)** (green): the same stack without the ODrive, for testing on the bench.
 4. Wait until the xterm shows Nav2's nodes are active. Nav2 starts about 8 seconds after everything else.
 5. Click **Launch RViz2**, then change **Global Options > Fixed Frame** to `map`.
 6. Send a waypoint (see below).
 
-Both buttons also bring up `enP8p1s0` and gives it `192.168.10.100/24`, which the Jetson needs to receive LiDAR packets.
+All three buttons also bring up `enP8p1s0` and give it `192.168.10.100/24`, which the Jetson needs to receive LiDAR packets.
 
-The red button starts `odrive_bridge.py`, so the wheels follow Nav2 as soon as a goal is sent. Keep the wheels off the ground for a first test.
+The red and purple buttons start `odrive_bridge.py`, so the wheels follow Nav2 as soon as a goal is sent. Keep the wheels off the ground for a first test.
 
 The green button does not start the ODrive, so the wheels never move. Nav2 still plans and publishes `/cmd_vel`, but nothing drives the motors. With no wheel odometry the robot is pinned at the `odom` origin, so keep it still: moving it by hand confuses SLAM.
 
@@ -46,19 +47,62 @@ The ZED starts with depth off. It needs `~/zed_ws` (the ZED ROS 2 wrapper) and `
 
 Do not click these while the autonomous launch is running:
 - **Launch SLAM** and **Launch Nav2**: the launch already runs both, so they just report an error.
-- **Launch Real Robot (ODrive + LiDAR)** or the other autonomous button: they are blocked because they all run the LiDAR.
+- **Launch Real Robot (ODrive + LiDAR)** or another autonomous button: they are blocked because they all run the LiDAR.
 - **Waypoint Nav**: this is the older `waypoint_navigator.py`, which follows fixed waypoints from `igvc_waypoints.yaml`.
 
-Both buttons ignore the **Enable LIDAR** and joystick checkboxes and the mount dropdowns. Tick **RViz (Real Robot)** before clicking one to open RViz with the launch (Fixed Frame `odom`; change it to `map` to see SLAM's map). It always uses the LiDAR low on the chassis and the ZED on the pole, and they do not open WASD teleop.
+The autonomous buttons ignore the **Enable LIDAR** and joystick checkboxes and the mount dropdowns. Tick **RViz (Real Robot)** before clicking one to open RViz with the launch (Fixed Frame `odom`; change it to `map` to see SLAM's map). It always uses the LiDAR low on the chassis and the ZED on the pole, and they do not open WASD teleop.
 
-## Launch from a Terminal
-```bash
-cd ~/Mk3/esda_simulation_2025
-source install/setup.bash
-sudo ip link set enP8p1s0 up
-sudo ip addr add 192.168.10.100/24 dev enP8p1s0  # once per boot
-ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py launch_teleop:=false
-```
+## Launch from a Terminal (No UI, e.g. over SSH)
+Use this when there is no screen on the Jetson, for example from a laptop over SSH.
+
+1. SSH into the Jetson. Over Tailscale it is at `100.67.86.95`:
+   ```bash
+   ssh asterius@100.67.86.95
+   ```
+2. Start a `tmux` session, so the robot keeps running if SSH drops:
+   ```bash
+   tmux new -s robot
+   ```
+3. Bring up the LiDAR network, entering the `sudo` password if asked:
+   ```bash
+   sudo ip link set enP8p1s0 up
+   ip -4 addr show dev enP8p1s0 | grep -q 192.168.10.100 || \
+     sudo ip addr add 192.168.10.100/24 dev enP8p1s0
+   ```
+4. Source the workspaces and launch from the workspace root:
+   ```bash
+   cd ~/Mk3/esda_simulation_2025
+   source ~/zed_ws/install/setup.bash
+   source install/setup.bash
+   ```
+5. Run the launch that matches the button you want.
+
+   Autonomous Robot + Lanes (the purple button):
+   ```bash
+   ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py \
+     launch_teleop:=false launch_lane_detection:=true
+   ```
+
+   Autonomous Robot, without lanes (the red button):
+   ```bash
+   ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py \
+     launch_teleop:=false
+   ```
+
+   Autonomous Stack, without the ODrive (the green button):
+   ```bash
+   ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py \
+     launch_teleop:=false launch_odrive:=false
+   ```
+
+Always pass `launch_teleop:=false` over SSH. Teleop opens an xterm, which needs a screen. RViz is already off by default; to see the robot, run RViz on the laptop (see [RViz on a Laptop](#rviz-on-a-laptop)).
+
+Send waypoints from a second tmux window (`Ctrl+B` then `C`) with the command in [Terminal on the Jetson](#terminal-on-the-jetson).
+
+`tmux` keys:
+- Detach and leave the robot running: `Ctrl+B` then `D`.
+- Reattach after reconnecting: `tmux attach -t robot`.
+- Stop the launch: reattach and press `Ctrl+C`. From another shell, `tmux send-keys -t robot C-c` does the same thing.
 
 Launch from the workspace root, because `nav2_params_real_robot.yaml` finds its behaviour tree through a relative `install/...` path.
 
@@ -66,7 +110,10 @@ Useful arguments:
 
 | Argument | Default | Purpose |
 |---|---|---|
-| `launch_teleop` | `true` | WASD teleop in its own xterm (the UI button sets this to `false`) |
+| `launch_odrive` | `true` | ODrive bridge, so the wheels follow `/cmd_vel` |
+| `launch_zed_cam` | `true` | ZED camera (needs `~/zed_ws` sourced) |
+| `launch_lane_detection` | `false` | Lane detection on the ZED into `/lane_obstacles` |
+| `launch_teleop` | `true` | WASD teleop in its own xterm (needs a screen; the UI buttons set this to `false`) |
 | `launch_joy` | `false` | Gamepad teleop |
 | `launch_rviz` | `false` | RViz on the Jetson |
 | `launch_virtual_lanes` | `false` | Virtual walls either side of the start pose |
@@ -113,6 +160,15 @@ The UI button also works with a laptop, because `real_robot_slam_nav.launch.py` 
 - Keep a physical way to cut power, because these all stop the robot through software.
 
 The wheels stop if `/cmd_vel` is missing for 0.5 s. Do not use WASD to stop the robot during autonomous driving: it publishes to `/cmd_vel` alongside Nav2, so the two fight. Close WASD before sending waypoints.
+
+## Lane Detection
+The purple button, or `launch_lane_detection:=true` with `launch_zed_cam:=true`, runs the Adaptive detector (`lane_detection_esda.py`) on the ZED's left image. It publishes lane points to `/lane_obstacles`, which both Nav2 costmaps already mark as obstacles. SLAM keeps using the plain LiDAR `/scan`.
+
+- **No depth:** the ZED's depth is off, so each lane pixel is placed where its ray meets the ground (`z = -0.1625` in `base_link`), using the camera's real lens model and its TF. This assumes flat ground; on slopes the points land too near or too far.
+- **Half-size images:** the ZED publishes at 640x360, which matches the size the detector's pixel thresholds were tuned for.
+- **CPU:** the detector uses about 1.7 cores on the Jetson.
+- **Tuning:** it was tuned on simulated lanes. Check `/lane_markers` in RViz against the real lines before trusting it.
+- **Cones:** cone points need depth, so cones come from the LiDAR only.
 
 ## Virtual Lane Walls
 `virtual_lane_walls.py` adds two straight walls parallel to the robot's starting heading, enforced by Nav2's keepout filter. They are off by default. Turn them on with `launch_virtual_lanes:=true`.

@@ -100,6 +100,8 @@ echo "source ~/esda_sim_ws/install/setup.bash" >> ~/.bashrc
 
 ## 2. Launching the Simulation
 
+> **Real robot:** to run the Jetson robot (ODrive + LiDAR + ZED + SLAM + Nav2 + lane detection) from the UI or from a terminal over SSH, see [REAL_ROBOT.md](REAL_ROBOT.md).
+
 ### 2.1. 🎮 Using the Simulation Manager GUI (Recommended)
 
 The **ESDA Simulation Manager** provides a complete graphical interface. Run it from your workspace:

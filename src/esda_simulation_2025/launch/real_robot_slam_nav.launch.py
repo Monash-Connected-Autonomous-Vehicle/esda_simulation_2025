@@ -49,7 +49,8 @@ def generate_launch_description():
         'launch_rviz': 'false',
         'launch_virtual_lanes': 'false',  # walls 2 m left/right of the start pose
         'lane_half_width': '2.0',
-        'launch_zed_cam': 'true'
+        'launch_zed_cam': 'true',
+        'launch_lane_detection': 'false',  # ZED lanes into /lane_obstacles
     }
 
     robot = IncludeLaunchDescription(

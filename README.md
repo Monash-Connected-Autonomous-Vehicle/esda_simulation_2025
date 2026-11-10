@@ -46,6 +46,9 @@ ros2 launch esda_simulation_2025 navigation_launch.py use_sim_time:=true map_sub
 
 ```
 
+#### 2.5. Real Robot (Jetson)
+To run the real robot with SLAM, Nav2 and lane detection, from the UI or from a terminal over SSH, see [REAL_ROBOT.md](src/esda_simulation_2025/REAL_ROBOT.md).
+
 ### 3. TO-DO
 #### 3.1 Tune follow_the_gap.py
 - This is a local controller. It's job is to read /scan messages, avoid obstacles, avoid lane edges should they appear as obstacles / map costs, publish /cmd_vel
