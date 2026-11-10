@@ -455,7 +455,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'lidar_mount', default_value='pole_top',
+            'lidar_mount', default_value='low',
             description='LiDAR mount point: "pole_top" or "low"'),
         DeclareLaunchArgument(
             'camera_mount', default_value='front',

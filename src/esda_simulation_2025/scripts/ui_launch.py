@@ -138,7 +138,7 @@ class SimManager(ctk.CTk):
 
         self.lidar_mount_label = ctk.CTkLabel(self.sim_frame, text="LiDAR Mount:", font=("Orbitron", 11), text_color=self.accent_blue, bg_color=self.bg_panel)
         self.lidar_mount_label.grid(row=3, column=0, padx=10, pady=(0, 8), sticky="w")
-        self.lidar_mount_var = ctk.StringVar(value="pole_top")
+        self.lidar_mount_var = ctk.StringVar(value="low")
         self.lidar_mount_dropdown = ctk.CTkOptionMenu(
             self.sim_frame,
             variable=self.lidar_mount_var,

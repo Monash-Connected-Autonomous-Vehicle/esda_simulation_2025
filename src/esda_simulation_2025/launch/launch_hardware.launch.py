@@ -355,7 +355,7 @@ def generate_launch_description():
             'camera_mount', default_value='front',
             description='ZED mount point: "front" (low, forward) or "pole_top" (on the LiDAR pole)'),
         DeclareLaunchArgument(
-            'lidar_mount', default_value='pole_top',
+            'lidar_mount', default_value='low',
             description='LiDAR mount point: "pole_top" (on the mounting pole) or "low" (original, directly on chassis)'),
 
         DeclareLaunchArgument('launch_lidar', default_value='true'),

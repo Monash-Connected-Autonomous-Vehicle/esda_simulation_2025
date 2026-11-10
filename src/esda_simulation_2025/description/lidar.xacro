@@ -1,16 +1,16 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
 
-    <!-- lidar_mount: "pole_top" (default) raises the sensor on a mounting
+    <!-- lidar_mount: "pole_top" raises the sensor on a mounting
          pole above the chassis/camera so its 360 deg scan isn't blocked.
-         "low" reverts to the original single mount, directly on the chassis,
+         "low" (default) is the original single mount, directly on the chassis,
          no pole. Select with e.g. `xacro robot.urdf.xacro lidar_mount:=low`.
 
          camera.xacro's "pole_top" camera_mount option assumes this pole
          exists (it reuses lidar_mount_x as its own x) - pairing
          camera_mount:=pole_top with lidar_mount:=low doesn't make physical
          sense (there is no pole to mount it on). -->
-    <xacro:arg name="lidar_mount" default="pole_top" />
+    <xacro:arg name="lidar_mount" default="low" />
 
     <!-- Pole: square tube, sized to match the physical part
          (assets/pruned/part_1__7.stl is 40x40mm x 1.0m). The base sits at

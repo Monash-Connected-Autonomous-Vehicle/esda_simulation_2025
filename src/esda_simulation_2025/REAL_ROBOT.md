@@ -50,7 +50,7 @@ Do not click these while the autonomous launch is running:
 - **Launch Real Robot (ODrive + LiDAR)** or another autonomous button: they are blocked because they all run the LiDAR.
 - **Waypoint Nav**: this is the older `waypoint_navigator.py`, which follows fixed waypoints from `igvc_waypoints.yaml`.
 
-The autonomous buttons ignore the **Enable LIDAR** and joystick checkboxes and the mount dropdowns. Tick **RViz (Real Robot)** before clicking one to open RViz with the launch (Fixed Frame `odom`; change it to `map` to see SLAM's map). It always uses the LiDAR low on the chassis and the ZED on the pole, and they do not open WASD teleop.
+The autonomous buttons ignore the **Enable LIDAR** and joystick checkboxes and the mount dropdowns. Tick **RViz (Real Robot)** before clicking one to open RViz with the launch (Fixed Frame `odom`; change it to `map` to see SLAM's map). It always uses the LiDAR low on the chassis and the ZED on the front, and they do not open WASD teleop.
 
 ## Launch from a Terminal (No UI, e.g. over SSH)
 Use this when there is no screen on the Jetson, for example from a laptop over SSH.
@@ -77,23 +77,37 @@ Use this when there is no screen on the Jetson, for example from a laptop over S
    ```
 5. Run the launch that matches the button you want.
 
+   All three commands start the same base stack:
+   - **`robot_state_publisher`:** the robot model, with the ZED on the front and the LiDAR low on the chassis, so the sensor frames are in TF.
+   - **The VLP-16 LiDAR:** `velodyne_driver_node`, then `velodyne_transform_node` to `/velodyne_points`, then `pointcloud_to_laserscan` to `/scan`. A throttled copy is also published on `/velodyne_points_viz` for Foxglove.
+   - **The ZED 2i:** the ZED wrapper with depth off, publishing the left image at 640x360, plus a static TF joining it to the robot model's `camera_link`.
+   - **SLAM Toolbox:** builds the map from `/scan` and publishes `map -> odom`.
+   - **Nav2:** starts 8 seconds after everything else. It plans on `/scan` (plus `/lane_obstacles` when lanes are on) and publishes `/cmd_vel`.
+
+   None of them start teleop, RViz or the virtual lane walls.
+
    Autonomous Robot + Lanes (the purple button):
    ```bash
    ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py \
      launch_teleop:=false launch_lane_detection:=true
    ```
+   This is the base stack plus two more things:
+   - **`odrive_bridge.py`:** drives the wheels from `/cmd_vel` and publishes `/odom`, the `odom -> base_link` TF and `/joint_states` from the encoders. **The wheels move as soon as a goal is sent.**
+   - **`lane_detection_esda.py`** (Adaptive mode): finds lane lines in the ZED's left image and publishes them on `/lane_obstacles`, so Nav2 keeps off them, and on `/lane_markers` for RViz. See [Lane Detection](#lane-detection).
 
-   Autonomous Robot, without lanes (the red button):
+   Autonomous Robot (the red button):
    ```bash
    ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py \
      launch_teleop:=false
    ```
+   This is the base stack plus `odrive_bridge.py`, so the wheels drive. There's no lane detection, so Nav2 only avoids what the LiDAR sees.
 
    Autonomous Stack, without the ODrive (the green button):
    ```bash
    ros2 launch esda_simulation_2025 real_robot_slam_nav.launch.py \
      launch_teleop:=false launch_odrive:=false
    ```
+   This is the base stack only. The wheels never move. A static `odom -> base_link` TF stands in for the ODrive, so the robot stays pinned at the origin: keep it still. Use this for bench tests of the sensors, SLAM and Nav2's planning.
 
 Always pass `launch_teleop:=false` over SSH. Teleop opens an xterm, which needs a screen. RViz is already off by default; to see the robot, run RViz on the laptop (see [RViz on a Laptop](#rviz-on-a-laptop)).
 
@@ -118,7 +132,7 @@ Useful arguments:
 | `launch_rviz` | `false` | RViz on the Jetson |
 | `launch_virtual_lanes` | `false` | Virtual walls either side of the start pose |
 | `lane_half_width` | `2.0` | Distance in metres from the start pose to each wall |
-| `camera_mount` | `pole_top` | `front` or `pole_top` |
+| `camera_mount` | `front` | `front` or `pole_top` |
 | `lidar_mount` | `low` | `low` or `pole_top` |
 
 ## Sending a Waypoint

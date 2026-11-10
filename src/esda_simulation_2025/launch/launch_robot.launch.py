@@ -23,7 +23,7 @@ def generate_launch_description():
     launch_slam = LaunchConfiguration("launch_slam", default="false")
 
     camera_mount = LaunchConfiguration("camera_mount", default="front")
-    lidar_mount = LaunchConfiguration("lidar_mount", default="pole_top")
+    lidar_mount = LaunchConfiguration("lidar_mount", default="low")
 
     # Path to your main xacro (adjust filename/path to your actual one)
     xacro_file = PathJoinSubstitution([
@@ -192,7 +192,7 @@ def generate_launch_description():
         DeclareLaunchArgument("sim_mode", default_value="false"),
         DeclareLaunchArgument("camera_mount", default_value="front",
             description='ZED mount point: "front" (low, forward) or "pole_top" (on the LiDAR pole)'),
-        DeclareLaunchArgument("lidar_mount", default_value="pole_top",
+        DeclareLaunchArgument("lidar_mount", default_value="low",
             description='LiDAR mount point: "pole_top" (on the mounting pole) or "low" (original, directly on chassis)'),
         rsp_node,
         delayed_controller_manager,

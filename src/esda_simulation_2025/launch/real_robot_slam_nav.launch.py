@@ -4,7 +4,7 @@
 # "Launch Real Robot (ODrive + LiDAR)" -> "Launch SLAM" -> "Launch Nav2" ->
 # "WASD Teleop" sequence starts, with the usual mounts:
 #
-#   ZED high on the pole (camera_mount:=pole_top), LiDAR low on the
+#   ZED on the front (camera_mount:=front), LiDAR low on the
 #   chassis (lidar_mount:=low)
 #   VLP-16 + ODrive bridge + throttled /velodyne_points_viz for Foxglove
 #   slam_toolbox on /scan (map -> odom)
@@ -38,7 +38,7 @@ def generate_launch_description():
     pkg_share = get_package_share_directory('esda_simulation_2025')
 
     defaults = {
-        'camera_mount': 'pole_top',   # ZED high, on the pole
+        'camera_mount': 'front',      # ZED on the front of the chassis
         'lidar_mount': 'low',         # LiDAR low, directly on the chassis
         'launch_lidar': 'true',
         'launch_odrive': 'true',
