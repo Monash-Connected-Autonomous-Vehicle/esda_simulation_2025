@@ -69,9 +69,9 @@ links:
   right_wheel:
     mass: 4.0
 
-  caster_wheel:
-    mass: 1.0             # see note in README_ISAAC.md: fixed joint, so this
-                          # is a rigid skid point, not a swivelling caster
+  # caster_wheel is NOT listed here. The export replaces the xacro's single
+  # rigid sphere with a real swivel-and-roll assembly; see the `caster:`
+  # section below, which owns its masses.
 
   lidar_pole:
     mass: 1.5             # 40x40 mm extrusion, 1.0 m, plus mount
@@ -81,19 +81,119 @@ links:
   gps_link:
     mass: 0.05            # already sane in the xacro; listed for completeness
 
+# The caster, modelled as what it actually is.
+#
+# WHAT THE REAL VEHICLE HAS
+#   assets/robot_pruned.urdf, the CAD-derived reference nothing launches, is
+#   unambiguous:
+#       caster_steer       revolute    chassis -> caster_arm    axis 0 0 1
+#       caster_wheel_spin  continuous  caster_arm -> caster_wheel
+#   and assets/ carries caster_arm_r.stl, cstr_wheel_rim.stl and
+#   cstr_wheel_tyre.stl. An arm that steers about a vertical axis, and a wheel
+#   that rolls.
+#
+# WHAT THE SIM URDF HAS
+#   robot_core_ref.xacro collapses all of that into ONE sphere on a FIXED
+#   joint, given mu 0.001 so it does not grip. That is a sound Gazebo
+#   simplification -- diff_drive_controller runs open_loop and integrates the
+#   commanded twist, so the rear support never has to do anything.
+#
+# WHY IT BREAKS UNDER PhysX
+#   PhysX actually resolves the contact. A rigid ball dragged sideways through
+#   a 0.725 m arc resists yaw hard: measured, the robot lost 44% of commanded
+#   yaw (4.23 rad achieved against 6.30 commanded) while the wheels over-spun
+#   to 7.55. A caster does not do that -- it swivels and rolls.
+#
+#   The tempting fix is to keep winding the friction coefficient down. That
+#   treats the symptom; the kinematics are the cause.
+#
+# GEOMETRY
+#   The swivel axis is placed trail metres AHEAD of the old sphere centre and
+#   the wheel trail metres behind it, so the ground contact point, the
+#   wheelbase and the load split computed in the mass budget all stay put.
+#   trail 0.05 comes from robot_pruned.urdf, where the wheel sits about
+#   0.059 m from the swivel axis in the horizontal plane. Check it against CAD.
+caster:
+  enabled: true
+  trail: 0.05           # swivel axis to wheel centre, horizontal
+  wheel_radius: 0.08    # matches caster_wheel_radius in robot_core_ref.xacro
+  wheel_width: 0.04
+  arm_mass: 0.5
+  wheel_mass: 0.5
+
+# Collision geometry overrides.
+#
+# WHY THE CHASSIS HAS TO SHRINK
+#   robot_core_ref.xacro gives the chassis a collision box chassis_width 0.5 m
+#   wide, and puts the wheels at wheel_offset_y 0.25 -- exactly half of it --
+#   with wheel_thickness 0.117. So each wheel's inner face sits at y = 0.1915
+#   and intersects the chassis box by 58 mm. They also overlap in x and z.
+#
+#   Gazebo never noticed: gz does not collide a parent link with its own child
+#   link. PhysX resolves the overlap instead, pushing the bodies apart at
+#   max_depenetration_velocity for as long as it persists -- which is forever,
+#   because the joint holds the wheel there. Measured: the robot climbing
+#   steadily at exactly the depenetration velocity and never settling.
+#
+#   Narrowing the collision box to 0.36 m clears each wheel by 11.5 mm. The
+#   VISUAL box is untouched, and 0.36 m is still wider than the 0.325 m wheel
+#   diameter, so the body remains properly bounded for obstacle contacts. The
+#   policy terminates on scan proximity against robot_radius 0.45 anyway, so
+#   this box only matters for the ramp and for genuine body strikes.
+#
+# WHY THE WHEELS COLLIDE AS SPHERES
+#   PhysX has no native cylinder collider -- it approximates one with a convex
+#   hull, and the converted wheels visibly render as ~10-sided polygons. That
+#   is fine rolling in a straight line (measured 97% of commanded distance),
+#   but a flat facet sitting on the ground resists rotation about the vertical,
+#   so the robot loses a large fraction of commanded yaw in a standing turn.
+#   The importer used to offer replace_cylinders_with_capsules for exactly this
+#   reason; Isaac Sim 6 dropped it.
+#
+#   A sphere of the wheel radius rolls exactly and has a true point contact, so
+#   there is no facet to fight. What it gives up is contact WIDTH: the real
+#   0.117 m tyre resists roll about the long axis more than a point does. For a
+#   two-wheels-plus-caster vehicle on a flat course that is not load-bearing,
+#   and the visual geometry is untouched, so the robot still looks right.
+#
+#   Set these back to the cylinder if the ramp behaviour ever looks wrong.
+collision:
+  chassis:
+    box: [0.965423, 0.36, 0.30]
+  left_wheel:
+    sphere: 0.1625
+  right_wheel:
+    sphere: 0.1625
+
 # Friction for the colliders the URDF importer cannot express.  gazebo tags in
 # robot_core_ref.xacro give the caster mu1 = mu2 = 0.001 so it skids instead of
 # gripping; the URDF importer drops <gazebo>, so convert_robot.py reapplies it.
+#
+# friction_combine_mode matters as much as the coefficients. PhysX combines the
+# two contacting materials, and its default is "average" -- so a 0.02 caster
+# touching a 1.0 ground behaves as 0.51, which is not a skid at all. At that
+# value the caster, 0.725 m behind the axle, resists yaw harder than the drive
+# wheels can push, and the robot drives beautifully straight while refusing to
+# turn. "min" makes the lower material win, which is what "frictionless skid"
+# was supposed to mean.
 materials:
   wheel:
     static_friction: 1.0
     dynamic_friction: 0.9
     restitution: 0.0
+    friction_combine_mode: average
   caster:
-    static_friction: 0.02
-    dynamic_friction: 0.02
+    # Ordinary rubber, because the caster now swivels. The old 0.02 was a hack
+    # standing in for the missing degrees of freedom: a rigid ball had to be
+    # made nearly frictionless or the robot could not turn at all. With real
+    # kinematics the yaw resistance disappears for the right reason, and the
+    # caster can have the grip a caster actually has.
+    static_friction: 0.7
+    dynamic_friction: 0.6
     restitution: 0.0
+    friction_combine_mode: average
   body:
     static_friction: 0.5
     dynamic_friction: 0.4
     restitution: 0.0
+    friction_combine_mode: average

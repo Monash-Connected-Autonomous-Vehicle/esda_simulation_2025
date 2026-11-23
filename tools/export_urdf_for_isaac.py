@@ -195,6 +195,156 @@ def apply_mass_overrides(root, cfg):
     return applied, massless, unknown
 
 
+def synthesise_caster(root, cfg):
+    """Replace the xacro's rigid caster sphere with a real swivel-and-roll caster.
+
+    robot_core_ref.xacro models the whole caster assembly as one sphere on a
+    FIXED joint. assets/robot_pruned.urdf shows what is actually there: a
+    revolute steer about the vertical and a continuous wheel spin. Gazebo never
+    needed the difference because diff_drive_controller integrates the
+    commanded twist open-loop; PhysX does, because a rigid ball dragged through
+    a turning arc resists yaw and a caster does not.
+
+    Geometry is arranged so the ground contact point does not move: the swivel
+    axis goes `trail` ahead of the old sphere centre, the wheel `trail` behind
+    it. The wheelbase, the load split and the mass budget all stay valid.
+
+    Returns a description of what was built, or None if disabled/not found.
+    """
+    spec = (cfg or {}).get("caster") or {}
+    if not spec.get("enabled", False):
+        return None
+
+    doc = root.ownerDocument
+    joint = None
+    for j in root.getElementsByTagName("joint"):
+        if j.getAttribute("name") == "caster_wheel_joint":
+            joint = j
+            break
+    if joint is None:
+        return None
+
+    parent = joint.getElementsByTagName("parent")[0].getAttribute("link")
+    origin = joint.getElementsByTagName("origin")
+    ox, oy, oz = _xyz(origin[0] if origin else None, "xyz")
+
+    trail = float(spec.get("trail", 0.05))
+    radius = float(spec.get("wheel_radius", 0.08))
+    width = float(spec.get("wheel_width", 0.04))
+    arm_mass = float(spec.get("arm_mass", 0.5))
+    wheel_mass = float(spec.get("wheel_mass", 0.5))
+
+    # Drop the old fixed joint and sphere link.
+    joint.parentNode.removeChild(joint)
+    for link in list(root.getElementsByTagName("link")):
+        if link.getAttribute("name") == "caster_wheel":
+            link.parentNode.removeChild(link)
+
+    def el(tag, **attrs):
+        node = doc.createElement(tag)
+        for k, v in attrs.items():
+            node.setAttribute(k.rstrip("_"), v)
+        return node
+
+    def inertial(mass, ixx, iyy, izz):
+        node = el("inertial")
+        node.appendChild(el("mass", value=repr(float(mass))))
+        node.appendChild(el("inertia", ixx=repr(ixx), ixy="0.0", ixz="0.0",
+                            iyy=repr(iyy), iyz="0.0", izz=repr(izz)))
+        return node
+
+    # --- caster_arm: inertia only. No collider: it rides above the wheel and a
+    # --- collider there could catch the chassis or the ground.
+    arm = el("link", name="caster_arm")
+    ax, ay, az = trail, 0.04, 0.04
+    arm.appendChild(inertial(arm_mass,
+                             arm_mass * (ay * ay + az * az) / 12.0,
+                             arm_mass * (ax * ax + az * az) / 12.0,
+                             arm_mass * (ax * ax + ay * ay) / 12.0))
+    root.appendChild(arm)
+
+    steer = el("joint", name="caster_steer", type="continuous")
+    steer.appendChild(el("parent", link=parent))
+    steer.appendChild(el("child", link="caster_arm"))
+    steer.appendChild(el("origin", xyz="%r %r %r" % (ox + trail, oy, oz),
+                         rpy="0 0 0"))
+    steer.appendChild(el("axis", xyz="0 0 1"))
+    root.appendChild(steer)
+
+    # --- caster_wheel: a cylinder rolling about its local Z, matching how the
+    # --- drive wheels are built (rpy -pi/2 then axis 0 0 1).
+    wheel = el("link", name="caster_wheel")
+    for tag in ("visual", "collision"):
+        node = el(tag)
+        geom = el("geometry")
+        geom.appendChild(el("cylinder", radius=repr(radius), length=repr(width)))
+        node.appendChild(geom)
+        wheel.appendChild(node)
+    wheel.appendChild(inertial(
+        wheel_mass,
+        wheel_mass * (3.0 * radius * radius + width * width) / 12.0,
+        wheel_mass * (3.0 * radius * radius + width * width) / 12.0,
+        wheel_mass * radius * radius / 2.0))
+    root.appendChild(wheel)
+
+    spin = el("joint", name="caster_wheel_spin", type="continuous")
+    spin.appendChild(el("parent", link="caster_arm"))
+    spin.appendChild(el("child", link="caster_wheel"))
+    spin.appendChild(el("origin", xyz="%r 0 0" % (-trail,),
+                        rpy="%r 0 0" % (-math.pi / 2.0,)))
+    spin.appendChild(el("axis", xyz="0 0 1"))
+    root.appendChild(spin)
+
+    return {
+        "parent": parent,
+        "swivel_xyz": (ox + trail, oy, oz),
+        "wheel_xyz": (ox, oy, oz),
+        "trail": trail,
+        "radius": radius,
+        "contact_z": oz - radius,
+        "mass": arm_mass + wheel_mass,
+    }
+
+
+def apply_collision_overrides(root, cfg):
+    """Resize named collision shapes, leaving the visuals alone.
+
+    Needed because the xacro's chassis collision box is exactly as wide as the
+    wheel track, so the wheels sit inside it. Gazebo ignores parent/child
+    self-collision; PhysX does not, and tries to push them apart forever. See
+    research/isaac/config/robot_mass.yaml for the measurement.
+    """
+    spec = (cfg or {}).get("collision") or {}
+    changed = []
+    for link in root.getElementsByTagName("link"):
+        name = link.getAttribute("name")
+        if name not in spec:
+            continue
+        want = spec[name]
+        for coll in link.getElementsByTagName("collision"):
+            if "box" in want:
+                for box in coll.getElementsByTagName("box"):
+                    before = box.getAttribute("size")
+                    after = " ".join(repr(float(v)) for v in want["box"])
+                    box.setAttribute("size", after)
+                    changed.append((name, "box", before, after))
+            if "sphere" in want:
+                # Swap the collision primitive wholesale. The visual is left
+                # alone, so the robot still looks like it has wheels.
+                for geom in coll.getElementsByTagName("geometry"):
+                    old = [c for c in geom.childNodes
+                           if c.nodeType == c.ELEMENT_NODE]
+                    before = ", ".join(c.tagName for c in old) or "none"
+                    for c in old:
+                        geom.removeChild(c)
+                    sph = geom.ownerDocument.createElement("sphere")
+                    sph.setAttribute("radius", repr(float(want["sphere"])))
+                    geom.appendChild(sph)
+                    changed.append((name, "sphere", before,
+                                    "sphere r=%g" % float(want["sphere"])))
+    return changed
+
+
 # -------------------------------------------------- mass budget reporting --
 def _xyz(el, attr, default=(0.0, 0.0, 0.0)):
     if el is None or not el.hasAttribute(attr):
@@ -363,7 +513,10 @@ def main(argv=None):
                      "pass --no-mass-override to skip")
         with open(args.mass_config) as fh:
             cfg = yaml.safe_load(fh)
+    # Before the mass pass, so the synthesised links are reported with the rest.
+    caster = synthesise_caster(root, cfg)
     applied, massless, unknown = apply_mass_overrides(root, cfg)
+    collisions = apply_collision_overrides(root, cfg)
 
     out_path = os.path.abspath(args.out)
     out_dir = os.path.dirname(out_path)
@@ -417,6 +570,16 @@ def main(argv=None):
     if unreached:
         print("  WARNING  : links not reachable from %s: %s"
               % (base, ", ".join(unreached)))
+    if caster:
+        print("  caster   : rigid sphere -> swivel + roll assembly")
+        print("             caster_steer (continuous, axis Z) at %s on %s"
+              % (tuple(round(v, 4) for v in caster["swivel_xyz"]), caster["parent"]))
+        print("             caster_wheel_spin (continuous) %.3f m behind it, "
+              "wheel r %.3f" % (caster["trail"], caster["radius"]))
+        print("             ground contact unchanged at z %+.4f in %s frame"
+              % (caster["contact_z"], caster["parent"]))
+    for link, kind, before, after in collisions:
+        print("  collision: %s %s  %s -> %s" % (link, kind, before, after))
     print("  massless : %s" % (", ".join(massless) or "none"))
     print("  root link: %s" % base)
     print("  mass budget:")
