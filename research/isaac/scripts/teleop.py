@@ -33,7 +33,7 @@ THE READOUT
     amount of training will fix it.
 
 USAGE
-    C:\\Users\\Ishaan\\IsaacLab\\isaaclab.bat -p research\\isaac\\scripts\\teleop.py --viz
+    C:\\Users\\Ishaan\\IsaacLab\\isaaclab.bat -p research\\isaac\\scripts\\teleop.py --viz kit
     ... --course flat      plain ground, no course geometry
 """
 import argparse

@@ -27,7 +27,8 @@ from isaaclab.app import AppLauncher  # noqa: E402
 
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
-# Headless is the default in Isaac Lab 3.0; --viz opts in. Passing --headless
+# Headless is the default in Isaac Lab 3.0; '--viz kit' opts in -- it takes a
+# CSV of visualizer backends, so a bare --viz is an error. Passing --headless
 # is deprecated and prints a warning.
 app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app

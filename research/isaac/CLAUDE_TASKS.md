@@ -10,6 +10,12 @@ cores, and Isaac's main thread wants P-cores:
 wsl --shutdown
 ```
 
+> **Seeing a window: `--viz kit`, not `--viz`.** Isaac Lab 3.0 is headless by
+> default and `--viz` / `--visualizer` takes a CSV of backends
+> (`kit,newton,rerun,viser`) — a bare `--viz` fails with
+> `expected one argument`. `--headless` still exists but is deprecated, and
+> `--viz none` is how you force visualizers off.
+
 ---
 
 ## 0. Once per machine
@@ -99,7 +105,7 @@ vehicle feels right or whether its observation is sane; two minutes at the
 wheel tells you both.
 
 ```powershell
-C:\Users\Ishaan\IsaacLab\isaaclab.bat -p research\isaac\scripts\teleop.py --viz
+C:\Users\Ishaan\IsaacLab\isaaclab.bat -p research\isaac\scripts\teleop.py --viz kit
 ```
 
 Keys are the same as `scripts/teleop_wasd.py`, so the same fingers drive the
@@ -192,7 +198,7 @@ it would push frames over the eGPU's PCIe x4 link every step.
 ### Watch it drive
 
 ```powershell
-C:\Users\Ishaan\IsaacLab\isaaclab.bat -p research\isaac\scripts\play.py --load_run v1 --num_envs 1 --viz
+C:\Users\Ishaan\IsaacLab\isaaclab.bat -p research\isaac\scripts\play.py --load_run v1 --num_envs 1 --viz kit
 ```
 
 ### Measure it

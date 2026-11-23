@@ -25,7 +25,7 @@ THREE QUESTIONS, IN ORDER OF HOW BADLY A WRONG ANSWER WOULD HURT
 
 USAGE
     C:\\Users\\Ishaan\\IsaacLab\\isaaclab.bat -p research\\isaac\\scripts\\drive_check.py
-    ... --viz          watch it
+    ... --viz kit      watch it (--viz takes a backend; a bare --viz errors)
     ... --side 5.0     square side length in metres
 """
 import argparse

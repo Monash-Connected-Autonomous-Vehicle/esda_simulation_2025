@@ -26,7 +26,7 @@ ON THE ROBUSTNESS SWEEP
 
 USAGE
     C:\\Users\\Ishaan\\IsaacLab\\isaaclab.bat -p research\\isaac\\scripts\\play.py --load_run <run>
-    ... --viz                 watch it
+    ... --viz kit             watch it (--viz needs a backend, e.g. kit)
     ... --num_envs 32         more episodes, better statistics
     ... --noise 1.5           robustness sweep
 """

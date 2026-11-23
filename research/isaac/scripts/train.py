@@ -14,7 +14,8 @@ USAGE
     C:\\Users\\Ishaan\\IsaacLab\\isaaclab.bat -p research\\isaac\\scripts\\train.py --num_envs 4096
     ... --max_iterations 50          short run, to check throughput
     ... --resume --load_run <name>   continue, e.g. to advance the curriculum
-    ... --viz                        watch it (headless is the default in 3.0)
+    ... --viz kit                    watch it. Headless is the default in 3.0,
+                                     and --viz takes a backend name, not a flag.
 """
 import argparse
 import os
