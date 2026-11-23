@@ -70,6 +70,7 @@ from isaaclab_rl.rsl_rl import (  # noqa: E402
     handle_deprecated_rsl_rl_cfg,
 )
 
+import obs_core as OC  # noqa: E402
 import esda_isaac.tasks  # noqa: E402,F401  -- registers the gym ids
 from esda_isaac.tasks.course.agents.rsl_rl_ppo_cfg import (  # noqa: E402
     EsdaCoursePPORunnerCfg,
@@ -129,7 +130,17 @@ def main():
         os.makedirs(out, exist_ok=True)
         runner.export_policy_to_jit(path=out, filename="policy.pt")
         runner.export_policy_to_onnx(path=out, filename="policy.onnx")
+
+        # The deployment contract. rl_policy_node.py refuses to run a policy
+        # whose meta disagrees with the obs_core it imports, which is the only
+        # thing standing between a changed constant and a robot driving on
+        # confident, wrong velocities.
+        import yaml
+        meta_path = os.path.join(out, "policy_meta.yaml")
+        with open(meta_path, "w") as fh:
+            yaml.safe_dump(OC.policy_meta(), fh, sort_keys=True)
         print("[play] exported  : %s" % out)
+        print("[play] contract  : %s" % meta_path)
 
     core = env.unwrapped
     n = core.num_envs

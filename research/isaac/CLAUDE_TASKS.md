@@ -252,6 +252,79 @@ side is Python 3.10 with `numpy<2` pinned for `cv_bridge`, and dragging torch
 
 ---
 
+## 6. Run it on the robot (WSL, ROS 2)
+
+The policy deploys as `scripts/rl_policy_node.py`, which publishes
+`geometry_msgs/Twist` on `/cmd_vel` at 8 Hz.
+
+### Once, in WSL
+
+```bash
+pip3 install onnxruntime==1.18.1
+```
+
+**That version specifically.** It is the only release in range whose own
+metadata caps `numpy<2.0`, which is what `cv_bridge` needs. 1.19 and later
+leave numpy uncapped, so pip is free to pull numpy 2.x and break `cv_bridge`.
+All of them require `numpy>=1.21.6` and Humble ships 1.21.5, so expect a small
+numpy bump either way.
+
+```bash
+cd ~/esda_simulation_2025 && colcon build --symlink-install --packages-select esda_simulation_2025
+```
+
+### Running it
+
+```bash
+ros2 run esda_simulation_2025 rl_policy_node.py --ros-args \
+  -p policy_path:=/path/to/exported/policy.onnx -p debug:=true
+```
+
+Start the sim and lane detection first — the policy eats `/scan_fused`, and
+nothing else publishes it. **Do not run `navigation_launch.py`**: nav2's
+`collision_monitor` is the final `/cmd_vel` publisher there and the two will
+fight.
+
+`obs_core.py` lives in `research/isaac/` and is not a ROS package, so the node
+looks for it in `$ESDA_ISAAC_DIR`, then `./research/isaac` relative to the
+working directory. Run from the workspace root, or set the variable.
+
+### What it checks before it moves
+
+The node loads `policy_meta.yaml` from beside the `.onnx` and refuses to run
+if it disagrees with the `obs_core` it imported. That file is the deployment
+contract — beam count, pooling rule, observation layout, velocity envelope —
+and without the check a changed constant would produce confident, wrong
+velocities rather than an error.
+
+It also stops and publishes a zero `Twist` if `/scan_fused` or odometry goes
+stale for more than 0.5 s, matching the controller's own `cmd_vel_timeout`.
+`-p enable_cmd_vel:=false` runs it silently so you can watch the debug output
+without the robot moving.
+
+### Diagnosing it
+
+```bash
+ros2 topic hz /cmd_vel          # should hold 8 Hz
+ros2 topic echo /cmd_vel        # linear.x in [-0.2, 1.0], angular.z in [-0.8, 0.8]
+ros2 topic hz /scan_fused       # silent means lane detection is not running
+```
+
+A velocity outside that envelope means `policy_meta.yaml` and the trained
+policy disagree. The most likely cause of "works in Isaac, wanders in Gazebo"
+is an observation mismatch, which is why `obs_core.py` is shared rather than
+reimplemented — log the node's pooled observation and diff it against the
+Isaac-side one at a matching pose.
+
+### One subtlety
+
+The velocity fed into the observation is the **commanded** twist the node last
+sent, not the measured one from odometry. That is what training used, and the
+two differ on a real robot — wheels slip, the controller lags. Odometry is
+used for the robot's *pose*, which is a different question.
+
+---
+
 ## Known gaps
 
 - **The masses are estimates.** Weigh the vehicle and replace them in
@@ -269,5 +342,12 @@ side is Python 3.10 with `numpy<2` pinned for `cv_bridge`, and dragging torch
 - **Reward weights are reasoned, not tuned.** They were scaled so progress
   reads as speed in m/s and terminal penalties cost about a sixth of a perfect
   episode. That is arithmetic, not evidence.
-- **Phase 6 is not written.** No `rl_policy_node.py` yet, so the exported
-  ONNX has nothing to run it in ROS.
+- **Phase 6 is written but untested on the robot.** `rl_policy_node.py`
+  compiles under Humble's Python 3.10 and its `obs_core` discovery works, but
+  it has never been run against a live `/scan_fused` or a real policy — there
+  has not been a trained one yet. Treat the first run as a bring-up.
+- **The goal source is a stand-in.** Training steered toward a point 4 m ahead
+  on the course centreline; the robot has no centreline, so the node takes a
+  `/goal_pose` if one is fresh and otherwise projects a carrot straight ahead.
+  Wiring it to the GPS waypoints through `/fromLL`, the way
+  `waypoint_navigator_recommendation.py` does, is the obvious next step.
