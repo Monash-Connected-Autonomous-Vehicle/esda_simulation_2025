@@ -14,3 +14,9 @@ research/isaac/usd/
 research/isaac/logs/
 research/isaac/exported/
 research/isaac/assets/meshes/
+
+# Python bytecode. Note: some .pyc files are already tracked in this repo,
+# so running tools/validate_waypoint_logic.py dirties the tree. This stops
+# new ones appearing; clearing the tracked ones is a separate decision.
+__pycache__/
+*.pyc
