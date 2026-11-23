@@ -20,3 +20,7 @@ research/isaac/assets/meshes/
 # new ones appearing; clearing the tracked ones is a separate decision.
 __pycache__/
 *.pyc
+
+# Isaac task package build artefacts and training runs.
+research/isaac/esda_isaac/*.egg-info/
+research/isaac/esda_isaac/**/*.egg-info/

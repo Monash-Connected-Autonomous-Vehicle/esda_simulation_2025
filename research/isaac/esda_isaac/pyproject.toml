@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esda-isaac"
+version = "0.1.0"
+description = "Isaac Lab task package for the ESDA IGVC vehicle"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+include = ["esda_isaac*"]

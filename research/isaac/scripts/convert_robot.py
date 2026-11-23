@@ -429,8 +429,17 @@ def main():
 
 
 if __name__ == "__main__":
+    # Print the traceback BEFORE closing the app. Kit's close() can terminate
+    # the process itself, which swallows a pending exception and leaves an
+    # exit code of 0 -- a silent failure that looks like a clean run.
+    code = 1
     try:
         code = main()
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
     finally:
         simulation_app.close()
     sys.exit(code)
