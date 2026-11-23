@@ -24,3 +24,5 @@ __pycache__/
 # Isaac task package build artefacts and training runs.
 research/isaac/esda_isaac/*.egg-info/
 research/isaac/esda_isaac/**/*.egg-info/
+
+research/isaac/logs/

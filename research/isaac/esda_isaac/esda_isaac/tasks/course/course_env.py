@@ -126,11 +126,28 @@ class EsdaCourseEnvCfg(DirectRLEnvCfg):
     # --- terminations ---
     tilt_limit_rad: float = 0.6
 
-    # --- observation noise, raised by the curriculum ---
+    # --- observation noise, scaled by the curriculum stage ---
     noise_dropout: float = 0.02
     noise_lane_dropout: float = 0.08
     noise_spurious: float = 0.005
     noise_range_bias: float = 0.02
+
+    # --- curriculum ---
+    #
+    # Training on all ten layouts from the first step is the difference
+    # between learning and thrashing: hairpin, fork and crossroads punish a
+    # policy that has not yet learned to go forwards. Stage 0 is the layouts
+    # whose corridors are wide and whose curvature is gentle; stage 1 opens
+    # everything up and turns the sensor noise to full.
+    #
+    # Thresholds are in ENVIRONMENT STEPS, not iterations, so they mean the
+    # same thing regardless of how many environments are running.
+    curriculum: bool = True
+    stage_steps: tuple = (4_000_000, 20_000_000)
+    easy_layouts: tuple = ("oval", "wavy", "spline", "slalom")
+    # Noise multiplier per stage. Starting at full noise asks the policy to
+    # learn the task and to see through a degraded sensor at the same time.
+    stage_noise_scale: tuple = (0.25, 1.0, 1.0)
 
 
 class EsdaCourseEnv(DirectRLEnv):
@@ -164,11 +181,21 @@ class EsdaCourseEnv(DirectRLEnv):
         self.lap_progress = torch.zeros(n, device=dev)
 
         self.scan_cfg = ScanCfg()
-        self.noise = ScanNoise(range_std=OC.NOISE_STD,
-                               dropout_p=cfg.noise_dropout,
-                               lane_dropout_p=cfg.noise_lane_dropout,
-                               spurious_p=cfg.noise_spurious,
-                               range_bias_std=cfg.noise_range_bias)
+        self.stage = -1
+        # Bank indices allowed at each stage: the easy layouts first, then
+        # everything. Courses keep their layout name so this is a lookup
+        # rather than a regeneration.
+        easy = [i for i, nm in enumerate(self.course_names)
+                if nm in cfg.easy_layouts]
+        if not easy:                       # e.g. the play config, one layout
+            easy = list(range(self.n_courses))
+        every = list(range(self.n_courses))
+        self._stage_pool = [
+            torch.tensor(easy, dtype=torch.long, device=dev),
+            torch.tensor(every, dtype=torch.long, device=dev),
+            torch.tensor(every, dtype=torch.long, device=dev),
+        ]
+        self._set_stage(0)
 
         names = self.robot.data.joint_names
         self.j_left = names.index("left_wheel_joint")
@@ -176,6 +203,34 @@ class EsdaCourseEnv(DirectRLEnv):
         self.joint_target = torch.zeros_like(self.robot.data.joint_vel)
 
         self.env_xy = self.scene.env_origins[:, :2]
+
+    # -------------------------------------------------------- curriculum --
+    def _set_stage(self, stage):
+        """Widen the course pool and raise the sensor noise."""
+        if stage == self.stage:
+            return
+        self.stage = stage
+        cfg = self.cfg
+        scale = cfg.stage_noise_scale[min(stage, len(cfg.stage_noise_scale) - 1)]
+        self.noise = ScanNoise(
+            range_std=OC.NOISE_STD,
+            dropout_p=cfg.noise_dropout * scale,
+            lane_dropout_p=cfg.noise_lane_dropout * scale,
+            spurious_p=cfg.noise_spurious * scale,
+            range_bias_std=cfg.noise_range_bias * scale)
+        pool = self._stage_pool[min(stage, len(self._stage_pool) - 1)]
+        print("[curriculum] stage %d: %d of %d courses, noise x%.2f"
+              % (stage, len(pool), self.n_courses, scale))
+
+    def _stage_now(self):
+        if not self.cfg.curriculum:
+            return len(self._stage_pool) - 1
+        steps = int(self.common_step_counter) * self.num_envs
+        stage = 0
+        for threshold in self.cfg.stage_steps:
+            if steps >= threshold:
+                stage += 1
+        return min(stage, len(self._stage_pool) - 1)
 
     # ------------------------------------------------------------- scene --
     def _setup_scene(self):
@@ -381,7 +436,9 @@ class EsdaCourseEnv(DirectRLEnv):
         n = len(env_ids)
         dev = self.device
 
-        self.course_idx[env_ids] = torch.randint(0, self.n_courses, (n,), device=dev)
+        self._set_stage(self._stage_now())
+        pool = self._stage_pool[min(self.stage, len(self._stage_pool) - 1)]
+        self.course_idx[env_ids] = pool[torch.randint(0, len(pool), (n,), device=dev)]
         start = torch.randint(0, self.n_samples, (n,), device=dev)
         centre = self.bank_centre[self.course_idx[env_ids], start]
         nxt = self.bank_centre[self.course_idx[env_ids],
