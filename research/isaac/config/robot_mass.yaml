@@ -1,0 +1,99 @@
+# Mass and inertia overrides applied to the flattened URDF by
+# tools/export_urdf_for_isaac.py.
+#
+# WHY THIS FILE EXISTS
+#   description/robot_core_ref.xacro declares chassis_mass 0.5 kg, wheel_mass
+#   0.1 kg, caster 0.1, lidar pole 0.3, laser_frame 0.1, gps 0.05 -- and
+#   appearance_body carries no <inertial> at all.  That totals about 1.25 kg for
+#   a vehicle with 0.325 m wheels and a 1.385 m lidar mast.
+#
+#   Gazebo never cared.  diff_drive_controller runs open_loop: true and the
+#   wheel joints are velocity-commanded, so the dynamics are nearly bypassed:
+#   the controller integrates the commanded twist and the body follows.
+#
+#   PhysX does care.  At 1.25 kg the robot tips on the 8.5 degree ramp in
+#   worlds/models/orange_igvc/model.sdf, bounces off barrels, and gets wheel
+#   traction wrong against the ground's mu 100 / mu2 50.  Every reward number
+#   measured on top of that would be meaningless.
+#
+# HOW IT IS APPLIED
+#   Inertia scales linearly with mass for fixed geometry, so the exporter
+#   multiplies the existing <inertia> tensor by (new mass / old mass) rather
+#   than re-deriving it.  The xacro's inertial_box / inertial_cylinder /
+#   inertial_sphere macros already encode the right shape; only the scale was
+#   wrong.  That keeps this file free of geometry assumptions.
+#
+#   com_xyz, where given, replaces the <inertial><origin> so the centre of mass
+#   can be put where the batteries actually are instead of at the centroid of
+#   an empty box.
+#
+#   Links with no <inertial> are left alone and reported.  They are all fixed
+#   to a parent, so merge_fixed_joints folds them into the parent body with no
+#   mass of their own -- correct for massless frames, and the reason
+#   camera_link / imu_link / lens_* are absent here.
+#
+# THESE NUMBERS ARE ESTIMATES, NOT MEASUREMENTS.
+#   Replace them with the weighed vehicle.  Until then they are a defensible
+#   IGVC-class budget: ~57 kg total, mass low in the chassis.  Anything trained
+#   against estimates has to be re-validated after the real figures land.
+
+links:
+  chassis:
+    mass: 45.0            # welded aluminium body + batteries + electronics
+    # In CHASSIS frame, which sits at base_link + (-0.965423, 0, 0).  The box
+    # spans x 0 -> 0.965423 and z 0 -> 0.30, so its bare centroid is
+    # (0.4827, 0, 0.15).  Two deliberate departures from that centroid:
+    #
+    #  z 0.08, not 0.15 -- batteries and motor controllers sit on the floor
+    #    pan, not evenly through the volume.  Puts the CoM about 0.24 m above
+    #    ground, which is what keeps it upright on the 8.5 degree ramp.
+    #
+    #  x 0.748, not 0.4827 -- this one matters more than it looks.  The drive
+    #    axle is at chassis x 0.965423 (base_link x 0) and the caster at
+    #    chassis x 0.24 (base_link x -0.725).  A bare centroid puts the CoM
+    #    0.415 m behind the axle, i.e. 57% of the vehicle's weight resting on
+    #    the caster -- which robot_core_ref.xacro gives mu 0.001, a near
+    #    frictionless skid.  The drive wheels would then carry 43% of 56 kg and
+    #    struggle for traction on the ramp.  0.748 shifts the load to a 70/30
+    #    drive/caster split, which is how a 2WD-plus-caster vehicle is actually
+    #    laid out: mass over the driven axle.
+    #
+    # Gazebo never exposed any of this, because diff_drive_controller's
+    # open_loop mode integrates the commanded twist and never consults traction.
+    # The exporter prints the resulting static load split -- check it after
+    # changing this, it is the number that governs ramp climbing.
+    com_xyz: [0.748, 0.0, 0.08]
+
+  left_wheel:
+    mass: 4.0             # 0.325 m wheel + hub
+  right_wheel:
+    mass: 4.0
+
+  caster_wheel:
+    mass: 1.0             # see note in README_ISAAC.md: fixed joint, so this
+                          # is a rigid skid point, not a swivelling caster
+
+  lidar_pole:
+    mass: 1.5             # 40x40 mm extrusion, 1.0 m, plus mount
+  laser_frame:
+    mass: 0.85            # VLP-16 is 0.83 kg
+
+  gps_link:
+    mass: 0.05            # already sane in the xacro; listed for completeness
+
+# Friction for the colliders the URDF importer cannot express.  gazebo tags in
+# robot_core_ref.xacro give the caster mu1 = mu2 = 0.001 so it skids instead of
+# gripping; the URDF importer drops <gazebo>, so convert_robot.py reapplies it.
+materials:
+  wheel:
+    static_friction: 1.0
+    dynamic_friction: 0.9
+    restitution: 0.0
+  caster:
+    static_friction: 0.02
+    dynamic_friction: 0.02
+    restitution: 0.0
+  body:
+    static_friction: 0.5
+    dynamic_friction: 0.4
+    restitution: 0.0
