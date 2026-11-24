@@ -21,7 +21,13 @@ class EsdaCoursePlayEnvCfg(EsdaCourseEnvCfg):
         if hasattr(super(), "__post_init__"):
             super().__post_init__()
         self.scene.num_envs = 32
-        self.courses = ("oval",)        # one filler layout; igvc is the subject
+        self.show_course = True
+        # NO generated layouts. An earlier version kept an "oval" filler
+        # alongside igvc, which meant half the evaluation episodes ran on a
+        # course that is not the one being reported -- the averaged lap length
+        # came out at 102.5 m for a 135.7 m course, and every headline number
+        # was a blend of two different tasks.
+        self.courses = ()
         self.courses_per_layout = 1
         self.include_igvc = True
         self.noise_dropout = 0.0

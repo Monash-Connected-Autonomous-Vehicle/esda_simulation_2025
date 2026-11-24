@@ -54,7 +54,9 @@ MODEL_OFFSET = np.array([0.0, 16.3])
 N_SAMPLES = 256
 # Obstacle slots per course. Padding is marked by a radius of zero, which
 # raycasting treats as a miss, so no masking logic is needed downstream.
-N_OBSTACLES = 64
+# 96 rather than 64 because each barricade now costs a chain of discs: 34
+# barrels plus 4 x 8 barricade discs is 66.
+N_OBSTACLES = 96
 
 DEFAULT_COURSES = ("oval", "wavy", "figure8", "slalom", "spline",
                    "hairpin", "crossroads", "narrowing", "zigzag", "fork")
@@ -173,15 +175,39 @@ def igvc_course(n_samples=N_SAMPLES, n_obstacles=N_OBSTACLES, config_dir=CONFIG)
         with open(obst_path) as fh:
             obst = yaml.safe_load(fh) or {}
         items = list(obst.get("barrels") or [])
-        # Barricades are 3 x 0.5 x 3 boxes; as discs they get a radius that
-        # covers the short axis, deliberately under-covering the long one so
-        # the policy is not taught that they are wider than they are.
         for row in (obst.get("barricades") or []):
-            items.append([row[0], row[1], max(0.5, row[4]) / 2.0])
+            items.extend(barricade_discs(*row))
         for i, row in enumerate(items[:n_obstacles]):
             discs[i] = (row[0], row[1])
             radii[i] = row[2]
     return _pack("igvc", centre, widths, True, discs, radii)
+
+
+def barricade_discs(x, y, yaw, size_x, size_y, size_z, overlap=0.8):
+    """A barricade as a CHAIN of discs along its long axis.
+
+    The raycaster works in discs, so a 3.0 x 0.5 m box has to be approximated.
+    It was previously one disc of radius 0.25 -- the short half-width -- which
+    made a 3 m wall indistinguishable from a traffic cone: the policy could
+    not see its extent, and the collision test only fired within 0.7 m of its
+    centre, so the robot could drive through most of the wall and register
+    nothing. The comment justifying that called it conservative. It was not:
+    under-representing an obstacle by twelve times is not an error in the
+    cautious direction.
+
+    Discs are spaced to overlap, so the chain has no gaps for a ray to slip
+    through, and the radius stays the true half-width so the wall is not
+    modelled as thicker than it is.
+    """
+    radius = max(0.1, size_y / 2.0)
+    span = max(0.0, size_x - 2.0 * radius)
+    step = 2.0 * radius * overlap
+    n = max(1, int(math.ceil(span / step)) + 1)
+    out = []
+    for k in range(n):
+        t = (k / (n - 1) - 0.5) * span if n > 1 else 0.0
+        out.append([x + t * math.cos(yaw), y + t * math.sin(yaw), radius])
+    return out
 
 
 def _pack(name, centre, widths, closed, discs, radii):

@@ -89,6 +89,21 @@ Must print `PHASE 4 ENV GATE: PASS`. Builds the RL environment and drives
 zero, forward and random policies through it.
 
 ```powershell
+C:\Users\Ishaan\IsaacLab\isaaclab.bat -p research\isaac\scripts\ramp_check.py
+```
+
+Must print `9 of 9 checks passed`. The course USD has colliders on
+everything, and the evaluation scene keeps them only on what the robot drives
+**on** — the ramps — stripping them from the obstacles, which the course
+tensors already handle. This gate checks that split survived, then drops the
+robot on the ramp apex and drives it over. Run it after touching
+`build_course_usd.py` or `_set_course_collisions`.
+
+It exists because an earlier version stripped the whole subtree and the robot
+drove *through* the ramp. Nothing in the logs said so; it was caught by
+watching a video.
+
+```powershell
 python3 tools\validate_isaac_obs.py
 ```
 
@@ -331,10 +346,14 @@ used for the robot's *pose*, which is a different question.
   `config/robot_mass.yaml`. Nothing trained against the current numbers is
   trustworthy until that happens — this is the largest open assumption in the
   stack.
-- **The ramp is not in the training scene.** It exists in the course USD and
-  you can drive it in teleop, but training never meets it. The policy cannot
-  *see* it either way (a 0.05 m slab is below the lidar), so what it would
-  learn is pitch-disturbance robustness, not a decision.
+- **The ramp is not in the training scene.** It is solid in the evaluation
+  scene — `ramp_check.py` gates that — and you can drive it in teleop, but
+  training never meets it. The policy cannot *see* it either way (a 0.05 m
+  slab is below the lidar), so what it would learn is pitch-disturbance
+  robustness, not a decision. Adding it means rigid-transforming a course so a
+  chosen sample passes over a fixed slab, which is real work for a small
+  return; the cheaper check is whether evaluation laps now lose time or
+  heading on the climb.
 - **Yaw slip differs from Gazebo.** Isaac's wheels genuinely slip through
   standing turns; Gazebo's `diff_drive_controller` runs `open_loop: true` and
   integrates the command without ever consulting the ground. A policy trained

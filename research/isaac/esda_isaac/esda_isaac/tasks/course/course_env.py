@@ -69,6 +69,64 @@ PHYSICS_DT = 1.0 / 200.0
 DECIMATION = 25
 
 
+# Subtrees of the course USD the robot DRIVES ON, and so must collide with.
+# Everything else in the course keeps its collider switched off.
+DRIVE_ON = ("Ramps",)
+
+
+def _set_course_collisions(prim_path, drive_on=DRIVE_ON):
+    """Enable collision only on the parts of the course the robot drives ON.
+
+    The split is by ROLE, not by scene, and the distinction matters:
+
+      * A barrel is something to AVOID. The environment already decides
+        contact from the course tensors and the episode ENDS on it, so the
+        geometry never has to resist anything. Leaving its USD collider on
+        would add a second, parallel representation of the same obstacle and
+        make what you watch differ from what was trained.
+      * A ramp is something to DRIVE OVER. There is no tensor for height, so
+        the collider is the only representation there is. With it off the
+        robot passes straight through the one piece of terrain the real
+        course has.
+
+    The USD's own ground slab also stays off: it duplicates the environment's
+    ground plane at exactly the same height, and two coincident static
+    colliders are a contact-jitter source for no gain.
+
+    This function replaced one that stripped the whole subtree unconditionally.
+    That was written to keep visualisation from changing the physics, which it
+    did -- and it silently removed the ramp from evaluation, so every lap
+    measured so far drove through it.
+
+    Returns (kept paths, number stripped).
+    """
+    import omni.usd
+    from pxr import UsdPhysics
+
+    stage = omni.usd.get_context().get_stage()
+    root = stage.GetPrimAtPath(prim_path)
+    if not (root and root.IsValid()):
+        return [], 0
+    keep_roots = [root.GetPath().AppendChild(name) for name in drive_on]
+
+    kept, stripped = [], 0
+    stack = [root]
+    while stack:
+        prim = stack.pop()
+        if prim.HasAPI(UsdPhysics.CollisionAPI):
+            path = prim.GetPath()
+            keep = any(path.HasPrefix(k) for k in keep_roots)
+            attr = UsdPhysics.CollisionAPI(prim).GetCollisionEnabledAttr()
+            if attr:
+                attr.Set(bool(keep))
+            if keep:
+                kept.append(str(path))
+            else:
+                stripped += 1
+        stack.extend(prim.GetChildren())
+    return kept, stripped
+
+
 @configclass
 class EsdaCourseEnvCfg(DirectRLEnvCfg):
     """Configuration for the course-following task."""
@@ -97,6 +155,16 @@ class EsdaCourseEnvCfg(DirectRLEnvCfg):
     # The real course is the EVALUATION course. Training on it would measure
     # memorisation of 34 barrel positions.
     include_igvc: bool = False
+
+    # Spawn the course USD as VISUAL geometry. Off during training, where it
+    # would be pure render cost: the policy meets the course only through rays
+    # and the geometry lives in tensors. On for evaluation, so a human can see
+    # what the robot is doing. Colliders in the spawned course are kept only
+    # on what the robot drives ON -- the ramps -- and switched off on the
+    # obstacles, which the course tensors already handle. See
+    # _set_course_collisions for why that split is not arbitrary.
+    show_course: bool = False
+    course_usd: str = os.path.join(_ISAAC_DIR, "usd", "course", "igvc_course.usda")
 
     # --- task shaping ---
     goal_lookahead_m: float = 4.0
@@ -243,6 +311,25 @@ class EsdaCourseEnv(DirectRLEnv):
             physics_material=sim_utils.RigidBodyMaterialCfg(
                 static_friction=1.0, dynamic_friction=1.0, restitution=0.0))
         ground.func("/World/ground", ground)
+
+        if self.cfg.show_course and os.path.exists(self.cfg.course_usd):
+            cfg = sim_utils.UsdFileCfg(usd_path=self.cfg.course_usd)
+            cfg.func("/World/envs/env_0/Course", cfg)
+            kept, stripped = _set_course_collisions("/World/envs/env_0/Course")
+
+            # The surfaces that are kept have to carry the GROUND's friction,
+            # not PhysX's default 0.5. An 8.5 degree ramp only needs 0.15 to
+            # hold, so this is not about climbing it -- it is so the ramp and
+            # the ground the policy trained on behave the same under the
+            # wheels, instead of the slope quietly being the slipperier of
+            # the two.
+            drive_mat = sim_utils.RigidBodyMaterialCfg(
+                static_friction=1.0, dynamic_friction=1.0, restitution=0.0)
+            drive_mat.func("/World/courseMaterial", drive_mat)
+            for path in kept:
+                sim_utils.bind_physics_material(path, "/World/courseMaterial")
+            print("[course] colliders: %d kept (%s), %d stripped"
+                  % (len(kept), ", ".join(DRIVE_ON), stripped))
 
         self.scene.clone_environments(copy_from_source=False)
         sim_utils.DomeLightCfg(intensity=1500.0).func(

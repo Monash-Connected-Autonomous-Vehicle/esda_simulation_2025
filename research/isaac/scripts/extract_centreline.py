@@ -96,6 +96,13 @@ HALF_WIDTH_M = 1.5
 # robot_radius in config/nav2_params.yaml
 ROBOT_RADIUS_M = 0.45
 
+# worlds/sim_world_ic.sdf approximates construction_barrel.dae this way.
+BARREL_RADIUS_M = 0.25
+# Preferred standoff from a barrel surface. The hard limit is the robot radius;
+# this is what the route is nudged toward, so the reference path does not skim
+# obstacles at exactly the legal minimum.
+OBSTACLE_PREFER_M = 0.80
+
 # scripts/ui_launch.py spawns at world (11, 0); map frame origin is that pose.
 SPAWN_WORLD = (11.0, 0.0)
 
@@ -157,13 +164,13 @@ def despeckle(mask, min_area):
     return keep[lab].astype(np.uint8)
 
 
-def barricades_from_sdf(path):
-    """The four barricade poses declared in model.sdf, in world metres."""
+def _link_poses(path, prefix):
+    """World-frame (x, y) of every link in model.sdf whose name starts with prefix."""
     doc = minidom.parse(path)
     out = {}
     for link in doc.getElementsByTagName("link"):
         name = link.getAttribute("name")
-        if not name.startswith("barricade"):
+        if not name.startswith(prefix):
             continue
         for pose in link.childNodes:
             if pose.nodeType == pose.ELEMENT_NODE and pose.tagName == "pose":
@@ -171,6 +178,22 @@ def barricades_from_sdf(path):
                 out[name] = (vals[0] + MODEL_OFFSET[0], vals[1] + MODEL_OFFSET[1])
                 break
     return out
+
+
+def barricades_from_sdf(path):
+    """The four barricade poses declared in model.sdf, in world metres."""
+    return _link_poses(path, "barricade")
+
+
+def barrels_from_sdf(path):
+    """The construction barrels, in world metres.
+
+    Read from the SDF rather than from config/course_obstacles.yaml so this
+    script has no ordering dependency on build_course_usd.py -- the centreline
+    and the obstacle list are then both derived from the same source, and
+    neither can be regenerated into disagreement with the other.
+    """
+    return sorted(_link_poses(path, "construction_barrel").values())
 
 
 def barricades_from_texture(dark, min_area=50):
@@ -245,13 +268,42 @@ def corridor_mask(paint, reach_m=2.5, step_px=2):
     return mask & (paint == 0)
 
 
-def build_cost(paint, nomans_cost=6.0):
+def obstacle_field(barrels, barrel_radius=BARREL_RADIUS_M):
+    """Distance in metres from every pixel to the nearest barrel SURFACE.
+
+    WHY THE CENTRELINE HAS TO KNOW ABOUT THESE
+        The first version of this script routed on lane paint alone. Barrels
+        are 3D models, not painted, so they were invisible to it -- and the
+        resulting path ran 0.11 m from barrel 4 and straight between three
+        barrel pairs whose gaps are 0.62-0.65 m when the robot needs 0.90 m.
+
+        That is not a small inaccuracy. The RL reward pays the policy to follow
+        this line, so an obstacle-blind centreline teaches the robot to drive
+        into barrels, and it did: 84% of collisions in evaluation were three
+        barrels sitting on or beside this path.
+    """
+    free = np.ones((TEX_H, TEX_W), dtype=np.uint8)
+    for bx, by in barrels:
+        col, row = world_to_px(bx, by)
+        cv2.circle(free, (int(round(col)), int(round(row))),
+                   max(1, int(round(barrel_radius * PX_PER_M))), 0, -1)
+    if free.all():
+        return np.full((TEX_H, TEX_W), 1e3, dtype=np.float32)
+    return (cv2.distanceTransform(free, cv2.DIST_L2, 5) / PX_PER_M).astype(np.float32)
+
+
+def build_cost(paint, barrels=(), nomans_cost=6.0, obstacle_weight=3.0):
     """Per-pixel traversal cost, the clearance field, and the blocked band.
 
     Inside a corridor the cost rewards clearance near half a lane width, so the
     route hugs the middle.  Where there is no corridor -- no man's land -- the
     cost is flat and higher, so the route crosses in roughly a straight line and
     prefers a real corridor whenever one exists.
+
+    Barrels block outright within the robot's radius and are penalised softly
+    out to OBSTACLE_PREFER_M, so the route gives them room rather than merely
+    squeezing past. Blocking alone would produce paths that skim an obstacle at
+    exactly the legal minimum, which is not what you want a policy to imitate.
     """
     clearance_px = cv2.distanceTransform(1 - paint, cv2.DIST_L2, 5)
     clearance_m = (clearance_px / PX_PER_M).astype(np.float32)
@@ -260,7 +312,14 @@ def build_cost(paint, nomans_cost=6.0):
                     1.0 + 4.0 * np.abs(clearance_m - HALF_WIDTH_M),
                     nomans_cost).astype(np.float32)
     blocked = clearance_m < ROBOT_RADIUS_M
-    return cost, clearance_m, blocked, corridor
+
+    obstacle_m = None
+    if len(barrels):
+        obstacle_m = obstacle_field(barrels)
+        blocked = blocked | (obstacle_m < ROBOT_RADIUS_M)
+        near = np.clip(OBSTACLE_PREFER_M - obstacle_m, 0.0, None)
+        cost = cost + obstacle_weight * near
+    return cost, clearance_m, blocked, corridor, obstacle_m
 
 
 def snap_anchor(clearance, blocked, corridor, col, row, radius_px=70):
@@ -372,6 +431,51 @@ def smooth_closed(pts, k):
     return np.stack([sx, sy], axis=1)
 
 
+def push_clear_of_obstacles(pts, barrels, want, iterations=6):
+    """Nudge a smoothed path back out of obstacles.
+
+    Routing already refuses cells within the robot radius of a barrel, but the
+    box filter that follows cuts corners -- measured, it pulled the path to
+    0.30 m from barrel 26 when the robot needs 0.45 m. Smoothing a path that
+    satisfies a clearance constraint does not preserve it.
+
+    Each pass moves offending samples radially outward to `want` and then
+    lightly re-smooths, so the result stays a smooth curve rather than
+    developing a kink at every repair.
+    """
+    if not len(barrels):
+        return pts, 0
+    obs = np.asarray(barrels, dtype=np.float64)
+    pts = pts.copy()
+    moved_total = 0
+    for _ in range(iterations):
+        delta = pts[:, None, :] - obs[None, :, :]
+        dist = np.linalg.norm(delta, axis=2) - BARREL_RADIUS_M
+        j = dist.argmin(axis=1)
+        nearest = dist[np.arange(len(pts)), j]
+        bad = nearest < want
+        if not bad.any():
+            break
+        moved_total += int(bad.sum())
+        vec = pts[bad] - obs[j[bad]]
+        norm = np.linalg.norm(vec, axis=1, keepdims=True)
+        vec = vec / np.where(norm < 1e-9, 1.0, norm)
+        pts[bad] = obs[j[bad]] + vec * (BARREL_RADIUS_M + want)
+        pts = smooth_closed(pts, 5)
+    return pts, moved_total
+
+
+def obstacle_clearance(pts, barrels):
+    """Closest approach of the path to any barrel surface, and where."""
+    if not len(barrels):
+        return float("inf"), -1
+    obs = np.asarray(barrels, dtype=np.float64)
+    dist = np.linalg.norm(pts[:, None, :] - obs[None, :, :], axis=2) - BARREL_RADIUS_M
+    per = dist.min(axis=0)
+    i = int(per.argmin())
+    return float(per[i]), i
+
+
 def sample_clearance(clearance, pts_m):
     cols = np.clip(((pts_m[:, 0] - MODEL_OFFSET[0] - X_MIN) / (X_MAX - X_MIN) * TEX_W),
                    0, TEX_W - 1).astype(int)
@@ -407,7 +511,11 @@ def main(argv=None):
         print("  WARNING: the world<->pixel mapping looks wrong. Everything "
               "downstream inherits this error.")
 
-    cost, clearance, blocked, corridor = build_cost(paint)
+    barrels = barrels_from_sdf(args.sdf)
+    cost, clearance, blocked, corridor, obstacle_m = build_cost(paint, barrels)
+    print("\nbarrels from model.sdf: %d, blocked within %.2f m of a surface, "
+          "preferred standoff %.2f m" % (len(barrels), ROBOT_RADIUS_M,
+                                         OBSTACLE_PREFER_M))
     print("\nclearance: max %.2f m, blocked (<%.2f m) %.1f%% of texture"
           % (clearance.max(), ROBOT_RADIUS_M, 100.0 * blocked.mean()))
     print("corridor (paint within 2.5 m on two opposing sides): %.1f%% of texture"
@@ -440,6 +548,10 @@ def main(argv=None):
     pts_m = np.array([px_to_world(c, r) for c, r in path_px], dtype=np.float64)
     pts_m, raw_len = resample(pts_m, args.step)
     pts_m = smooth_closed(pts_m, args.smooth)
+    pts_m, repaired = push_clear_of_obstacles(pts_m, barrels, OBSTACLE_PREFER_M)
+    if repaired:
+        print("  repaired %d smoothed samples that had drifted inside the "
+              "obstacle standoff" % repaired)
     widths = 2.0 * sample_clearance(clearance, pts_m)
 
     _, length = resample(pts_m, args.step)
@@ -451,6 +563,14 @@ def main(argv=None):
     if widths.min() / 2.0 < ROBOT_RADIUS_M:
         print("  WARNING: the route passes closer to the paint than the robot "
               "radius. Inspect the overlay.")
+
+    gap, which = obstacle_clearance(pts_m, barrels)
+    print("  barrel clearance: closest approach %.2f m (barrel %d), "
+          "robot radius %.2f" % (gap, which, ROBOT_RADIUS_M))
+    if gap < ROBOT_RADIUS_M:
+        print("  WARNING: the reference path passes closer to a barrel than the")
+        print("           robot radius. A policy rewarded for following it will")
+        print("           be rewarded for driving into that barrel.")
 
     write_yaml(args.out, pts_m, widths, length, worst)
     print("\nwrote %s" % args.out)
