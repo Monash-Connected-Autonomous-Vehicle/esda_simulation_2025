@@ -275,14 +275,20 @@ The policy deploys as `scripts/rl_policy_node.py`, which publishes
 ### Once, in WSL
 
 ```bash
-pip3 install onnxruntime==1.18.1
+pip3 install --user --no-deps onnxruntime==1.18.1
 ```
 
 **That version specifically.** It is the only release in range whose own
 metadata caps `numpy<2.0`, which is what `cv_bridge` needs. 1.19 and later
 leave numpy uncapped, so pip is free to pull numpy 2.x and break `cv_bridge`.
-All of them require `numpy>=1.21.6` and Humble ships 1.21.5, so expect a small
-numpy bump either way.
+
+**And `--no-deps` specifically.** Every onnxruntime asks for `numpy>=1.21.6`
+while Humble ships 1.21.5 from apt, in `/usr/lib/python3/dist-packages`. Let
+pip resolve that and it satisfies the bound by putting a second numpy in
+`~/.local`, which then shadows the system one for every ROS node in the
+session — a bad trade for a patch version. `--no-deps` leaves it alone;
+onnxruntime's other dependencies are already present on Humble. Verified:
+`onnxruntime 1.18.1` imports against the untouched apt `numpy 1.21.5`.
 
 ```bash
 cd ~/esda_simulation_2025 && colcon build --symlink-install --packages-select esda_simulation_2025
