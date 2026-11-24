@@ -63,6 +63,11 @@ parser.add_argument("--video", type=float, default=0.0, metavar="SECONDS",
                     help="record this many seconds of env 0 to an mp4 with a "
                          "chase camera. Needs --enable_cameras.")
 parser.add_argument("--video_fps", type=int, default=30)
+parser.add_argument("--start_frac", type=float, default=-1.0, metavar="F",
+                    help="pin every episode to start at this fraction of the "
+                         "lap (0..1) instead of a random point, so one corner "
+                         "can be filmed. Biases every metric -- diagnostic "
+                         "only. Barrel 33 sits at 0.785.")
 parser.add_argument("--export", action="store_true",
                     help="also write policy.onnx and policy.pt beside the run")
 
@@ -83,6 +88,7 @@ from isaaclab_rl.rsl_rl import (  # noqa: E402
 )
 
 import obs_core as OC  # noqa: E402
+import course_bank as CB  # noqa: E402
 import esda_isaac.tasks  # noqa: E402,F401  -- registers the gym ids
 from esda_isaac.tasks.course.agents.rsl_rl_ppo_cfg import (  # noqa: E402
     EsdaCoursePPORunnerCfg,
@@ -148,10 +154,17 @@ def report_collisions(where, core):
     """Where collisions happen, and what the robot hit.
 
     course_bank.igvc_course packs barrels first and barricades after, so the
-    obstacle index says which kind it was. That distinction is the point:
-    barricades are 3.0 x 0.5 m boxes flattened into a single 0.25 m disc, so
-    if they dominate this table the obstacle model is the problem rather than
-    the policy.
+    obstacle index says which kind it was. That distinction is the point: if
+    barricades dominate this table the obstacle model is the problem rather
+    than the policy.
+
+    The index map is NOT one slot per barricade. Each 3.0 x 0.5 m box becomes
+    a chain of overlapping discs, so barricade b owns a RANGE of indices.
+    This mapped index-n_barrels straight into barricades[...] -- correct only
+    while a barricade was one disc, which it stopped being when the chain
+    replaced it. It survived because no collision has yet had a barricade
+    disc as its nearest obstacle; the first one would have raised IndexError
+    inside the diagnostic, losing the run it was diagnosing.
     """
     import collections
 
@@ -161,10 +174,17 @@ def report_collisions(where, core):
     n_barrels = len(obst.get("barrels") or [])
     barricades = obst.get("barricades") or []
 
+    # Index ranges, built the same way course_bank.igvc_course packs them.
+    spans, at = [], n_barrels
+    for row in barricades:
+        k = len(CB.barricade_discs(*row))
+        spans.append((at, at + k, row))
+        at += k
+
     print("\n  --- where it crashes (%d collisions) ---" % len(where))
 
     bins = [0] * 10
-    for frac, _, _ in where:
+    for frac, _, _, _ in where:
         bins[min(9, int(frac * 10))] += 1
     print("  by position around the lap:")
     peak = max(bins) or 1
@@ -172,23 +192,44 @@ def report_collisions(where, core):
         print("    %3d-%3d%%  %-30s %d"
               % (i * 10, (i + 1) * 10, "#" * int(28 * count / peak), count))
 
-    tally = collections.Counter(o for _, o, _ in where)
+    tally = collections.Counter(o for _, o, _, _ in where)
     print("  worst obstacles:")
     for obstacle, count in tally.most_common(8):
         if obstacle < n_barrels:
             x, y, r = obst["barrels"][obstacle]
             kind = "barrel  r=%.2f" % r
         else:
-            row = barricades[obstacle - n_barrels]
-            x, y = row[0], row[1]
-            kind = "BARRICADE %.1f x %.1f m, modelled as r=%.2f disc" % (
-                row[3], row[4], max(0.5, row[4]) / 2.0)
+            hit = next(((i, lo, hi, row) for i, (lo, hi, row) in enumerate(spans)
+                        if lo <= obstacle < hi), None)
+            if hit is None:
+                x, y = float("nan"), float("nan")
+                kind = "UNMAPPED index %d -- the obstacle packing changed" % obstacle
+            else:
+                i, lo, hi, row = hit
+                x, y = row[0], row[1]
+                kind = ("BARRICADE %d, %.1f x %.1f m, disc %d of %d"
+                        % (i, row[3], row[4], obstacle - lo + 1, hi - lo))
         print("    %5.1f%%  obstacle %2d at (%+7.2f,%+7.2f)  %s"
               % (100.0 * count / len(where), obstacle, x, y, kind))
 
-    n_barricade_hits = sum(1 for _, o, _ in where if o >= n_barrels)
+    n_barricade_hits = sum(1 for _, o, _, _ in where if o >= n_barrels)
     print("  barricades account for %.0f%% of collisions (%d of %d)"
           % (100.0 * n_barricade_hits / len(where), n_barricade_hits, len(where)))
+
+    # WHICH SIDE the robot was on when it hit. An obstacle on the left that
+    # is struck by a robot sitting LEFT of the line was driven into; the same
+    # obstacle struck by a robot still RIGHT of the line means something else
+    # pushed it across. The obstacle it touches cannot distinguish those, and
+    # the difference decides whether the fix is the policy or the course.
+    print("  lateral offset when it hit (+ is left of the line):")
+    for obstacle, count in tally.most_common(4):
+        lats = [lat for _, o, _, lat in where if o == obstacle]
+        if not lats:
+            continue
+        mean = sum(lats) / len(lats)
+        left = sum(1 for v in lats if v > 0)
+        print("    obstacle %2d: mean %+.2f m, %d of %d hits from the left"
+              % (obstacle, mean, left, len(lats)))
 
 
 def record(core, wrapped, policy, run_dir):
@@ -281,6 +322,14 @@ def main():
     env_cfg.curriculum = False          # evaluate the full task, not a stage
     if args.episode_s:
         env_cfg.episode_length_s = args.episode_s
+    if args.start_frac >= 0.0:
+        # Diagnostic: every reset starts at the same point on the lap. This
+        # BIASES every measured number -- the episode no longer samples the
+        # course uniformly -- so it is for filming a particular corner, not
+        # for reporting. Say so loudly rather than let a figure escape.
+        env_cfg.start_frac = args.start_frac
+        print("[play] START PINNED at %.0f%% of the lap -- metrics from this "
+              "run are NOT representative" % (100.0 * args.start_frac))
     # Scale the TRAINING noise levels, so --noise 1.0 means "as degraded as
     # training was" and 0.0 means a clean sensor. The play config zeroes them,
     # so the baseline has to come from the training config.
@@ -371,6 +420,7 @@ def main():
             # be located from the state it happened in, not the state after.
             if args.diagnose:
                 prev_idx = core._idx.clone()
+                prev_lat = core._lateral.clone()
                 prev_xy = (core.robot.data.root_pos_w[:, :2] - core.env_xy).clone()
                 prev_course = core.course_idx.clone()
 
@@ -400,8 +450,14 @@ def main():
                         gap = torch.linalg.norm(discs - prev_xy[e][None, :], dim=1) - radii
                         gap = torch.where(radii > 0, gap, torch.full_like(gap, 1e3))
                         obstacle = int(gap.argmin())
+                        # Lateral offset at the moment of the hit, SIGNED.
+                        # Which side of the line the robot had drifted to is
+                        # the difference between "it failed to turn" and "it
+                        # swerved away from something else into this" -- and
+                        # the obstacle it touches cannot tell you which.
                         where.append((int(prev_idx[e]) / core.n_samples,
-                                      obstacle, float(gap.min())))
+                                      obstacle, float(gap.min()),
+                                      float(prev_lat[e])))
 
     mean_speed = float((speed_sum / steps.clamp(min=1)).mean())
     lap_m = float(core.bank_length[core.course_idx].float().mean())

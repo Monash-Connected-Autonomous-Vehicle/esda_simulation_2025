@@ -166,6 +166,13 @@ class EsdaCourseEnvCfg(DirectRLEnvCfg):
     show_course: bool = False
     course_usd: str = os.path.join(_ISAAC_DIR, "usd", "course", "igvc_course.usda")
 
+    # DIAGNOSTIC ONLY. Pin every reset to this fraction of the lap instead of
+    # a random point, so one corner can be filmed repeatedly rather than
+    # waited for. Negative means random, which is what training wants (varied
+    # starts) and what measurement wants (unbiased coverage of the lap) -- so
+    # anything that is not a video should leave this alone.
+    start_frac: float = -1.0
+
     # --- task shaping ---
     goal_lookahead_m: float = 4.0
     # Lane range plus margin; beyond this the boundary cannot be seen anyway.
@@ -191,33 +198,33 @@ class EsdaCourseEnvCfg(DirectRLEnvCfg):
     rew_collision: float = -50.0
     rew_lane_cross: float = -25.0
 
-    # Continuous obstacle proximity. THE LANE HAD TWO TERMS AND OBSTACLES HAD
-    # ONE, and that asymmetry is what the first real evaluation found.
+    # A WIDE CORRIDOR MUST NOT BUY THE RIGHT TO DRIFT.
     #
-    # The paint gets rew_lane, a smooth gradient the policy can follow, AND
-    # rew_lane_cross when it fails. Obstacles got only the terminal -50. So
-    # the policy never experienced a barrel as "getting closer" -- only as a
-    # cliff it had no way to see coming -- and it learned the lane lesson
-    # perfectly (0.00 crossings per episode) while learning nothing at all
-    # about barrels.
+    # The lane penalty divides lateral offset by the corridor half-width, so
+    # the same drift costs less wherever there is more room. Measured on the
+    # real course: every one of 74 collisions happened on the LEFT -- the
+    # inside of every corner on this counter-clockwise lap -- at a mean drift
+    # of 0.83 m. The policy cuts corners, and the only obstacles it ever hits
+    # are inside-corner obstacles.
     #
-    # Measured: barrel 33 alone caused 89% of remaining collisions. It sits
-    # on the inside of a 68 degree corner where cutting saves 1.78 m of arc,
-    # worth 14.2 of progress reward, in the widest corridor on the lap -- the
-    # one place where cutting toward a barrel does not also threaten the
-    # paint. It is the gap between the two lessons.
+    # That drift is cheapest exactly where it is most dangerous:
     #
-    # The job of this term is NOT to outweigh that 14.2; the -50 already
-    # does. It is to make the cliff differentiable, so the approach carries
-    # information instead of the arrival carrying all of it.
-    rew_clearance: float = -1.0
-    # Measured from the ROBOT'S SURFACE, not its centre. The reference line
-    # keeps 0.91 m from the nearest barrel surface, which is 0.46 m of gap
-    # past the 0.45 m robot radius -- so at 0.50 m a policy that tracks the
-    # line pays 0.006 per step against progress of 1.0, i.e. nothing. The
-    # term bites only when the robot leaves the line toward an obstacle,
-    # which is exactly the behaviour being priced.
-    clearance_margin_m: float = 0.5
+    #     barrel 33   half-width 1.75 m   0.83 m drift -> lane 0.47   90.5%
+    #     barrel 26   half-width 1.19 m   0.83 m drift -> lane 0.70   not hit
+    #
+    # Barrel 33 sits in the widest corridor on the lap, on its sharpest
+    # corner, so the gradient holding the robot to the line is at its weakest
+    # precisely where the temptation to cut is greatest.
+    #
+    # Capping the denominator makes the penalty absolute once the corridor is
+    # wider than this, and leaves it untouched where the corridor is already
+    # tighter -- a robot in a 1.0 m corridor is not asked for more precision
+    # than before. Chosen over a dedicated obstacle term because the policy
+    # demonstrably FOLLOWS this gradient already (0.00 lane crossings per
+    # episode); strengthening a channel it listens to beats adding one it
+    # would have to learn from nothing, which is what rew_clearance tried and
+    # why that attempt made things worse.
+    lane_ref_m: float = 1.0
 
     # --- terminations ---
     tilt_limit_rad: float = 0.6
@@ -509,22 +516,16 @@ class EsdaCourseEnv(DirectRLEnv):
         self.lap_progress += ds
 
         half = self.bank_widths[self.course_idx, self._idx] * 0.5
-        lane = (self._lateral.abs() / torch.clamp(half, min=0.1)).clamp(max=2.0)
+        # Capped at lane_ref_m, so beyond that width the penalty is on the
+        # ABSOLUTE offset: extra room stops being a licence to drift. See
+        # lane_ref_m for the measurement this comes from.
+        denom = torch.clamp(half, min=0.1, max=cfg.lane_ref_m)
+        lane = (self._lateral.abs() / denom).clamp(max=2.0)
         action_rate = torch.linalg.norm(self.actions - self.prev_action, dim=1)
         spin = self.twist[:, 1].abs()
 
-        # The mirror of `lane`, for obstacles: 0 while there is room, rising
-        # to 1 at contact. Squared so it stays near zero through the ordinary
-        # business of passing a barrel and climbs steeply only in the last
-        # few centimetres, where the terminal penalty is about to fire.
-        # _clearance is centre-to-surface, so the robot radius comes off it
-        # to give the gap the robot actually has.
-        gap = self._clearance - OC.ROBOT_RADIUS
-        near = (1.0 - gap / cfg.clearance_margin_m).clamp(min=0.0, max=1.0) ** 2
-
         reward = (cfg.rew_progress * ds
                   + cfg.rew_lane * lane
-                  + cfg.rew_clearance * near
                   + cfg.rew_action_rate * action_rate
                   + cfg.rew_spin * spin
                   + cfg.rew_time)
@@ -564,7 +565,11 @@ class EsdaCourseEnv(DirectRLEnv):
         self._set_stage(self._stage_now())
         pool = self._stage_pool[min(self.stage, len(self._stage_pool) - 1)]
         self.course_idx[env_ids] = pool[torch.randint(0, len(pool), (n,), device=dev)]
-        start = torch.randint(0, self.n_samples, (n,), device=dev)
+        if self.cfg.start_frac >= 0.0:
+            fixed = int(self.cfg.start_frac * self.n_samples) % self.n_samples
+            start = torch.full((n,), fixed, device=dev, dtype=torch.long)
+        else:
+            start = torch.randint(0, self.n_samples, (n,), device=dev)
         centre = self.bank_centre[self.course_idx[env_ids], start]
         nxt = self.bank_centre[self.course_idx[env_ids],
                                (start + 1) % self.n_samples]
