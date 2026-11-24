@@ -21,6 +21,22 @@ class EsdaCoursePlayEnvCfg(EsdaCourseEnvCfg):
         if hasattr(super(), "__post_init__"):
             super().__post_init__()
         self.scene.num_envs = 32
+
+        # LONG ENOUGH FOR A LAP. Training inherits 40 s, which is right there
+        # -- short episodes mean more resets, more starting positions and a
+        # tighter credit horizon. For EVALUATION it made the headline metric
+        # impossible to earn: 40 s at the 1.0 m/s cap is 40 m, and the real
+        # course is 136.3 m, so the best achievable lap fraction was 0.29.
+        # A run measured 0.29 mean against a 0.30 max at 0.99 m/s -- the
+        # policy was saturating the clock, and the plan's ">=80% lap
+        # completion" target could not be reached by any policy whatsoever.
+        #
+        # 180 s covers the lap at 0.76 m/s, so a lap left unfinished at this
+        # length is the policy's doing and not the timer's. It also makes
+        # timeouts meaningful: a timeout now says "too slow or stuck", where
+        # before it only said "the lap is longer than 40 seconds".
+        self.episode_length_s = 180.0
+
         self.show_course = True
         # NO generated layouts. An earlier version kept an "oval" filler
         # alongside igvc, which meant half the evaluation episodes ran on a

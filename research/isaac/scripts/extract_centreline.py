@@ -101,7 +101,21 @@ BARREL_RADIUS_M = 0.25
 # Preferred standoff from a barrel surface. The hard limit is the robot radius;
 # this is what the route is nudged toward, so the reference path does not skim
 # obstacles at exactly the legal minimum.
-OBSTACLE_PREFER_M = 0.80
+#
+# 0.80 was the first value, and it was too tight for a reason worth writing
+# down: it is an allowance of 0.35 m over the 0.45 m robot radius, and that
+# 0.35 m is the entire budget for the policy TRACKING the line. Evaluation
+# measured four barrels at 0.72-0.75 m from the line, all of them on the
+# course's tightest corners (radius 1.7-2.5 m), taken at 0.99 m/s -- and they
+# accounted for every remaining collision. The line was legal and still not
+# drivable, because a reference path has to leave room to be followed
+# imperfectly, not merely room to be occupied.
+#
+# 1.00 m gives 0.55 m of tracking budget. The corridor is the limit on going
+# further: push_clear_of_obstacles will not take a sample off the asphalt to
+# reach this, so on the narrow sections the standoff silently reduces to
+# whatever fits.
+OBSTACLE_PREFER_M = 1.00
 
 # scripts/ui_launch.py spawns at world (11, 0); map frame origin is that pose.
 SPAWN_WORLD = (11.0, 0.0)
@@ -431,8 +445,8 @@ def smooth_closed(pts, k):
     return np.stack([sx, sy], axis=1)
 
 
-def push_clear_of_obstacles(pts, barrels, want, iterations=6):
-    """Nudge a smoothed path back out of obstacles.
+def push_clear_of_obstacles(pts, barrels, want, clearance=None, iterations=6):
+    """Nudge a smoothed path back out of obstacles, without leaving the asphalt.
 
     Routing already refuses cells within the robot radius of a barrel, but the
     box filter that follows cuts corners -- measured, it pulled the path to
@@ -442,12 +456,22 @@ def push_clear_of_obstacles(pts, barrels, want, iterations=6):
     Each pass moves offending samples radially outward to `want` and then
     lightly re-smooths, so the result stays a smooth curve rather than
     developing a kink at every repair.
+
+    `want` is a WISH, not a guarantee, and `clearance` is why. On the narrow
+    sections the corridor is 1.66 m wide -- 0.83 m of half-width -- so a
+    full 1.00 m push away from a barrel sitting near the middle of it would
+    put the reference path across the lane paint. Crossing a lane line is an
+    IGVC fault and a terminal condition in training, so trading a collision
+    for a line crossing is not a trade. Each sample therefore takes the
+    LARGEST fraction of its outward move that keeps it at least a robot
+    radius from the paint, and samples where no fraction works stay where
+    routing put them.
     """
     if not len(barrels):
         return pts, 0
     obs = np.asarray(barrels, dtype=np.float64)
     pts = pts.copy()
-    moved_total = 0
+    moved_total, capped_total = 0, 0
     for _ in range(iterations):
         delta = pts[:, None, :] - obs[None, :, :]
         dist = np.linalg.norm(delta, axis=2) - BARREL_RADIUS_M
@@ -460,9 +484,26 @@ def push_clear_of_obstacles(pts, barrels, want, iterations=6):
         vec = pts[bad] - obs[j[bad]]
         norm = np.linalg.norm(vec, axis=1, keepdims=True)
         vec = vec / np.where(norm < 1e-9, 1.0, norm)
-        pts[bad] = obs[j[bad]] + vec * (BARREL_RADIUS_M + want)
+        target = obs[j[bad]] + vec * (BARREL_RADIUS_M + want)
+
+        if clearance is None:
+            pts[bad] = target
+        else:
+            here = pts[bad]
+            chosen = here.copy()
+            settled = np.zeros(len(here), dtype=bool)
+            # Largest move first, so each sample gets as much standoff as the
+            # corridor will give it.
+            for frac in (1.0, 0.8, 0.6, 0.4, 0.2):
+                trial = here + frac * (target - here)
+                ok = ~settled & (sample_clearance(clearance, trial)
+                                 >= ROBOT_RADIUS_M)
+                chosen[ok] = trial[ok]
+                settled |= ok
+            capped_total += int((~settled).sum())
+            pts[bad] = chosen
         pts = smooth_closed(pts, 5)
-    return pts, moved_total
+    return pts, (moved_total, capped_total)
 
 
 def obstacle_clearance(pts, barrels):
@@ -548,10 +589,15 @@ def main(argv=None):
     pts_m = np.array([px_to_world(c, r) for c, r in path_px], dtype=np.float64)
     pts_m, raw_len = resample(pts_m, args.step)
     pts_m = smooth_closed(pts_m, args.smooth)
-    pts_m, repaired = push_clear_of_obstacles(pts_m, barrels, OBSTACLE_PREFER_M)
+    pts_m, (repaired, capped) = push_clear_of_obstacles(
+        pts_m, barrels, OBSTACLE_PREFER_M, clearance)
     if repaired:
         print("  repaired %d smoothed samples that had drifted inside the "
               "obstacle standoff" % repaired)
+    if capped:
+        print("  %d of those could not reach the %.2f m standoff without "
+              "crossing the paint, and were left short"
+              % (capped, OBSTACLE_PREFER_M))
     widths = 2.0 * sample_clearance(clearance, pts_m)
 
     _, length = resample(pts_m, args.step)

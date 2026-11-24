@@ -585,7 +585,31 @@ def suite_course_meta():
     # boundaries at roughly half the corridor width.
     left, right = SS.boundaries_from_centreline(pts, widths)
     cfg = SS.ScanCfg()
-    i = len(pts) // 4
+
+    # Measure this on the STRAIGHTEST part of the lap, not at a fixed index.
+    # The prediction below is half_width / sin(half_fov), which has no
+    # curvature term in it: on a bend the inside boundary curves into the
+    # camera cone and the nearest paint is legitimately closer than a straight
+    # corridor would put it. A hardcoded index silently tests whatever the
+    # course happens to have there, so widening the obstacle standoff in
+    # extract_centreline.py -- which tightens corners, by design -- moved
+    # sample 144 onto a bend and failed a check about SENSOR geometry for
+    # reasons that had nothing to do with the sensor.
+    nxt = np.roll(pts, -1, axis=0)
+    prv = np.roll(pts, 1, axis=0)
+    ang = (np.arctan2(nxt[:, 1] - pts[:, 1], nxt[:, 0] - pts[:, 0])
+           - np.arctan2(pts[:, 1] - prv[:, 1], pts[:, 0] - prv[:, 0]))
+    ang = np.abs((ang + np.pi) % (2 * np.pi) - np.pi)
+    # Straight over a window about as long as the robot can see sideways,
+    # and of near-constant width, so the straight-corridor model applies.
+    span = max(1, int(round(3.0 / max(float(seg.mean()), 1e-6))))
+    local_turn = np.array([ang[np.arange(k - span, k + span + 1) % len(pts)].sum()
+                           for k in range(len(pts))])
+    # np.ptp(a), not a.ptp(): the method was removed from ndarray in numpy
+    # 2.0, and this harness has to run under Humble's numpy 1.21 as well.
+    local_vary = np.array([np.ptp(widths[np.arange(k - span, k + span + 1)
+                                         % len(pts)]) for k in range(len(pts))])
+    i = int(np.argmin(local_turn + local_vary))
     heading = math.atan2(pts[(i + 1) % len(pts), 1] - pts[i, 1],
                          pts[(i + 1) % len(pts), 0] - pts[i, 0])
     r = SS.synth_scan((pts[i, 0], pts[i, 1], heading), cfg, None, None, [left, right])
@@ -604,8 +628,9 @@ def suite_course_meta():
         expect = (widths[i] / 2.0) / math.sin(cfg.lane_half_fov)
         check("nearest visible paint matches half_width / sin(half_fov)",
               abs(float(finite.min()) - expect) < 0.6,
-              "nearest %.2f m, predicted %.2f m (half-width %.2f)"
-              % (finite.min(), expect, widths[i] / 2.0))
+              "nearest %.2f m, predicted %.2f m (half-width %.2f, "
+              "straightest sample %d, %.3f rad of turn over +/-3 m)"
+              % (finite.min(), expect, widths[i] / 2.0, i, local_turn[i]))
         check("the robot cannot see the paint directly beside it",
               float(finite.min()) > widths[i] / 2.0 * 1.4,
               "nearest %.2f m vs half-width %.2f" % (finite.min(), widths[i] / 2.0))
