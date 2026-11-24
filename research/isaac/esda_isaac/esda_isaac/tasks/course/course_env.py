@@ -191,6 +191,34 @@ class EsdaCourseEnvCfg(DirectRLEnvCfg):
     rew_collision: float = -50.0
     rew_lane_cross: float = -25.0
 
+    # Continuous obstacle proximity. THE LANE HAD TWO TERMS AND OBSTACLES HAD
+    # ONE, and that asymmetry is what the first real evaluation found.
+    #
+    # The paint gets rew_lane, a smooth gradient the policy can follow, AND
+    # rew_lane_cross when it fails. Obstacles got only the terminal -50. So
+    # the policy never experienced a barrel as "getting closer" -- only as a
+    # cliff it had no way to see coming -- and it learned the lane lesson
+    # perfectly (0.00 crossings per episode) while learning nothing at all
+    # about barrels.
+    #
+    # Measured: barrel 33 alone caused 89% of remaining collisions. It sits
+    # on the inside of a 68 degree corner where cutting saves 1.78 m of arc,
+    # worth 14.2 of progress reward, in the widest corridor on the lap -- the
+    # one place where cutting toward a barrel does not also threaten the
+    # paint. It is the gap between the two lessons.
+    #
+    # The job of this term is NOT to outweigh that 14.2; the -50 already
+    # does. It is to make the cliff differentiable, so the approach carries
+    # information instead of the arrival carrying all of it.
+    rew_clearance: float = -1.0
+    # Measured from the ROBOT'S SURFACE, not its centre. The reference line
+    # keeps 0.91 m from the nearest barrel surface, which is 0.46 m of gap
+    # past the 0.45 m robot radius -- so at 0.50 m a policy that tracks the
+    # line pays 0.006 per step against progress of 1.0, i.e. nothing. The
+    # term bites only when the robot leaves the line toward an obstacle,
+    # which is exactly the behaviour being priced.
+    clearance_margin_m: float = 0.5
+
     # --- terminations ---
     tilt_limit_rad: float = 0.6
 
@@ -485,8 +513,18 @@ class EsdaCourseEnv(DirectRLEnv):
         action_rate = torch.linalg.norm(self.actions - self.prev_action, dim=1)
         spin = self.twist[:, 1].abs()
 
+        # The mirror of `lane`, for obstacles: 0 while there is room, rising
+        # to 1 at contact. Squared so it stays near zero through the ordinary
+        # business of passing a barrel and climbs steeply only in the last
+        # few centimetres, where the terminal penalty is about to fire.
+        # _clearance is centre-to-surface, so the robot radius comes off it
+        # to give the gap the robot actually has.
+        gap = self._clearance - OC.ROBOT_RADIUS
+        near = (1.0 - gap / cfg.clearance_margin_m).clamp(min=0.0, max=1.0) ** 2
+
         reward = (cfg.rew_progress * ds
                   + cfg.rew_lane * lane
+                  + cfg.rew_clearance * near
                   + cfg.rew_action_rate * action_rate
                   + cfg.rew_spin * spin
                   + cfg.rew_time)

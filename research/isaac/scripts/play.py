@@ -335,8 +335,15 @@ def main():
         return record(core, wrapped, policy, run_dir)
     n = core.num_envs
     dev = core.device
-    laps = torch.zeros(n, device=dev)        # best fraction per episode
-    metres = torch.zeros(n, device=dev)      # best distance per episode
+    # BEST per environment, and the running totals over every episode. Only
+    # the bests were kept at first and they were printed as "mean ... max",
+    # which made the headline read as typical behaviour when it was the best
+    # of each environment's attempts -- it reported 1.33 laps and 181.9 m on
+    # a run where half the episodes ended in a collision, and 181.9 m is
+    # above the 180 m the clock allows. Keep both and label them.
+    laps = torch.zeros(n, device=dev)        # best lap fraction, per env
+    metres = torch.zeros(n, device=dev)      # best distance, per env
+    laps_sum = metres_sum = 0.0              # over every finished episode
     running_frac = torch.zeros(n, device=dev)
     running_m = torch.zeros(n, device=dev)
     speed_sum = torch.zeros(n, device=dev)
@@ -374,6 +381,8 @@ def main():
                 idx = dones.nonzero(as_tuple=False).flatten()
                 crossings += int(core._crossed[idx].sum())
                 collisions += int(core._collided[idx].sum())
+                laps_sum += float(running_frac[idx].sum())
+                metres_sum += float(running_m[idx].sum())
                 laps[idx] = torch.maximum(laps[idx], running_frac[idx])
                 metres[idx] = torch.maximum(metres[idx], running_m[idx])
                 running_frac[idx] = 0.0
@@ -395,21 +404,34 @@ def main():
                                       obstacle, float(gap.min())))
 
     mean_speed = float((speed_sum / steps.clamp(min=1)).mean())
+    lap_m = float(core.bank_length[core.course_idx].float().mean())
     print("\n  episodes finished     : %d" % finished)
-    print("  distance per episode  : mean %.1f m, max %.1f m"
-          % (float(metres.mean()), float(metres.max())))
-    print("  lap fraction          : mean %.2f, max %.2f  (lap is %.1f m)"
-          % (float(laps.mean()), float(laps.max()),
-             float(core.bank_length[core.course_idx].float().mean())))
+    if finished:
+        print("  distance per episode  : mean %.1f m   (best env %.1f m)"
+              % (metres_sum / finished, float(metres.max())))
+        print("  lap fraction          : mean %.2f      (best env %.2f)   "
+              "lap is %.1f m" % (laps_sum / finished, float(laps.max()), lap_m))
     print("  episode length        : %.0f s -- at 1 m/s that bounds a lap at "
           "%.2f" % (env_cfg.episode_length_s,
-                    env_cfg.episode_length_s
-                    / float(core.bank_length[core.course_idx].float().mean())))
+                    env_cfg.episode_length_s / lap_m))
     print("  mean speed            : %.2f m/s" % mean_speed)
     if finished:
         print("  lane crossings/episode: %.2f" % (crossings / finished))
         print("  collisions/episode    : %.2f" % (collisions / finished))
         print("  timeouts/episode      : %.2f" % (timeouts / finished))
+        # PER DISTANCE, because per-episode figures do not survive a change
+        # of episode_length_s: the 40 s and 180 s runs of the same policy
+        # reported 0.43 and 0.50 collisions per episode while the collision
+        # rate per lap had in fact fallen from 1.46 to 0.38. Compare these.
+        if metres_sum > 0:
+            print("  --")
+            print("  collisions per 100 m  : %.2f   (1 per %.0f m)"
+                  % (100.0 * collisions / metres_sum,
+                     metres_sum / collisions if collisions else float("inf")))
+            print("  collisions per lap    : %.2f"
+                  % (collisions / (metres_sum / lap_m)))
+            print("  clean episodes        : %.0f%% (no collision, no crossing)"
+                  % (100.0 * timeouts / finished))
     if args.diagnose and where:
         report_collisions(where, core)
 
