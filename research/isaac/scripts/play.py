@@ -109,6 +109,12 @@ def _iteration(name):
         return -1
 
 
+# Beyond this much lateral offset the robot is not tracking the line, it is
+# taking a different one. 0.45 m is the robot radius, so this is "one whole
+# vehicle off the centre".
+LAT_FAR = 0.45
+
+
 def resolve_run(log_root):
     """Find a run directory and its latest checkpoint.
 
@@ -397,6 +403,14 @@ def main():
     running_m = torch.zeros(n, device=dev)
     speed_sum = torch.zeros(n, device=dev)
     steps = torch.zeros(n, device=dev)
+    # DRIVING STYLE, over every step rather than only at collisions. The
+    # signed mean says whether the policy sits systematically to one side --
+    # on a counter-clockwise lap, inside the corners -- which the collision
+    # sites alone cannot distinguish from bad luck at a few obstacles.
+    lat_abs_sum = torch.zeros(n, device=dev)
+    lat_signed_sum = torch.zeros(n, device=dev)
+    lat_over = torch.zeros(n, device=dev)      # steps beyond LAT_FAR
+    clear_min = torch.full((n,), 1e3, device=dev)
     crossings = collisions = timeouts = finished = 0
     where = []
 
@@ -426,6 +440,10 @@ def main():
 
             obs, _, dones, extras = wrapped.step(policy(obs))
             speed_sum += core.twist[:, 0]
+            lat_abs_sum += core._lateral.abs()
+            lat_signed_sum += core._lateral
+            lat_over += (core._lateral.abs() > LAT_FAR).float()
+            clear_min = torch.minimum(clear_min, core._clearance)
             steps += 1
             if dones.any():
                 idx = dones.nonzero(as_tuple=False).flatten()
@@ -471,6 +489,11 @@ def main():
           "%.2f" % (env_cfg.episode_length_s,
                     env_cfg.episode_length_s / lap_m))
     print("  mean speed            : %.2f m/s" % mean_speed)
+    tot = float(steps.clamp(min=1).sum())
+    print("  mean |lateral|        : %.2f m   (signed mean %+.2f m, + is left)"
+          % (float(lat_abs_sum.sum()) / tot, float(lat_signed_sum.sum()) / tot))
+    print("  time beyond %.2f m     : %.0f%% of steps"
+          % (LAT_FAR, 100.0 * float(lat_over.sum()) / tot))
     if finished:
         print("  lane crossings/episode: %.2f" % (crossings / finished))
         print("  collisions/episode    : %.2f" % (collisions / finished))
