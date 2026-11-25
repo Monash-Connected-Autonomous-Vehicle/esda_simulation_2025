@@ -10,6 +10,7 @@
 | `feature/hardware-interface` | ros2_control hardware interface for the real vehicle | @xavier-marie | 🚧 Active |
 | `feature/new-maps` | New simulation maps/worlds | @ishaan | 🚧 Active |
 | `esda-jetson-testing` | Testing on the Jetson Orin Nano | @jun-hau | 🚧 Active |
+| `fast-lio` | FAST_LIO testing | @andrew | 🚧 Active |
 | `feature/reactive-local-navigation` | Reactive local planner / obstacle avoidance | @ishaan | 💤 Paused |
 | `feature/waypoint-recommender-revamp` | Waypoint recommender rework (PR #1) | @ishaan | 🔍 In review |
 
